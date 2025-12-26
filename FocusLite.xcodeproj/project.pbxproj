@@ -1,0 +1,425 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 55;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A2B3C4D5E6F000000000200 /* FocusLiteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000100 /* FocusLiteApp.swift */; };
+		1A2B3C4D5E6F000000000201 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000101 /* AppDelegate.swift */; };
+		1A2B3C4D5E6F000000000202 /* LauncherWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */; };
+		1A2B3C4D5E6F000000000203 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000103 /* LauncherView.swift */; };
+		1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */; };
+		1A2B3C4D5E6F000000000205 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */; };
+		1A2B3C4D5E6F000000000206 /* ResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000109 /* ResultItem.swift */; };
+		1A2B3C4D5E6F000000000207 /* ResultProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010A /* ResultProvider.swift */; };
+		1A2B3C4D5E6F000000000208 /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010B /* SearchEngine.swift */; };
+		1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010C /* MockProvider.swift */; };
+		1A2B3C4D5E6F00000000020A /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010D /* Log.swift */; };
+		1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000108 /* Assets.xcassets */; };
+		1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000120 /* AppKit.framework */; };
+		1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000121 /* SwiftUI.framework */; };
+		1A2B3C4D5E6F00000000020E /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000122 /* Carbon.framework */; };
+		1A2B3C4D5E6F00000000020F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000123 /* XCTest.framework */; };
+		1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1A2B3C4D5E6F000000000030 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A2B3C4D5E6F000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A2B3C4D5E6F000000000010;
+			remoteInfo = FocusLite;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1A2B3C4D5E6F000000000100 /* FocusLiteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiteApp.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherWindowController.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000103 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherViewModel.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000106 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000107 /* FocusLite.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FocusLite.entitlements; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000108 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000109 /* ResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultItem.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010A /* ResultProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010B /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010C /* MockProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010D /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiteTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000010F /* FocusLite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = FocusLite.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = FocusLiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A2B3C4D5E6F000000000120 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		1A2B3C4D5E6F000000000121 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		1A2B3C4D5E6F000000000122 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
+		1A2B3C4D5E6F000000000123 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A2B3C4D5E6F000000000022 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */,
+				1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */,
+				1A2B3C4D5E6F00000000020E /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1A2B3C4D5E6F000000000024 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F00000000020F /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1A2B3C4D5E6F000000000001 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000004 /* FocusLite */,
+				1A2B3C4D5E6F000000000005 /* FocusLiteCore */,
+				1A2B3C4D5E6F000000000007 /* FocusLitePlugins */,
+				1A2B3C4D5E6F000000000009 /* FocusLiteTests */,
+				1A2B3C4D5E6F000000000002 /* Products */,
+				1A2B3C4D5E6F000000000003 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000004 /* FocusLite */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000100 /* FocusLiteApp.swift */,
+				1A2B3C4D5E6F000000000101 /* AppDelegate.swift */,
+				1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */,
+				1A2B3C4D5E6F000000000103 /* LauncherView.swift */,
+				1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */,
+				1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */,
+				1A2B3C4D5E6F000000000108 /* Assets.xcassets */,
+				1A2B3C4D5E6F000000000106 /* Info.plist */,
+				1A2B3C4D5E6F000000000107 /* FocusLite.entitlements */,
+			);
+			path = FocusLite;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000005 /* FocusLiteCore */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000006 /* Search */,
+				1A2B3C4D5E6F00000000000A /* Utils */,
+			);
+			path = FocusLiteCore;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000006 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000109 /* ResultItem.swift */,
+				1A2B3C4D5E6F00000000010A /* ResultProvider.swift */,
+				1A2B3C4D5E6F00000000010B /* SearchEngine.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000000A /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F00000000010D /* Log.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000007 /* FocusLitePlugins */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000008 /* Mock */,
+			);
+			path = FocusLitePlugins;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000008 /* Mock */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F00000000010C /* MockProvider.swift */,
+			);
+			path = Mock;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000009 /* FocusLiteTests */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */,
+			);
+			path = FocusLiteTests;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F00000000010F /* FocusLite.app */,
+				1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000003 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000120 /* AppKit.framework */,
+				1A2B3C4D5E6F000000000121 /* SwiftUI.framework */,
+				1A2B3C4D5E6F000000000122 /* Carbon.framework */,
+				1A2B3C4D5E6F000000000123 /* XCTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A2B3C4D5E6F000000000010 /* FocusLite */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A2B3C4D5E6F000000000043 /* Build configuration list for PBXNativeTarget "FocusLite" */;
+			buildPhases = (
+				1A2B3C4D5E6F000000000020 /* Sources */,
+				1A2B3C4D5E6F000000000021 /* Resources */,
+				1A2B3C4D5E6F000000000022 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FocusLite;
+			productName = FocusLite;
+			productReference = 1A2B3C4D5E6F00000000010F /* FocusLite.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1A2B3C4D5E6F000000000011 /* FocusLiteTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A2B3C4D5E6F000000000046 /* Build configuration list for PBXNativeTarget "FocusLiteTests" */;
+			buildPhases = (
+				1A2B3C4D5E6F000000000023 /* Sources */,
+				1A2B3C4D5E6F000000000024 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1A2B3C4D5E6F000000000031 /* PBXTargetDependency */,
+			);
+			name = FocusLiteTests;
+			productName = FocusLiteTests;
+			productReference = 1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1A2B3C4D5E6F000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					1A2B3C4D5E6F000000000010 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					1A2B3C4D5E6F000000000011 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 1A2B3C4D5E6F000000000040 /* Build configuration list for PBXProject "FocusLite" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 1A2B3C4D5E6F000000000001 /* Main */;
+			productRefGroup = 1A2B3C4D5E6F000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A2B3C4D5E6F000000000010 /* FocusLite */,
+				1A2B3C4D5E6F000000000011 /* FocusLiteTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A2B3C4D5E6F000000000021 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1A2B3C4D5E6F000000000020 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F000000000200 /* FocusLiteApp.swift in Sources */,
+				1A2B3C4D5E6F000000000201 /* AppDelegate.swift in Sources */,
+				1A2B3C4D5E6F000000000202 /* LauncherWindowController.swift in Sources */,
+				1A2B3C4D5E6F000000000203 /* LauncherView.swift in Sources */,
+				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,
+				1A2B3C4D5E6F000000000205 /* HotKeyManager.swift in Sources */,
+				1A2B3C4D5E6F000000000206 /* ResultItem.swift in Sources */,
+				1A2B3C4D5E6F000000000207 /* ResultProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000208 /* SearchEngine.swift in Sources */,
+				1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */,
+				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1A2B3C4D5E6F000000000023 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1A2B3C4D5E6F000000000031 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1A2B3C4D5E6F000000000010 /* FocusLite */;
+			targetProxy = 1A2B3C4D5E6F000000000030 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1A2B3C4D5E6F000000000041 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		1A2B3C4D5E6F000000000042 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		1A2B3C4D5E6F000000000044 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FocusLite/FocusLite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_TESTABILITY = YES;
+				INFOPLIST_FILE = FocusLite/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.FocusLite;
+				PRODUCT_NAME = FocusLite;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		1A2B3C4D5E6F000000000045 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FocusLite/FocusLite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = FocusLite/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.FocusLite;
+				PRODUCT_NAME = FocusLite;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		1A2B3C4D5E6F000000000047 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.FocusLiteTests;
+				PRODUCT_NAME = FocusLiteTests;
+				SWIFT_VERSION = 5.9;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FocusLite.app/Contents/MacOS/FocusLite";
+			};
+			name = Debug;
+		};
+		1A2B3C4D5E6F000000000048 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.FocusLiteTests;
+				PRODUCT_NAME = FocusLiteTests;
+				SWIFT_VERSION = 5.9;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FocusLite.app/Contents/MacOS/FocusLite";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A2B3C4D5E6F000000000040 /* Build configuration list for PBXProject "FocusLite" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A2B3C4D5E6F000000000041 /* Debug */,
+				1A2B3C4D5E6F000000000042 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1A2B3C4D5E6F000000000043 /* Build configuration list for PBXNativeTarget "FocusLite" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A2B3C4D5E6F000000000044 /* Debug */,
+				1A2B3C4D5E6F000000000045 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1A2B3C4D5E6F000000000046 /* Build configuration list for PBXNativeTarget "FocusLiteTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A2B3C4D5E6F000000000047 /* Debug */,
+				1A2B3C4D5E6F000000000048 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1A2B3C4D5E6F000000000000 /* Project object */;
+}
