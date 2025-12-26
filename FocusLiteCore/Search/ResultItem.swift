@@ -7,6 +7,8 @@ struct ResultItem: Identifiable, Hashable, Sendable {
     let icon: ItemIcon?
     let score: Double
     let action: ResultAction
+    let providerID: String
+    let category: ResultCategory
 
     init(
         id: UUID = UUID(),
@@ -14,7 +16,9 @@ struct ResultItem: Identifiable, Hashable, Sendable {
         subtitle: String? = nil,
         icon: ItemIcon? = nil,
         score: Double = 0,
-        action: ResultAction = .none
+        action: ResultAction = .none,
+        providerID: String = "unknown",
+        category: ResultCategory = .standard
     ) {
         self.id = id
         self.title = title
@@ -22,6 +26,8 @@ struct ResultItem: Identifiable, Hashable, Sendable {
         self.icon = icon
         self.score = score
         self.action = action
+        self.providerID = providerID
+        self.category = category
     }
 }
 
@@ -35,4 +41,9 @@ enum ResultAction: Hashable, Sendable {
     case openURL(URL)
     case copyText(String)
     case runApp(bundleID: String)
+}
+
+enum ResultCategory: Int, Hashable, Sendable {
+    case calc = 0
+    case standard = 1
 }

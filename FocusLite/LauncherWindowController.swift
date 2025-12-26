@@ -1,10 +1,11 @@
 import Cocoa
 import SwiftUI
 
-final class LauncherWindowController {
+final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let viewModel: LauncherViewModel
     private var window: NSWindow?
     private let showOnAllSpaces = true
+    private var keyMonitor: Any?
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
@@ -15,12 +16,14 @@ final class LauncherWindowController {
         centerWindow()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        startKeyMonitor()
         Task { @MainActor in
             viewModel.requestFocus()
         }
     }
 
     func hide() {
+        stopKeyMonitor()
         window?.orderOut(nil)
     }
 
@@ -55,6 +58,7 @@ final class LauncherWindowController {
         window.isMovableByWindowBackground = true
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.delegate = self
 
         let rootView = LauncherView(viewModel: viewModel)
         let hostingView = NSHostingView(rootView: rootView)
@@ -67,6 +71,39 @@ final class LauncherWindowController {
         self.window = window
     }
 
+    private func startKeyMonitor() {
+        stopKeyMonitor()
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            guard self.window?.isVisible == true, self.window?.isKeyWindow == true else { return event }
+            if event.modifierFlags.contains(.command) {
+                return event
+            }
+
+            switch event.keyCode {
+            case 125: // down arrow
+                Task { @MainActor in
+                    self.viewModel.moveSelection(delta: 1)
+                }
+                return nil
+            case 126: // up arrow
+                Task { @MainActor in
+                    self.viewModel.moveSelection(delta: -1)
+                }
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+
+    private func stopKeyMonitor() {
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
+        }
+    }
+
     private func centerWindow() {
         guard let window = window else { return }
         if let screenFrame = NSScreen.main?.visibleFrame {
@@ -76,6 +113,12 @@ final class LauncherWindowController {
         } else {
             window.center()
         }
+    }
+}
+
+extension LauncherWindowController {
+    func windowDidResignKey(_ notification: Notification) {
+        hide()
     }
 }
 

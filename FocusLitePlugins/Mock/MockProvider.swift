@@ -16,21 +16,27 @@ struct MockProvider: ResultProvider {
                 subtitle: "Mock result with highest score",
                 icon: .system("bolt.circle"),
                 score: 0.9,
-                action: .none
+                action: .none,
+                providerID: id,
+                category: .standard
             ),
             ResultItem(
                 title: "\(trimmed) - Documentation",
                 subtitle: "Mock result with medium score",
                 icon: .system("book"),
                 score: 0.6,
-                action: .none
+                action: .none,
+                providerID: id,
+                category: .standard
             ),
             ResultItem(
                 title: "\(trimmed) - Suggestion",
                 subtitle: "Mock result with lower score",
                 icon: .system("lightbulb"),
                 score: 0.3,
-                action: .none
+                action: .none,
+                providerID: id,
+                category: .standard
             )
         ]
     }

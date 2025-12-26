@@ -8,7 +8,8 @@ final class SearchEngine {
     }
 
     func search(query: String) async -> [ResultItem] {
-        await withTaskGroup(of: [ResultItem].self) { group in
+        let preferCalc = SearchQueryClassifier.isMathQuery(query)
+        return await withTaskGroup(of: [ResultItem].self) { group in
             for provider in providers {
                 group.addTask {
                     await provider.results(for: query)
@@ -18,6 +19,15 @@ final class SearchEngine {
             var items: [ResultItem] = []
             for await result in group {
                 items.append(contentsOf: result)
+            }
+
+            if preferCalc {
+                return items.sorted {
+                    if $0.category != $1.category {
+                        return $0.category.rawValue < $1.category.rawValue
+                    }
+                    return $0.score > $1.score
+                }
             }
 
             return items.sorted { $0.score > $1.score }

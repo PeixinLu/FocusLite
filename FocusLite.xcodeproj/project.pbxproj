@@ -17,12 +17,16 @@
 		1A2B3C4D5E6F000000000208 /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010B /* SearchEngine.swift */; };
 		1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010C /* MockProvider.swift */; };
 		1A2B3C4D5E6F00000000020A /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010D /* Log.swift */; };
+		1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000111 /* CalcProvider.swift */; };
+		1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */; };
+		1A2B3C4D5E6F000000000213 /* SearchQueryClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */; };
 		1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000108 /* Assets.xcassets */; };
 		1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000120 /* AppKit.framework */; };
 		1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000121 /* SwiftUI.framework */; };
 		1A2B3C4D5E6F00000000020E /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000122 /* Carbon.framework */; };
 		1A2B3C4D5E6F00000000020F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000123 /* XCTest.framework */; };
 		1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */; };
+		1A2B3C4D5E6F000000000214 /* ExpressionParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +55,10 @@
 		1A2B3C4D5E6F00000000010C /* MockProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010D /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiteTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000111 /* CalcProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParser.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQueryClassifier.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParserTests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010F /* FocusLite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = FocusLite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = FocusLiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000120 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -124,6 +132,7 @@
 				1A2B3C4D5E6F000000000109 /* ResultItem.swift */,
 				1A2B3C4D5E6F00000000010A /* ResultProvider.swift */,
 				1A2B3C4D5E6F00000000010B /* SearchEngine.swift */,
+				1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */,
 			);
 			path = Search;
 			sourceTree = "<group>";
@@ -139,9 +148,19 @@
 		1A2B3C4D5E6F000000000007 /* FocusLitePlugins */ = {
 			isa = PBXGroup;
 			children = (
+				1A2B3C4D5E6F00000000000B /* Calc */,
 				1A2B3C4D5E6F000000000008 /* Mock */,
 			);
 			path = FocusLitePlugins;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000000B /* Calc */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000111 /* CalcProvider.swift */,
+				1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */,
+			);
+			path = Calc;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F000000000008 /* Mock */ = {
@@ -156,6 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */,
+				1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */,
 			);
 			path = FocusLiteTests;
 			sourceTree = "<group>";
@@ -276,6 +296,9 @@
 				1A2B3C4D5E6F000000000206 /* ResultItem.swift in Sources */,
 				1A2B3C4D5E6F000000000207 /* ResultProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000208 /* SearchEngine.swift in Sources */,
+				1A2B3C4D5E6F000000000213 /* SearchQueryClassifier.swift in Sources */,
+				1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */,
 				1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */,
 				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
 			);
@@ -286,6 +309,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */,
+				1A2B3C4D5E6F000000000214 /* ExpressionParserTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

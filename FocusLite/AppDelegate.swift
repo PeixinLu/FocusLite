@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let providers: [any ResultProvider] = [MockProvider()]
+        let providers: [any ResultProvider] = [CalcProvider(), MockProvider()]
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
         viewModel.onExit = { [weak self] in

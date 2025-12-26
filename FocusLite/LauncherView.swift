@@ -19,6 +19,9 @@ struct LauncherView: View {
                     .onChange(of: viewModel.query) { newValue in
                         viewModel.search(query: newValue)
                     }
+                    .onSubmit {
+                        viewModel.submitPrimaryAction()
+                    }
             }
             .padding(16)
 
@@ -30,8 +33,11 @@ struct LauncherView: View {
                         EmptyStateView()
                             .padding(.top, 40)
                     } else {
-                        ForEach(viewModel.results) { item in
-                            ResultRow(item: item)
+                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
+                                .onTapGesture {
+                                    viewModel.selectIndex(index)
+                                }
                         }
                     }
                 }
@@ -52,11 +58,20 @@ struct LauncherView: View {
         .onExitCommand {
             viewModel.handleExit()
         }
+        .overlay(alignment: .topTrailing) {
+            if let message = viewModel.toastMessage {
+                ToastView(message: message)
+                    .padding(12)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
     }
 }
 
 private struct ResultRow: View {
     let item: ResultItem
+    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -77,7 +92,7 @@ private struct ResultRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
         )
     }
 
@@ -121,5 +136,22 @@ private struct EmptyStateView: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
+    }
+}
+
+private struct ToastView: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .shadow(radius: 2)
+            )
+            .foregroundColor(.primary)
     }
 }
