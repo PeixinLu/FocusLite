@@ -54,7 +54,16 @@ final class LauncherViewModel: ObservableObject {
         case .copyText(let text):
             copyToPasteboard(text)
             showToast("已复制")
-        case .openURL, .runApp, .none:
+        case .openURL(let url):
+            NSWorkspace.shared.open(url)
+        case .runApp(let bundleID):
+            NSWorkspace.shared.launchApplication(
+                withBundleIdentifier: bundleID,
+                options: [.default],
+                additionalEventParamDescriptor: nil,
+                launchIdentifier: nil
+            )
+        case .none:
             break
         }
 

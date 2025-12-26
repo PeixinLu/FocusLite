@@ -34,6 +34,7 @@ struct ResultItem: Identifiable, Hashable, Sendable {
 enum ItemIcon: Hashable, Sendable {
     case system(String)
     case bundle(String)
+    case filePath(String)
 }
 
 enum ResultAction: Hashable, Sendable {

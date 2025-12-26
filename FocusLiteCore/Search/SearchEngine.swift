@@ -26,11 +26,25 @@ final class SearchEngine {
                     if $0.category != $1.category {
                         return $0.category.rawValue < $1.category.rawValue
                     }
-                    return $0.score > $1.score
+                    if $0.score != $1.score {
+                        return $0.score > $1.score
+                    }
+                    if $0.title.count != $1.title.count {
+                        return $0.title.count < $1.title.count
+                    }
+                    return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
                 }
             }
 
-            return items.sorted { $0.score > $1.score }
+            return items.sorted {
+                if $0.score != $1.score {
+                    return $0.score > $1.score
+                }
+                if $0.title.count != $1.title.count {
+                    return $0.title.count < $1.title.count
+                }
+                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
         }
     }
 }

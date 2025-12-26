@@ -20,6 +20,11 @@
 		1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000111 /* CalcProvider.swift */; };
 		1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */; };
 		1A2B3C4D5E6F000000000213 /* SearchQueryClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */; };
+		1A2B3C4D5E6F000000000230 /* AppSearchProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000130 /* AppSearchProvider.swift */; };
+		1A2B3C4D5E6F000000000231 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000132 /* AppIndex.swift */; };
+		1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */; };
+		1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000134 /* Matcher.swift */; };
+		1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */; };
 		1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000108 /* Assets.xcassets */; };
 		1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000120 /* AppKit.framework */; };
 		1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000121 /* SwiftUI.framework */; };
@@ -27,6 +32,7 @@
 		1A2B3C4D5E6F00000000020F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000123 /* XCTest.framework */; };
 		1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */; };
 		1A2B3C4D5E6F000000000214 /* ExpressionParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */; };
+		1A2B3C4D5E6F000000000241 /* MatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000141 /* MatchingTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,10 +61,16 @@
 		1A2B3C4D5E6F00000000010C /* MockProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010D /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusLiteTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000130 /* AppSearchProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000132 /* AppIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndex.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNameIndex.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000134 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000111 /* CalcProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParser.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQueryClassifier.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParserTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000141 /* MatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingTests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010F /* FocusLite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = FocusLite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = FocusLiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000120 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -149,9 +161,22 @@
 			isa = PBXGroup;
 			children = (
 				1A2B3C4D5E6F00000000000B /* Calc */,
+				1A2B3C4D5E6F00000000000C /* AppSearch */,
 				1A2B3C4D5E6F000000000008 /* Mock */,
 			);
 			path = FocusLitePlugins;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000000C /* AppSearch */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000130 /* AppSearchProvider.swift */,
+				1A2B3C4D5E6F000000000132 /* AppIndex.swift */,
+				1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */,
+				1A2B3C4D5E6F000000000134 /* Matcher.swift */,
+				1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */,
+			);
+			path = AppSearch;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F00000000000B /* Calc */ = {
@@ -176,6 +201,7 @@
 			children = (
 				1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */,
 				1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */,
+				1A2B3C4D5E6F000000000141 /* MatchingTests.swift */,
 			);
 			path = FocusLiteTests;
 			sourceTree = "<group>";
@@ -299,6 +325,11 @@
 				1A2B3C4D5E6F000000000213 /* SearchQueryClassifier.swift in Sources */,
 				1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */,
+				1A2B3C4D5E6F000000000230 /* AppSearchProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000231 /* AppIndex.swift in Sources */,
+				1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */,
+				1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */,
+				1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */,
 				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
 			);
@@ -310,6 +341,7 @@
 			files = (
 				1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */,
 				1A2B3C4D5E6F000000000214 /* ExpressionParserTests.swift in Sources */,
+				1A2B3C4D5E6F000000000241 /* MatchingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

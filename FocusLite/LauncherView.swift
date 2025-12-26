@@ -113,6 +113,15 @@ private struct ResultRow: View {
             } else {
                 placeholderIcon
             }
+        case .filePath(let path):
+            if let image = AppIconCache.shared.icon(for: path) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+            } else {
+                placeholderIcon
+            }
         case .none:
             placeholderIcon
         }
@@ -153,5 +162,20 @@ private struct ToastView: View {
                     .shadow(radius: 2)
             )
             .foregroundColor(.primary)
+    }
+}
+
+private final class AppIconCache {
+    static let shared = AppIconCache()
+    private let cache = NSCache<NSString, NSImage>()
+
+    func icon(for path: String) -> NSImage? {
+        if let cached = cache.object(forKey: path as NSString) {
+            return cached
+        }
+
+        let image = NSWorkspace.shared.icon(forFile: path)
+        cache.setObject(image, forKey: path as NSString)
+        return image
     }
 }
