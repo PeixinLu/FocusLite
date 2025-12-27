@@ -98,8 +98,8 @@ struct TranslateSettingsView: View {
                     note: "需要有道智云应用密钥",
                     id: .youdaoAPI
                 ) {
-                    TextField("App Key", text: $viewModel.youdaoAppKey)
-                    SecureField("App Secret", text: $viewModel.youdaoSecret)
+                    TextField("App Key（应用ID）", text: $viewModel.youdaoAppKey)
+                    SecureField("App Secret（应用密钥）", text: $viewModel.youdaoSecret)
                 }
 
                 serviceSection(
@@ -107,8 +107,8 @@ struct TranslateSettingsView: View {
                     note: "需要百度翻译开放平台密钥",
                     id: .baiduAPI
                 ) {
-                    TextField("App ID", text: $viewModel.baiduAppID)
-                    SecureField("App Secret", text: $viewModel.baiduSecret)
+                    TextField("App ID（应用ID）", text: $viewModel.baiduAppID)
+                    SecureField("App Secret（应用密钥）", text: $viewModel.baiduSecret)
                 }
 
                 serviceSection(
@@ -116,7 +116,7 @@ struct TranslateSettingsView: View {
                     note: "需要 Google Cloud API Key",
                     id: .googleAPI
                 ) {
-                    SecureField("API Key", text: $viewModel.googleAPIKey)
+                    SecureField("API Key（密钥）", text: $viewModel.googleAPIKey)
                 }
 
                 serviceSection(
@@ -124,14 +124,13 @@ struct TranslateSettingsView: View {
                     note: "需要 Azure Translator Key",
                     id: .bingAPI
                 ) {
-                    SecureField("API Key", text: $viewModel.bingAPIKey)
-                    TextField("Region (可选)", text: $viewModel.bingRegion)
-                    TextField("Endpoint", text: $viewModel.bingEndpoint)
+                    SecureField("API Key（密钥）", text: $viewModel.bingAPIKey)
+                    TextField("区域（可选）", text: $viewModel.bingRegion)
+                    TextField("接口地址", text: $viewModel.bingEndpoint)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Toggle("系统翻译（本地）", isOn: serviceBinding(.system))
-                    Toggle("Mock（调试）", isOn: serviceBinding(.mock))
                 }
             }
             .formStyle(.grouped)

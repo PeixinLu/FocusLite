@@ -86,8 +86,6 @@ actor TranslationCoordinator {
                 return APITranslationService(id: id, displayName: "Google API")
             case .bingAPI:
                 return APITranslationService(id: id, displayName: "微软翻译 API")
-            case .mock:
-                return MockTranslationService()
             }
         }
     }

@@ -108,8 +108,6 @@ enum TranslatePreferences {
             return !googleAPIKeyValue.isEmpty
         case .bingAPI:
             return !bingAPIKeyValue.isEmpty
-        case .mock:
-            return true
         }
     }
 }

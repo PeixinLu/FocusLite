@@ -177,9 +177,9 @@ struct SnippetsManagerView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Snippets")
+                Text("片段")
                     .font(.system(size: 20, weight: .semibold))
-                Text("Manage text shortcuts and reusable templates.")
+                Text("管理文本快捷输入与模板。")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
@@ -197,10 +197,10 @@ struct SnippetsManagerView: View {
 
     private var prefixSettings: some View {
         HStack(spacing: 8) {
-            Text("Search prefix")
+            Text("搜索前缀")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
-            TextField("e.g. sn", text: $viewModel.searchPrefixText)
+            TextField("如 sn", text: $viewModel.searchPrefixText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 120)
                 .onSubmit {
@@ -215,9 +215,9 @@ struct SnippetsManagerView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Text("No snippets yet")
+            Text("还没有片段")
                 .font(.system(size: 14, weight: .medium))
-            Text("Click + to add your first snippet.")
+            Text("点击 + 添加你的第一个片段。")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
@@ -275,12 +275,12 @@ private struct SnippetEditorView: View {
     var body: some View {
         VStack(spacing: 16) {
             Form {
-                TextField("Title", text: $draft.title)
-                TextField("Keyword (optional, without ;)", text: $draft.keyword)
-                TextField("Tags (comma separated)", text: $draft.tagsText)
+                TextField("标题", text: $draft.title)
+                TextField("关键词（可选，不含 ;）", text: $draft.keyword)
+                TextField("标签（逗号分隔）", text: $draft.tagsText)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Content")
+                    Text("内容")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                     TextEditor(text: $draft.content)
@@ -297,9 +297,9 @@ private struct SnippetEditorView: View {
             HStack {
                 Spacer()
 
-                Button("Cancel", action: onCancel)
+                Button("取消", action: onCancel)
 
-                Button("Save") {
+                Button("保存") {
                     onSave(draft)
                 }
                 .buttonStyle(.borderedProminent)

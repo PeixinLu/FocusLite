@@ -62,7 +62,6 @@ A macOS-only Spotlight-style launcher built with Swift 5.9+, SwiftUI, and AppKit
 - Window shows but cannot type: click inside the window once, or relaunch the app after
   granting permissions (future milestones). If it persists, file an issue with macOS version and logs.
 - Hotkey registration fails: use the menu bar icon to toggle the window.
-- Translation shows only Mock: enable at least one service in Translate Settings and provide API keys.
 - System translation fails with missing language packs: install the required language packs in macOS
   system settings or disable System in Translate Settings.
 

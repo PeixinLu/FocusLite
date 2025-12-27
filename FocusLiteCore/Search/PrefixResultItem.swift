@@ -20,6 +20,10 @@ enum PrefixResultItemBuilder {
         }
     }
 
+    static func fallbackItem(for entry: PrefixEntry) -> ResultItem {
+        resultItem(from: entry, normalizedQuery: "")
+    }
+
     private static func shouldInclude(entry: PrefixEntry, normalizedQuery: String) -> Bool {
         guard !normalizedQuery.isEmpty else { return true }
         return entry.id.hasPrefix(normalizedQuery)

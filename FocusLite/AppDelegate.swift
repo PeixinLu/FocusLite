@@ -4,9 +4,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: LauncherWindowController?
-    private var snippetsWindowController: SnippetsManagerWindowController?
-    private var clipboardSettingsWindowController: ClipboardSettingsWindowController?
-    private var translateSettingsWindowController: TranslateSettingsWindowController?
+    private var settingsWindowController: SettingsWindowController?
     private var launcherViewModel: LauncherViewModel?
     private let clipboardMonitor = ClipboardMonitor()
     private let hotKeyManager = HotKeyManager.shared
@@ -21,8 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SnippetsProvider(),
             ClipboardProvider(),
             TranslateProvider(),
-            AppSearchProvider(),
-            MockProvider()
+            AppSearchProvider()
         ]
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
@@ -30,8 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.onExit = { [weak self] in
             self?.windowController?.hide()
         }
-        viewModel.onOpenSnippetsManager = { [weak self] in
-            self?.showSnippetsManager()
+        viewModel.onOpenSettings = { [weak self] tab in
+            self?.showSettings(tab: tab)
         }
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
@@ -40,10 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let snippetsViewModel = SnippetsManagerViewModel(store: .shared)
         let clipboardSettingsViewModel = ClipboardSettingsViewModel()
         let translateSettingsViewModel = TranslateSettingsViewModel()
+        let settingsViewModel = SettingsViewModel(
+            clipboardViewModel: clipboardSettingsViewModel,
+            snippetsViewModel: snippetsViewModel,
+            translateViewModel: translateSettingsViewModel
+        )
         windowController = LauncherWindowController(viewModel: viewModel)
-        snippetsWindowController = SnippetsManagerWindowController(viewModel: snippetsViewModel)
-        clipboardSettingsWindowController = ClipboardSettingsWindowController(viewModel: clipboardSettingsViewModel)
-        translateSettingsWindowController = TranslateSettingsWindowController(viewModel: translateSettingsViewModel)
+        settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
         setupStatusItem()
         registerLauncherHotKey()
         registerClipboardHotKey()
@@ -69,16 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController?.toggle()
     }
 
-    @objc private func showSnippetsManager() {
-        snippetsWindowController?.show()
+    @MainActor @objc private func showSettingsWindow() {
+        showSettings(tab: .clipboard)
     }
 
-    @objc private func showClipboardSettings() {
-        clipboardSettingsWindowController?.show()
-    }
-
-    @objc private func showTranslateSettings() {
-        translateSettingsWindowController?.show()
+    @MainActor private func showSettings(tab: SettingsTab) {
+        settingsWindowController?.show(tab: tab)
     }
 
     @objc private func toggleClipboardRecording() {
@@ -102,18 +98,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Toggle FocusLite", action: #selector(toggleWindow), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Snippets...", action: #selector(showSnippetsManager), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "显示/隐藏 FocusLite", action: #selector(toggleWindow), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "设置…", action: #selector(showSettingsWindow), keyEquivalent: ","))
 
-        let clipboardPause = NSMenuItem(title: "Pause Clipboard Recording", action: #selector(toggleClipboardRecording), keyEquivalent: "")
+        let clipboardPause = NSMenuItem(title: "暂停剪贴板记录", action: #selector(toggleClipboardRecording), keyEquivalent: "")
         clipboardPause.state = ClipboardPreferences.isPaused ? .on : .off
         menu.addItem(clipboardPause)
         clipboardPauseItem = clipboardPause
 
-        menu.addItem(NSMenuItem(title: "Clipboard Settings...", action: #selector(showClipboardSettings), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "翻译设置...", action: #selector(showTranslateSettings), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit FocusLite", action: #selector(quitApp), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "退出 FocusLite", action: #selector(quitApp), keyEquivalent: "q"))
         menu.items.forEach { $0.target = self }
         item.menu = menu
         statusItem = item

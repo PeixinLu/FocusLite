@@ -1,34 +1,40 @@
 import Cocoa
 import SwiftUI
 
-final class TranslateSettingsWindowController: NSObject, NSWindowDelegate {
+@MainActor
+final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
-    private let viewModel: TranslateSettingsViewModel
+    private let viewModel: SettingsViewModel
 
-    init(viewModel: TranslateSettingsViewModel) {
+    init(viewModel: SettingsViewModel) {
         self.viewModel = viewModel
     }
 
-    func show() {
+    func show(tab: SettingsTab = .clipboard) {
+        viewModel.selectedTab = tab
         createWindowIfNeeded()
-        window?.makeKeyAndOrderFront(nil)
+        guard let window else {
+            Log.info("Settings window was not created.")
+            return
+        }
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     private func createWindowIfNeeded() {
         guard window == nil else { return }
-        let contentRect = NSRect(x: 0, y: 0, width: 620, height: 640)
+        let contentRect = NSRect(x: 0, y: 0, width: 720, height: 680)
         let window = NSWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "翻译设置"
+        window.title = "设置"
         window.center()
         window.delegate = self
 
-        let rootView = TranslateSettingsView(viewModel: self.viewModel)
+        let rootView = SettingsView(viewModel: self.viewModel)
         window.contentView = NSHostingView(rootView: rootView)
         self.window = window
     }

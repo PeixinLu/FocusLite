@@ -15,7 +15,7 @@ final class LauncherViewModel: ObservableObject {
     private var toastTask: Task<Void, Never>?
 
     var onExit: (() -> Void)?
-    var onOpenSnippetsManager: (() -> Void)?
+    var onOpenSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
 
     init(searchEngine: SearchEngine) {
@@ -72,6 +72,13 @@ final class LauncherViewModel: ObservableObject {
         guard let item = selectedItem() else { return }
 
         if item.isPrefix {
+            let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if item.providerID == TranslateProvider.providerID,
+               !trimmed.isEmpty,
+               !searchText.lowercased().hasPrefix(item.title.lowercased()) {
+                activatePrefix(providerID: item.providerID, carryQuery: trimmed)
+                return
+            }
             activatePrefix(providerID: item.providerID)
             return
         }
@@ -109,7 +116,11 @@ final class LauncherViewModel: ObservableObject {
     }
 
     func openSnippetsManager() {
-        onOpenSnippetsManager?()
+        onOpenSettings?(.snippets)
+    }
+
+    func openSettings(tab: SettingsTab = .clipboard) {
+        onOpenSettings?(tab)
     }
 
     func activateClipboardSearch() {
@@ -209,7 +220,13 @@ final class LauncherViewModel: ObservableObject {
                 }
                 await MainActor.run { [weak self] in
                     guard self?.searchState == currentState else { return }
-                    self?.setResults(prefixItems + items)
+                    var combined = prefixItems + items
+                    if items.isEmpty,
+                       let entry = PrefixRegistry.entries().first(where: { $0.providerID == TranslateProvider.providerID }),
+                       !prefixItems.contains(where: { $0.title == entry.title }) {
+                        combined.append(PrefixResultItemBuilder.fallbackItem(for: entry))
+                    }
+                    self?.setResults(combined)
                 }
             }
         case .prefixed(let providerID):
@@ -238,9 +255,14 @@ final class LauncherViewModel: ObservableObject {
         isUpdatingText = false
     }
 
-    private func activatePrefix(providerID: String) {
+    private func activatePrefix(providerID: String, carryQuery: String? = nil) {
         guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == providerID }) else { return }
-        let update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        let update: SearchStateReducer.UpdateResult
+        if let carryQuery, !carryQuery.isEmpty {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry, carryQuery: carryQuery)
+        } else {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        }
         applyUpdate(update)
         focusToken = UUID()
         performSearch()

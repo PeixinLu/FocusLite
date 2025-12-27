@@ -40,31 +40,31 @@ struct ClipboardSettingsView: View {
             header
 
             Form {
-                Toggle("Enable clipboard recording", isOn: $viewModel.isRecordingEnabled)
+                Toggle("启用剪贴板记录", isOn: $viewModel.isRecordingEnabled)
                     .onChange(of: viewModel.isRecordingEnabled) { _ in
                         ClipboardPreferences.isPaused = !viewModel.isRecordingEnabled
                     }
 
-                TextField("Clipboard hotkey (e.g. option+v)", text: $viewModel.hotKeyText)
+                TextField("剪贴板快捷键（如 option+v）", text: $viewModel.hotKeyText)
                     .frame(width: 240)
 
-                TextField("Search prefix (e.g. c)", text: $viewModel.searchPrefixText)
+                TextField("搜索前缀（如 c）", text: $viewModel.searchPrefixText)
                     .frame(width: 160)
 
-                TextField("Max entries (10-1000)", text: $viewModel.maxEntriesText)
+                TextField("最大条目数（10-1000）", text: $viewModel.maxEntriesText)
                     .frame(width: 200)
 
-                Picker("History retention", selection: $viewModel.retentionHours) {
-                    Text("3 hours").tag(3)
-                    Text("12 hours").tag(12)
-                    Text("1 day").tag(24)
-                    Text("3 days").tag(72)
-                    Text("1 week").tag(168)
+                Picker("历史保留", selection: $viewModel.retentionHours) {
+                    Text("3 小时").tag(3)
+                    Text("12 小时").tag(12)
+                    Text("1 天").tag(24)
+                    Text("3 天").tag(72)
+                    Text("1 周").tag(168)
                 }
                 .frame(width: 200)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Ignored apps (bundle IDs, one per line)")
+                    Text("忽略的应用（Bundle ID，每行一个）")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                     TextEditor(text: $viewModel.ignoredAppsText)
@@ -80,7 +80,7 @@ struct ClipboardSettingsView: View {
 
             HStack {
                 Spacer()
-                Button("Save") {
+                Button("保存") {
                     viewModel.applyChanges()
                 }
                 .buttonStyle(.borderedProminent)
@@ -92,9 +92,9 @@ struct ClipboardSettingsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Clipboard Settings")
+            Text("剪贴板设置")
                 .font(.system(size: 20, weight: .semibold))
-            Text("FocusLite stores clipboard history locally and never uploads it.")
+            Text("剪贴板记录仅保存在本地，不会上传。")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
