@@ -55,8 +55,13 @@ jobs:
       - name: Zip app
         run: |
           APP_PATH="$PWD/build/FocusLite.xcarchive/Products/Applications/FocusLite.app"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist"
+          if [ ! -f "$APP_PATH/Contents/Info.plist" ]; then
+            echo "Info.plist not found at $APP_PATH" >&2
+            find "$PWD/build" -maxdepth 3 -type f -name Info.plist -print
+            exit 1
+          fi
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" || { plutil -p "$APP_PATH/Contents/Info.plist"; exit 1; }
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist" || { plutil -p "$APP_PATH/Contents/Info.plist"; exit 1; }
           mkdir -p artifacts
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
           ls -lh "$PWD/artifacts/FocusLite.zip"
