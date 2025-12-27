@@ -62,6 +62,7 @@ jobs:
         run: |
           curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
           tar -xf sparkle.tar.xz
+          ls -la Sparkle-${SPARKLE_VERSION}/bin
           echo "SPARKLE_BIN=$PWD/Sparkle-${SPARKLE_VERSION}/bin" >> "$GITHUB_ENV"
 
       - name: Prepare Sparkle private key
