@@ -37,6 +37,7 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME#v}"
           echo "app_version=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Build archive
         run: |
@@ -101,10 +102,18 @@ jobs:
       - name: Generate appcast
         run: |
           set -euo pipefail
-          DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          ZIP_NAME="FocusLite.zip"
+          DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}"
           cd artifacts
           "$SPARKLE_BIN/generate_appcast" --ed-key-file ../sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" .
           rm -f ../sparkle_private_key.pem
+          ls -lh "$ZIP_NAME" appcast.xml
+          if ! grep -q "releases/download/${TAG_NAME}/${ZIP_NAME}" appcast.xml; then
+            echo "Appcast enclosure URL does not point to releases/download/${TAG_NAME}/${ZIP_NAME}" >&2
+            cat appcast.xml
+            exit 1
+          fi
           cat appcast.xml
 
       - name: Create GitHub Release
