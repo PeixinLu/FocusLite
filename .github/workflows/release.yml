@@ -60,10 +60,23 @@ jobs:
 
       - name: Download Sparkle tools
         run: |
+          set -euo pipefail
           curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
           tar -xf sparkle.tar.xz
-          ls -la Sparkle-${SPARKLE_VERSION}/bin
-          echo "SPARKLE_BIN=$PWD/Sparkle-${SPARKLE_VERSION}/bin" >> "$GITHUB_ENV"
+          SPARKLE_DIR=$(tar -tf sparkle.tar.xz | head -1 | cut -d/ -f1 | tr -d '/')
+          echo "Detected Sparkle dir: $SPARKLE_DIR"
+          ls -la "$SPARKLE_DIR"
+          SPARKLE_BIN="$PWD/$SPARKLE_DIR/bin"
+          if [ ! -x "$SPARKLE_BIN/generate_appcast" ]; then
+            FOUND=$(find "$SPARKLE_DIR" -type f -name generate_appcast | head -1 || true)
+            if [ -z "${FOUND:-}" ]; then
+              echo "generate_appcast not found in Sparkle package" >&2
+              exit 1
+            fi
+            SPARKLE_BIN="$PWD/$(dirname "$FOUND")"
+          fi
+          ls -la "$SPARKLE_BIN"
+          echo "SPARKLE_BIN=$SPARKLE_BIN" >> "$GITHUB_ENV"
 
       - name: Prepare Sparkle private key
         env:
