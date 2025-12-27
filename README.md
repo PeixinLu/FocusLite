@@ -11,6 +11,32 @@ A macOS-only Spotlight-style launcher built with Swift 5.9+, SwiftUI, and AppKit
 2. Select the `FocusLite` scheme.
 3. Run (Cmd+R).
 
+## 自动更新（Sparkle 2 + GitHub）
+- 应用内：状态栏菜单新增 `Check for Updates…`，设置面板新增“更新”页（显示版本号、手动检查、自动检查开关，失败会弹窗提示）。
+- Feed：`SUFeedURL` 指向 `https://peixinlu.github.io/focuslight/appcast.xml`（由 CI 发布到 GitHub Pages），`SUPublicEDKey` 已配置。
+- CI：`.github/workflows/release.yml` 在 `v*` tag 时运行，使用 `Sparkle 2.8.1` 工具链，禁用签名构建 Release、打包 `FocusLite.zip`（顶层直接是 `.app`），生成 `appcast.xml`（含 `sparkle:edSignature`），发布 GitHub Release，并部署 appcast 到 Pages（无需手建 `gh-pages` 分支）。
+- 版本策略：tag `vX.Y.Z` 会注入为 `MARKETING_VERSION`，构建号使用 `GITHUB_RUN_NUMBER` 写入 `CFBundleVersion`，确保可递增比较。
+- 示例：`docs/appcast.example.xml` 展示生成结果结构；正式 feed 由 CI 覆盖。
+
+### 我需要手工做的事
+- GitHub Secrets：添加 `SPARKLE_ED25519_PRIVATE_KEY`（对应 `SUPublicEDKey` 的私钥，PEM 内容）。不要提交到仓库。
+- GitHub Pages：第一次运行 workflow 会自动创建/更新 Pages 发布，无需手工建分支；如需自定义域名可在仓库设置中调整。
+- Tag：在推送 `vX.Y.Z` 前确认版本号递增；如需变更公钥，在 `FocusLite/Info.plist` 更新 `SUPublicEDKey` 并重新生成私钥。
+
+### 端到端验证
+1. 下载并运行旧版本（上一条 Release）。
+2. 在 main 分支合并改动后打 tag（如 `v0.1.2`）并 push。
+3. 等待 GitHub Actions 生成 Release 资产和 Pages `appcast.xml`。
+4. 旧版应用里点击菜单或设置页的 `Check for Updates…`，应弹出 Sparkle 面板并下载新版本。
+5. 更新完成后重新打开设置页，版本号应与新 tag 匹配。
+
+### 常见问题排查
+- Feed 404 或旧内容：检查 Actions 是否成功，`actions/deploy-pages` 是否运行；确保 `SUFeedURL` 使用 `https://<owner>.github.io/focuslight/appcast.xml`。
+- 签名缺失/校验失败：确认 Secrets 中存在正确的 `SPARKLE_ED25519_PRIVATE_KEY`，与 `SUPublicEDKey` 成对；如更换密钥，老版本需要新的公钥更新才能信任新包。
+- Zip 结构错误：确保通过 workflow 生成的 `FocusLite.zip`，解压后顶层直接是 `FocusLite.app`，不要再包一层目录。
+- 版本号不递增：tag 必须递增；`CFBundleVersion` 由 `GITHUB_RUN_NUMBER` 写入，重复 tag 会导致比较失败。
+- 网络/Feed 不可用：Sparkle 会弹出错误提示且不会崩溃；若完全无 UI，请确认应用能访问外网并未被防火墙阻断。
+
 ## Expected behavior
 - A centered, borderless launcher window appears with rounded corners and shadow.
 - The window stays floating above other apps and can join all spaces.

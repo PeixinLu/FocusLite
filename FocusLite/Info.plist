@@ -14,5 +14,9 @@
 	<string>public.app-category.productivity</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://peixinlu.github.io/focuslight/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>rePHHPEpZAND6R6/8ALe1AoSnMMRBYoZGKSZfFuN45E=</string>
 </dict>
 </plist>

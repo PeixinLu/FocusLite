@@ -2,12 +2,14 @@ import Carbon.HIToolbox
 import Cocoa
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: LauncherWindowController?
     private var settingsWindowController: SettingsWindowController?
     private var launcherViewModel: LauncherViewModel?
     private let clipboardMonitor = ClipboardMonitor()
     private let hotKeyManager = HotKeyManager.shared
+    private let appUpdater = AppUpdater.shared
     private var statusItem: NSStatusItem?
     private var clipboardPauseItem: NSMenuItem?
     private let launcherHotKeyID: UInt32 = 1
@@ -38,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let clipboardSettingsViewModel = ClipboardSettingsViewModel()
         let translateSettingsViewModel = TranslateSettingsViewModel()
         let settingsViewModel = SettingsViewModel(
+            appUpdater: appUpdater,
             clipboardViewModel: clipboardSettingsViewModel,
             snippetsViewModel: snippetsViewModel,
             translateViewModel: translateSettingsViewModel
@@ -82,6 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleUserDefaultsChange()
     }
 
+    @objc private func checkForUpdates() {
+        appUpdater.checkForUpdates()
+    }
+
     @objc private func handleUserDefaultsChange() {
         clipboardPauseItem?.state = ClipboardPreferences.isPaused ? .on : .off
         registerClipboardHotKey()
@@ -100,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "显示/隐藏 FocusLite", action: #selector(toggleWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "设置…", action: #selector(showSettingsWindow), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""))
 
         let clipboardPause = NSMenuItem(title: "暂停剪贴板记录", action: #selector(toggleClipboardRecording), keyEquivalent: "")
         clipboardPause.state = ClipboardPreferences.isPaused ? .on : .off

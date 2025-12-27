@@ -62,6 +62,9 @@
 		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
 		1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */; };
+		81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */; };
+		98746D42D3E646CCB757A85D /* AppUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98746D42D3E646CCB757A85C /* AppUpdater.swift */; };
+		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -132,8 +135,10 @@
 		1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProxy.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
+		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000430 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +147,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */,
+				96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */,
 				1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */,
 				1A2B3C4D5E6F00000000020E /* Carbon.framework in Frameworks */,
 			);
@@ -203,9 +209,11 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */,
+				81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */,
 				1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */,
 				1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */,
 				1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */,
+				98746D42D3E646CCB757A85C /* AppUpdater.swift */,
 				1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */,
 				1A2B3C4D5E6F000000000108 /* Assets.xcassets */,
 				1A2B3C4D5E6F000000000106 /* Info.plist */,
@@ -350,6 +358,9 @@
 			);
 			dependencies = (
 			);
+			packageProductDependencies = (
+				96AE658B2F0039F200F4C762 /* Sparkle */,
+			);
 			name = FocusLite;
 			productName = FocusLite;
 			productReference = 1A2B3C4D5E6F00000000010F /* FocusLite.app */;
@@ -396,6 +407,9 @@
 				en,
 			);
 			mainGroup = 1A2B3C4D5E6F000000000001;
+			packageReferences = (
+				96AE658A2F0039F200F4C762 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = 1A2B3C4D5E6F000000000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -432,7 +446,9 @@
 				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */,
+				81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,
+				98746D42D3E646CCB757A85D /* AppUpdater.swift in Sources */,
 				1A2B3C4D5E6F000000000260 /* ClipboardSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000250 /* SnippetsManagerView.swift in Sources */,
 				1A2B3C4D5E6F000000000205 /* HotKeyManager.swift in Sources */,
@@ -633,6 +649,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		96AE658A2F0039F200F4C762 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		96AE658B2F0039F200F4C762 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 96AE658A2F0039F200F4C762 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1A2B3C4D5E6F000000000000 /* Project object */;
 }

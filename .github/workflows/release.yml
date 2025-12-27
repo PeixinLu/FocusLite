@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  SPARKLE_VERSION: "2.8.1"
+
+jobs:
+  release:
+    runs-on: macos-14
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME#v}"
+          echo "app_version=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Build archive
+        run: |
+          set -euo pipefail
+          ARCHIVE_PATH="$PWD/build/FocusLite.xcarchive"
+          xcodebuild -project FocusLite.xcodeproj \
+            -scheme FocusLite \
+            -configuration Release \
+            -archivePath "$ARCHIVE_PATH" \
+            MARKETING_VERSION="${{ steps.version.outputs.app_version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            -allowProvisioningUpdates \
+            clean archive
+
+      - name: Zip app
+        run: |
+          APP_PATH="$PWD/build/FocusLite.xcarchive/Products/Applications/FocusLite.app"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/FocusLite.zip"
+          ls -lh "$PWD/FocusLite.zip"
+
+      - name: Download Sparkle tools
+        run: |
+          curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
+          tar -xf sparkle.tar.xz
+          echo "SPARKLE_BIN=$PWD/Sparkle-${SPARKLE_VERSION}/bin" >> "$GITHUB_ENV"
+
+      - name: Prepare Sparkle private key
+        env:
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_ED25519_PRIVATE_KEY:-}" ]; then
+            echo "Secret SPARKLE_ED25519_PRIVATE_KEY is required" >&2
+            exit 1
+          fi
+          echo "$SPARKLE_ED25519_PRIVATE_KEY" > sparkle_private_key.pem
+          chmod 600 sparkle_private_key.pem
+
+      - name: Generate appcast
+        run: |
+          set -euo pipefail
+          DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
+          "$SPARKLE_BIN/generate_appcast" --ed-key-file sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" "$PWD"
+          rm -f sparkle_private_key.pem
+          cat appcast.xml
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: "Automated release for ${{ github.ref_name }}"
+          files: |
+            FocusLite.zip
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload appcast to Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: appcast.xml
+
+      - name: Deploy appcast to Pages
+        id: deploy-pages
+        uses: actions/deploy-pages@v4
