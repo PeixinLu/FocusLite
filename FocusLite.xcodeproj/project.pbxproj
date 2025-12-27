@@ -11,6 +11,10 @@
 		1A2B3C4D5E6F000000000202 /* LauncherWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */; };
 		1A2B3C4D5E6F000000000203 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000103 /* LauncherView.swift */; };
 		1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */; };
+		1A2B3C4D5E6F000000000256 /* AccessibilityPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000156 /* AccessibilityPermission.swift */; };
+		1A2B3C4D5E6F000000000257 /* HotKeyDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000157 /* HotKeyDescriptor.swift */; };
+		1A2B3C4D5E6F000000000250 /* SnippetsManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */; };
+		1A2B3C4D5E6F000000000255 /* SnippetsManagerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000155 /* SnippetsManagerWindowController.swift */; };
 		1A2B3C4D5E6F000000000205 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */; };
 		1A2B3C4D5E6F000000000206 /* ResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000109 /* ResultItem.swift */; };
 		1A2B3C4D5E6F000000000207 /* ResultProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010A /* ResultProvider.swift */; };
@@ -25,6 +29,17 @@
 		1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */; };
 		1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000134 /* Matcher.swift */; };
 		1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */; };
+		1A2B3C4D5E6F000000000251 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000151 /* Snippet.swift */; };
+		1A2B3C4D5E6F000000000252 /* SnippetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000152 /* SnippetStore.swift */; };
+		1A2B3C4D5E6F000000000253 /* SnippetMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000153 /* SnippetMatcher.swift */; };
+		1A2B3C4D5E6F000000000254 /* SnippetsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000154 /* SnippetsProvider.swift */; };
+		1A2B3C4D5E6F000000000260 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */; };
+		1A2B3C4D5E6F000000000261 /* ClipboardSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000161 /* ClipboardSettingsWindowController.swift */; };
+		1A2B3C4D5E6F000000000270 /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000170 /* ClipboardEntry.swift */; };
+		1A2B3C4D5E6F000000000271 /* ClipboardPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000171 /* ClipboardPreferences.swift */; };
+		1A2B3C4D5E6F000000000273 /* ClipboardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000173 /* ClipboardStore.swift */; };
+		1A2B3C4D5E6F000000000274 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000174 /* ClipboardMonitor.swift */; };
+		1A2B3C4D5E6F000000000275 /* ClipboardProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000175 /* ClipboardProvider.swift */; };
 		1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000108 /* Assets.xcassets */; };
 		1A2B3C4D5E6F00000000020C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000120 /* AppKit.framework */; };
 		1A2B3C4D5E6F00000000020D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000121 /* SwiftUI.framework */; };
@@ -33,6 +48,22 @@
 		1A2B3C4D5E6F000000000210 /* FocusLiteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000010E /* FocusLiteTests.swift */; };
 		1A2B3C4D5E6F000000000214 /* ExpressionParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */; };
 		1A2B3C4D5E6F000000000241 /* MatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000141 /* MatchingTests.swift */; };
+		1A2B3C4D5E6F000000000320 /* SearchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000300 /* SearchState.swift */; };
+		1A2B3C4D5E6F000000000321 /* PrefixRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000301 /* PrefixRegistry.swift */; };
+		1A2B3C4D5E6F000000000322 /* PrefixResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000302 /* PrefixResultItem.swift */; };
+		1A2B3C4D5E6F000000000323 /* SearchStateReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000303 /* SearchStateReducer.swift */; };
+		1A2B3C4D5E6F000000000324 /* SnippetsPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000304 /* SnippetsPreferences.swift */; };
+		1A2B3C4D5E6F000000000325 /* TagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000305 /* TagView.swift */; };
+		1A2B3C4D5E6F000000000330 /* TranslatePreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000420 /* TranslatePreferences.swift */; };
+		1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */; };
+		1A2B3C4D5E6F000000000332 /* TranslateSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000422 /* TranslateSettingsWindowController.swift */; };
+		1A2B3C4D5E6F000000000333 /* TranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000423 /* TranslationService.swift */; };
+		1A2B3C4D5E6F000000000334 /* TranslationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */; };
+		1A2B3C4D5E6F000000000335 /* SystemTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */; };
+		1A2B3C4D5E6F000000000336 /* MockTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000427 /* MockTranslationService.swift */; };
+		1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */; };
+		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
+		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +82,12 @@
 		1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherWindowController.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000103 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherViewModel.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000156 /* AccessibilityPermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermission.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000157 /* HotKeyDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyDescriptor.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsManagerView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000155 /* SnippetsManagerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsManagerWindowController.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000161 /* ClipboardSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsWindowController.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000106 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000107 /* FocusLite.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FocusLite.entitlements; sourceTree = "<group>"; };
@@ -66,11 +103,36 @@
 		1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNameIndex.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000134 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000151 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000152 /* SnippetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetStore.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000153 /* SnippetMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMatcher.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000154 /* SnippetsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000170 /* ClipboardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardEntry.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000171 /* ClipboardPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreferences.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000173 /* ClipboardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000174 /* ClipboardMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardMonitor.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000175 /* ClipboardProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000111 /* CalcProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParser.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQueryClassifier.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000114 /* ExpressionParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpressionParserTests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000141 /* MatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000300 /* SearchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchState.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000301 /* PrefixRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefixRegistry.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000302 /* PrefixResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefixResultItem.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000303 /* SearchStateReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchStateReducer.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000304 /* SnippetsPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsPreferences.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000305 /* TagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000420 /* TranslatePreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatePreferences.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateSettingsView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000422 /* TranslateSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateSettingsWindowController.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000423 /* TranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationService.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationCoordinator.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemTranslationService.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000427 /* MockTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTranslationService.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProxy.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000010F /* FocusLite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = FocusLite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000110 /* FocusLiteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = FocusLiteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F000000000120 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -118,9 +180,18 @@
 			children = (
 				1A2B3C4D5E6F000000000100 /* FocusLiteApp.swift */,
 				1A2B3C4D5E6F000000000101 /* AppDelegate.swift */,
+				1A2B3C4D5E6F000000000156 /* AccessibilityPermission.swift */,
+				1A2B3C4D5E6F000000000157 /* HotKeyDescriptor.swift */,
 				1A2B3C4D5E6F000000000102 /* LauncherWindowController.swift */,
 				1A2B3C4D5E6F000000000103 /* LauncherView.swift */,
 				1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */,
+				1A2B3C4D5E6F000000000305 /* TagView.swift */,
+				1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */,
+				1A2B3C4D5E6F000000000422 /* TranslateSettingsWindowController.swift */,
+				1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */,
+				1A2B3C4D5E6F000000000161 /* ClipboardSettingsWindowController.swift */,
+				1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */,
+				1A2B3C4D5E6F000000000155 /* SnippetsManagerWindowController.swift */,
 				1A2B3C4D5E6F000000000105 /* HotKeyManager.swift */,
 				1A2B3C4D5E6F000000000108 /* Assets.xcassets */,
 				1A2B3C4D5E6F000000000106 /* Info.plist */,
@@ -133,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				1A2B3C4D5E6F000000000006 /* Search */,
+				1A2B3C4D5E6F000000000306 /* Preferences */,
 				1A2B3C4D5E6F00000000000A /* Utils */,
 			);
 			path = FocusLiteCore;
@@ -141,10 +213,14 @@
 		1A2B3C4D5E6F000000000006 /* Search */ = {
 			isa = PBXGroup;
 			children = (
+				1A2B3C4D5E6F000000000300 /* SearchState.swift */,
 				1A2B3C4D5E6F000000000109 /* ResultItem.swift */,
 				1A2B3C4D5E6F00000000010A /* ResultProvider.swift */,
 				1A2B3C4D5E6F00000000010B /* SearchEngine.swift */,
 				1A2B3C4D5E6F000000000113 /* SearchQueryClassifier.swift */,
+				1A2B3C4D5E6F000000000301 /* PrefixRegistry.swift */,
+				1A2B3C4D5E6F000000000302 /* PrefixResultItem.swift */,
+				1A2B3C4D5E6F000000000303 /* SearchStateReducer.swift */,
 			);
 			path = Search;
 			sourceTree = "<group>";
@@ -157,11 +233,37 @@
 			path = Utils;
 			sourceTree = "<group>";
 		};
+		1A2B3C4D5E6F000000000306 /* Preferences */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000304 /* SnippetsPreferences.swift */,
+				1A2B3C4D5E6F000000000420 /* TranslatePreferences.swift */,
+			);
+			path = Preferences;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F000000000329 /* Translate */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000423 /* TranslationService.swift */,
+				1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */,
+				1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */,
+				1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */,
+				1A2B3C4D5E6F00000000042A /* APITranslationService.swift */,
+				1A2B3C4D5E6F000000000427 /* MockTranslationService.swift */,
+				1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */,
+			);
+			path = Translate;
+			sourceTree = "<group>";
+		};
 		1A2B3C4D5E6F000000000007 /* FocusLitePlugins */ = {
 			isa = PBXGroup;
 			children = (
 				1A2B3C4D5E6F00000000000B /* Calc */,
 				1A2B3C4D5E6F00000000000C /* AppSearch */,
+				1A2B3C4D5E6F00000000000D /* Snippets */,
+				1A2B3C4D5E6F00000000000E /* Clipboard */,
+				1A2B3C4D5E6F000000000329 /* Translate */,
 				1A2B3C4D5E6F000000000008 /* Mock */,
 			);
 			path = FocusLitePlugins;
@@ -186,6 +288,29 @@
 				1A2B3C4D5E6F000000000112 /* ExpressionParser.swift */,
 			);
 			path = Calc;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000000D /* Snippets */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000151 /* Snippet.swift */,
+				1A2B3C4D5E6F000000000152 /* SnippetStore.swift */,
+				1A2B3C4D5E6F000000000153 /* SnippetMatcher.swift */,
+				1A2B3C4D5E6F000000000154 /* SnippetsProvider.swift */,
+			);
+			path = Snippets;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000000E /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000170 /* ClipboardEntry.swift */,
+				1A2B3C4D5E6F000000000171 /* ClipboardPreferences.swift */,
+				1A2B3C4D5E6F000000000173 /* ClipboardStore.swift */,
+				1A2B3C4D5E6F000000000174 /* ClipboardMonitor.swift */,
+				1A2B3C4D5E6F000000000175 /* ClipboardProvider.swift */,
+			);
+			path = Clipboard;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F000000000008 /* Mock */ = {
@@ -315,14 +440,29 @@
 			files = (
 				1A2B3C4D5E6F000000000200 /* FocusLiteApp.swift in Sources */,
 				1A2B3C4D5E6F000000000201 /* AppDelegate.swift in Sources */,
+				1A2B3C4D5E6F000000000256 /* AccessibilityPermission.swift in Sources */,
+				1A2B3C4D5E6F000000000257 /* HotKeyDescriptor.swift in Sources */,
 				1A2B3C4D5E6F000000000202 /* LauncherWindowController.swift in Sources */,
 				1A2B3C4D5E6F000000000203 /* LauncherView.swift in Sources */,
+				1A2B3C4D5E6F000000000325 /* TagView.swift in Sources */,
+				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
+				1A2B3C4D5E6F000000000332 /* TranslateSettingsWindowController.swift in Sources */,
 				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,
+				1A2B3C4D5E6F000000000260 /* ClipboardSettingsView.swift in Sources */,
+				1A2B3C4D5E6F000000000261 /* ClipboardSettingsWindowController.swift in Sources */,
+				1A2B3C4D5E6F000000000250 /* SnippetsManagerView.swift in Sources */,
+				1A2B3C4D5E6F000000000255 /* SnippetsManagerWindowController.swift in Sources */,
 				1A2B3C4D5E6F000000000205 /* HotKeyManager.swift in Sources */,
 				1A2B3C4D5E6F000000000206 /* ResultItem.swift in Sources */,
 				1A2B3C4D5E6F000000000207 /* ResultProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000208 /* SearchEngine.swift in Sources */,
 				1A2B3C4D5E6F000000000213 /* SearchQueryClassifier.swift in Sources */,
+				1A2B3C4D5E6F000000000320 /* SearchState.swift in Sources */,
+				1A2B3C4D5E6F000000000321 /* PrefixRegistry.swift in Sources */,
+				1A2B3C4D5E6F000000000322 /* PrefixResultItem.swift in Sources */,
+				1A2B3C4D5E6F000000000323 /* SearchStateReducer.swift in Sources */,
+				1A2B3C4D5E6F000000000324 /* SnippetsPreferences.swift in Sources */,
+				1A2B3C4D5E6F000000000330 /* TranslatePreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */,
 				1A2B3C4D5E6F000000000230 /* AppSearchProvider.swift in Sources */,
@@ -330,6 +470,22 @@
 				1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */,
 				1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */,
 				1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000251 /* Snippet.swift in Sources */,
+				1A2B3C4D5E6F000000000252 /* SnippetStore.swift in Sources */,
+				1A2B3C4D5E6F000000000253 /* SnippetMatcher.swift in Sources */,
+				1A2B3C4D5E6F000000000254 /* SnippetsProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000270 /* ClipboardEntry.swift in Sources */,
+				1A2B3C4D5E6F000000000271 /* ClipboardPreferences.swift in Sources */,
+				1A2B3C4D5E6F000000000273 /* ClipboardStore.swift in Sources */,
+				1A2B3C4D5E6F000000000274 /* ClipboardMonitor.swift in Sources */,
+				1A2B3C4D5E6F000000000275 /* ClipboardProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000333 /* TranslationService.swift in Sources */,
+				1A2B3C4D5E6F000000000334 /* TranslationCoordinator.swift in Sources */,
+				1A2B3C4D5E6F000000000335 /* SystemTranslationService.swift in Sources */,
+				1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */,
+				1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */,
+				1A2B3C4D5E6F000000000336 /* MockTranslationService.swift in Sources */,
+				1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000209 /* MockProvider.swift in Sources */,
 				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
 			);

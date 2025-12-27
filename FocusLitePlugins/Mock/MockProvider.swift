@@ -4,7 +4,7 @@ struct MockProvider: ResultProvider {
     let id = "mock"
     let displayName = "Mock Provider"
 
-    func results(for query: String) async -> [ResultItem] {
+    func results(for query: String, isScoped: Bool) async -> [ResultItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             return []

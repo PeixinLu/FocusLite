@@ -6,6 +6,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private let showOnAllSpaces = true
     private var keyMonitor: Any?
+    private var previousApp: NSRunningApplication?
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
@@ -13,6 +14,10 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
     func show() {
         createWindowIfNeeded()
+        Task { @MainActor in
+            viewModel.resetSearch()
+        }
+        capturePreviousApp()
         centerWindow()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -33,6 +38,20 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         } else {
             show()
         }
+    }
+
+    func pasteTextAndHide(_ text: String) -> Bool {
+        guard AccessibilityPermission.isTrusted(prompt: true) else {
+            return false
+        }
+
+        hide()
+        previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            self.sendPasteCommand()
+        }
+        return true
     }
 
     private func createWindowIfNeeded() {
@@ -91,6 +110,14 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
                     self.viewModel.moveSelection(delta: -1)
                 }
                 return nil
+            case 51: // delete / backspace
+                let handled = self.viewModel.handleBackspaceKey()
+                return handled ? nil : event
+            case 53: // esc
+                Task { @MainActor in
+                    self.viewModel.handleEscapeKey()
+                }
+                return nil
             default:
                 return event
             }
@@ -113,6 +140,24 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         } else {
             window.center()
         }
+    }
+
+    private func capturePreviousApp() {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return }
+        guard frontmost.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+        previousApp = frontmost
+    }
+
+    private func sendPasteCommand() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyCode = CGKeyCode(9) // v
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
+        keyDown?.flags = .maskCommand
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        keyUp?.flags = .maskCommand
+
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
     }
 }
 

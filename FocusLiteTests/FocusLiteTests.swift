@@ -12,7 +12,7 @@ final class FocusLiteTests: XCTestCase {
         ])
 
         let engine = SearchEngine(providers: [providerA, providerB])
-        let results = await engine.search(query: "test")
+        let results = await engine.search(query: "test", isScoped: false)
 
         XCTAssertEqual(results.map(\.title), ["C", "B", "A"])
     }
@@ -23,7 +23,7 @@ private struct TestProvider: ResultProvider {
     let displayName = "Test"
     let items: [ResultItem]
 
-    func results(for query: String) async -> [ResultItem] {
+    func results(for query: String, isScoped: Bool) async -> [ResultItem] {
         items
     }
 }

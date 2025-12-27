@@ -12,43 +12,84 @@ struct LauncherView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.secondary)
 
-                TextField("Search", text: $viewModel.query)
+                if let prefix = viewModel.searchState.activePrefix {
+                    TagView(title: prefix.title, subtitle: prefix.subtitle)
+                }
+
+                TextField("Search", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, weight: .medium))
+                    .frame(maxWidth: .infinity)
                     .focused($isSearchFocused)
-                    .onChange(of: viewModel.query) { newValue in
-                        viewModel.search(query: newValue)
+                    .onChange(of: viewModel.searchText) { newValue in
+                        viewModel.updateInput(newValue)
                     }
                     .onSubmit {
                         viewModel.submitPrimaryAction()
                     }
+
+                Button {
+                    viewModel.openSnippetsManager()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.plain)
             }
             .padding(16)
 
             Divider()
 
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    if viewModel.results.isEmpty {
-                        EmptyStateView()
-                            .padding(.top, 40)
-                    } else {
-                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
-                                .onTapGesture {
-                                    viewModel.selectIndex(index)
+            if showsPreviewPane {
+                HStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            if viewModel.results.isEmpty {
+                                EmptyStateView()
+                                    .padding(.top, 40)
+                            } else {
+                                ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
+                                        .onTapGesture {
+                                            viewModel.selectIndex(index)
+                                        }
                                 }
+                            }
+                        }
+                        .padding(12)
+                    }
+                    .frame(width: 340)
+
+                    Divider()
+
+                    PreviewPane(item: viewModel.highlightedItem)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(12)
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        if viewModel.results.isEmpty {
+                            EmptyStateView()
+                                .padding(.top, 40)
+                        } else {
+                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
+                                    .onTapGesture {
+                                        viewModel.selectIndex(index)
+                                    }
+                            }
                         }
                     }
+                    .padding(12)
                 }
-                .padding(12)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(nsColor: .windowBackgroundColor))
         )
-        .frame(width: 640, height: 420)
+        .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
         .onAppear {
             isSearchFocused = true
         }
@@ -56,7 +97,7 @@ struct LauncherView: View {
             isSearchFocused = true
         }
         .onExitCommand {
-            viewModel.handleExit()
+            viewModel.handleEscapeKey()
         }
         .overlay(alignment: .topTrailing) {
             if let message = viewModel.toastMessage {
@@ -66,6 +107,11 @@ struct LauncherView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+    }
+
+    private var showsPreviewPane: Bool {
+        guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
+        return providerID == ClipboardProvider.providerID || providerID == SnippetsProvider.providerID
     }
 }
 
@@ -78,12 +124,28 @@ private struct ResultRow: View {
             iconView
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.system(size: 16, weight: .semibold))
+                HStack(spacing: 6) {
+                    Text(item.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if item.isPrefix {
+                        Text("Prefix")
+                            .font(.system(size: 11, weight: .bold))
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.accentColor.opacity(0.12))
+                            )
+                    }
+                }
                 if let subtitle = item.subtitle {
                     Text(subtitle)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(item.isPrefix ? .accentColor : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
 
@@ -132,6 +194,115 @@ private struct ResultRow: View {
             .fill(Color(nsColor: .tertiaryLabelColor))
             .frame(width: 28, height: 28)
             .opacity(0.4)
+    }
+}
+
+private struct PreviewPane: View {
+    let item: ResultItem?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let item {
+                Text(item.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let subtitle = item.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Divider()
+                content(for: item)
+            } else {
+                Text("Select an item to preview")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func content(for item: ResultItem) -> some View {
+        if item.providerID == ClipboardProvider.providerID || item.providerID == SnippetsProvider.providerID {
+            switch item.preview {
+            case .text(let text):
+                ScrollView {
+                    Text(text)
+                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding(8)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            case .image(let data):
+                if let image = NSImage(data: data) {
+                    ScrollView {
+                        Image(nsImage: image)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                            .padding(8)
+                    }
+                } else {
+                    Text("Cannot preview image")
+                        .foregroundColor(.secondary)
+                }
+            case .files(let files):
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(files, id: \.self) { file in
+                            HStack(spacing: 8) {
+                                if let icon = AppIconCache.shared.icon(for: file.path) {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 24, height: 24)
+                                } else {
+                                    Image(systemName: "doc")
+                                        .frame(width: 24, height: 24)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(file.name)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    Text(file.path)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                            }
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(nsColor: .controlBackgroundColor))
+                            )
+                        }
+                    }
+                }
+            case .none:
+                Text("No preview available")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+        } else {
+            Text("预览仅适用于剪贴板和 Snippets")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Spacer()
+        }
     }
 }
 

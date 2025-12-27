@@ -7,7 +7,7 @@ struct CalcProvider: ResultProvider {
     private let parser = ExpressionParser()
     private let unitConverter = UnitConverter()
 
-    func results(for query: String) async -> [ResultItem] {
+    func results(for query: String, isScoped: Bool) async -> [ResultItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 

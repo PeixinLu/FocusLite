@@ -13,7 +13,7 @@ struct AppSearchProvider: ResultProvider {
         }
     }
 
-    func results(for query: String) async -> [ResultItem] {
+    func results(for query: String, isScoped: Bool) async -> [ResultItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 

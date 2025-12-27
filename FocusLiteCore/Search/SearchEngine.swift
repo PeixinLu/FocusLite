@@ -7,12 +7,25 @@ final class SearchEngine {
         self.providers = providers
     }
 
-    func search(query: String) async -> [ResultItem] {
+    func search(query: String, isScoped: Bool, providerIDs: Set<String>? = nil) async -> [ResultItem] {
+        if !isScoped && query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return []
+        }
         let preferCalc = SearchQueryClassifier.isMathQuery(query)
+        let activeProviders: [any ResultProvider]
+        if let providerIDs {
+            activeProviders = providers.filter { providerIDs.contains($0.id) }
+        } else {
+            activeProviders = providers
+        }
+
+        if activeProviders.isEmpty {
+            return []
+        }
         return await withTaskGroup(of: [ResultItem].self) { group in
-            for provider in providers {
+            for provider in activeProviders {
                 group.addTask {
-                    await provider.results(for: query)
+                    await provider.results(for: query, isScoped: isScoped)
                 }
             }
 
