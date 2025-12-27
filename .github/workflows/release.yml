@@ -55,8 +55,11 @@ jobs:
       - name: Zip app
         run: |
           APP_PATH="$PWD/build/FocusLite.xcarchive/Products/Applications/FocusLite.app"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/FocusLite.zip"
-          ls -lh "$PWD/FocusLite.zip"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist"
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
+          ls -lh "$PWD/artifacts/FocusLite.zip"
 
       - name: Download Sparkle tools
         run: |
@@ -94,8 +97,9 @@ jobs:
         run: |
           set -euo pipefail
           DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}"
-          "$SPARKLE_BIN/generate_appcast" --ed-key-file sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" "$PWD"
-          rm -f sparkle_private_key.pem
+          cd artifacts
+          "$SPARKLE_BIN/generate_appcast" --ed-key-file ../sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" .
+          rm -f ../sparkle_private_key.pem
           cat appcast.xml
 
       - name: Create GitHub Release
@@ -105,7 +109,7 @@ jobs:
           name: ${{ github.ref_name }}
           body: "Automated release for ${{ github.ref_name }}"
           files: |
-            FocusLite.zip
+            artifacts/FocusLite.zip
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -113,7 +117,7 @@ jobs:
       - name: Upload appcast to Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: appcast.xml
+          path: artifacts/appcast.xml
 
       - name: Deploy appcast to Pages
         id: deploy-pages
