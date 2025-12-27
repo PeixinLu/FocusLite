@@ -129,9 +129,6 @@ struct TranslateSettingsView: View {
                     TextField("接口地址", text: $viewModel.bingEndpoint)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Toggle("系统翻译（本地）", isOn: serviceBinding(.system))
-                }
             }
             .formStyle(.grouped)
 

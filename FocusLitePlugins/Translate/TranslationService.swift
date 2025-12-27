@@ -2,7 +2,6 @@ import Foundation
 import NaturalLanguage
 
 enum TranslateServiceID: String, CaseIterable {
-    case system
     case youdaoAPI
     case baiduAPI
     case googleAPI

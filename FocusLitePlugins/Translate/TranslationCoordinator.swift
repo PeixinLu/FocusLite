@@ -76,8 +76,6 @@ actor TranslationCoordinator {
         return order.compactMap { rawValue in
             guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
             switch id {
-            case .system:
-                return SystemTranslationService()
             case .youdaoAPI:
                 return APITranslationService(id: id, displayName: "有道 API")
             case .baiduAPI:

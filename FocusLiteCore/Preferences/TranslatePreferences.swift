@@ -46,9 +46,9 @@ enum TranslatePreferences {
         get {
             if let values = UserDefaults.standard.array(forKey: servicesKey) as? [String], !values.isEmpty {
                 let cleaned = values.filter { TranslateServiceID(rawValue: $0) != nil }
-                return cleaned.isEmpty ? ["system"] : cleaned
+                return cleaned
             }
-            return ["system"]
+            return []
         }
         set {
             let cleaned = newValue.filter { !$0.isEmpty }
@@ -98,8 +98,6 @@ enum TranslatePreferences {
 
     static func isConfigured(serviceID: TranslateServiceID) -> Bool {
         switch serviceID {
-        case .system:
-            return true
         case .youdaoAPI:
             return !youdaoAppKeyValue.isEmpty && !youdaoSecretValue.isEmpty
         case .baiduAPI:

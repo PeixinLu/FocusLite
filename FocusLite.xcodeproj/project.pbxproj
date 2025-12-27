@@ -57,7 +57,6 @@
 		1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000430 /* SettingsView.swift */; };
 		1A2B3C4D5E6F000000000333 /* TranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000423 /* TranslationService.swift */; };
 		1A2B3C4D5E6F000000000334 /* TranslationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */; };
-		1A2B3C4D5E6F000000000335 /* SystemTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */; };
 		1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */; };
 		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
@@ -131,7 +130,6 @@
 		1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000423 /* TranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationCoordinator.swift; sourceTree = "<group>"; };
-		1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemTranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProxy.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
@@ -335,7 +333,6 @@
 			children = (
 				1A2B3C4D5E6F000000000423 /* TranslationService.swift */,
 				1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */,
-				1A2B3C4D5E6F000000000425 /* SystemTranslationService.swift */,
 				1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */,
 				1A2B3C4D5E6F00000000042A /* APITranslationService.swift */,
 				1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */,
@@ -480,7 +477,6 @@
 				1A2B3C4D5E6F000000000275 /* ClipboardProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000333 /* TranslationService.swift in Sources */,
 				1A2B3C4D5E6F000000000334 /* TranslationCoordinator.swift in Sources */,
-				1A2B3C4D5E6F000000000335 /* SystemTranslationService.swift in Sources */,
 				1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */,
 				1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */,
 				1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */,

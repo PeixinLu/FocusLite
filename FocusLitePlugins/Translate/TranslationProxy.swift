@@ -18,8 +18,6 @@ enum TranslationProxy {
             return await translateWithGoogle(request: request).text
         case .bingAPI:
             return await translateWithBing(request: request).text
-        case .system:
-            return nil
         }
     }
 
@@ -42,8 +40,6 @@ enum TranslationProxy {
         case .bingAPI:
             let response = await translateWithBing(request: request)
             return TranslationServiceTestResult(success: response.text != nil, message: response.message)
-        case .system:
-            return TranslationServiceTestResult(success: true, message: "可用")
         }
     }
 
