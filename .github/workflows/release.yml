@@ -122,7 +122,7 @@ jobs:
       - name: Upload appcast to Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: artifacts/appcast.xml
+          path: artifacts
 
       - name: Deploy appcast to Pages
         id: deploy-pages
