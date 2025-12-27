@@ -66,6 +66,7 @@ jobs:
           mkdir -p artifacts
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
           ls -lh "$PWD/artifacts/FocusLite.zip"
+          shasum -a 256 "$PWD/artifacts/FocusLite.zip"
 
       - name: Download Sparkle tools
         run: |
@@ -96,7 +97,7 @@ jobs:
             echo "Secret SPARKLE_ED25519_PRIVATE_KEY is required" >&2
             exit 1
           fi
-          echo "$SPARKLE_ED25519_PRIVATE_KEY" > sparkle_private_key.pem
+          printf '%s' "$SPARKLE_ED25519_PRIVATE_KEY" > sparkle_private_key.pem
           chmod 600 sparkle_private_key.pem
 
       - name: Generate appcast
@@ -112,6 +113,7 @@ jobs:
             exit 1
           fi
           cd artifacts
+          shasum -a 256 "$ZIP_NAME"
           "$SPARKLE_BIN/generate_appcast" --ed-key-file ../sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" .
           rm -f ../sparkle_private_key.pem
           ls -lh "$ZIP_NAME" appcast.xml
