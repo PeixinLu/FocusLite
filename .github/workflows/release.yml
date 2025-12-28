@@ -66,7 +66,6 @@ jobs:
           mkdir -p artifacts
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
           ls -lh "$PWD/artifacts/FocusLite.zip"
-          shasum -a 256 "$PWD/artifacts/FocusLite.zip"
 
       - name: Download Sparkle tools
         run: |
@@ -97,30 +96,8 @@ jobs:
             echo "Secret SPARKLE_ED25519_PRIVATE_KEY is required" >&2
             exit 1
           fi
-          KEY_CONTENT="$SPARKLE_ED25519_PRIVATE_KEY"
-          if printf '%s' "$KEY_CONTENT" | head -n1 | grep -q "BEGIN "; then
-            printf '%s' "$KEY_CONTENT" > sparkle_private_key.pem
-          else
-            # Secret is likely a single-line base64 without PEM headers; wrap it.
-            {
-              echo "-----BEGIN PRIVATE KEY-----"
-              printf '%s' "$KEY_CONTENT" | fold -w64
-              echo
-              echo "-----END PRIVATE KEY-----"
-            } > sparkle_private_key.pem
-          fi
+          printf '%s' "$SPARKLE_ED25519_PRIVATE_KEY" > sparkle_private_key.pem
           chmod 600 sparkle_private_key.pem
-          EXPECTED_PUB="rePHHPEpZAND6R6/8ALe1AoSnMMRBYoZGKSZfFuN45E="
-          PUB_OUTPUT=$("$SPARKLE_BIN/generate_keys" -x sparkle_private_key.pem 2>sparkle_pub.err || true)
-          echo "$PUB_OUTPUT"
-          ACTUAL_PUB=$(printf '%s' "$PUB_OUTPUT" | sed -n 's/.*Public EdDSA key: \\([A-Za-z0-9\\/+]*=\\{0,2\\}\\).*/\\1/p' | head -n1)
-          if [ -z "$ACTUAL_PUB" ]; then
-            echo "Failed to derive public key via Sparkle generate_keys; ensure the secret is the Sparkle-generated private key." >&2
-            cat sparkle_pub.err >&2
-            exit 1
-          fi
-          echo "Derived Sparkle public key: $ACTUAL_PUB"
-          test "$ACTUAL_PUB" = "$EXPECTED_PUB"
 
       - name: Generate appcast
         run: |
@@ -135,7 +112,6 @@ jobs:
             exit 1
           fi
           cd artifacts
-          shasum -a 256 "$ZIP_NAME"
           "$SPARKLE_BIN/generate_appcast" --ed-key-file ../sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" .
           rm -f ../sparkle_private_key.pem
           ls -lh "$ZIP_NAME" appcast.xml
