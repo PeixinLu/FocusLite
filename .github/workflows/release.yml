@@ -111,7 +111,10 @@ jobs:
           fi
           chmod 600 sparkle_private_key.pem
           EXPECTED_PUB="rePHHPEpZAND6R6/8ALe1AoSnMMRBYoZGKSZfFuN45E="
-          if ! ACTUAL_PUB=$("$SPARKLE_BIN/generate_keys" -x sparkle_private_key.pem -p 2>sparkle_pub.err | tr -d '\r\n'); then
+          PUB_OUTPUT=$("$SPARKLE_BIN/generate_keys" -x sparkle_private_key.pem 2>sparkle_pub.err || true)
+          echo "$PUB_OUTPUT"
+          ACTUAL_PUB=$(printf '%s' "$PUB_OUTPUT" | sed -n 's/.*Public EdDSA key: \\([A-Za-z0-9\\/+]*=\\{0,2\\}\\).*/\\1/p' | head -n1)
+          if [ -z "$ACTUAL_PUB" ]; then
             echo "Failed to derive public key via Sparkle generate_keys; ensure the secret is the Sparkle-generated private key." >&2
             cat sparkle_pub.err >&2
             exit 1
