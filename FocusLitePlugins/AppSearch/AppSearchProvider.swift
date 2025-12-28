@@ -1,7 +1,8 @@
 import Foundation
 
 struct AppSearchProvider: ResultProvider {
-    let id = "app_search"
+    static let providerID = "app_search"
+    let id = AppSearchProvider.providerID
     let displayName = "Applications"
 
     private let index: AppIndex

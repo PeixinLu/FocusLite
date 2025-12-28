@@ -73,13 +73,11 @@ final class LauncherViewModel: ObservableObject {
 
         if item.isPrefix {
             let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if item.providerID == TranslateProvider.providerID,
-               !trimmed.isEmpty,
-               !searchText.lowercased().hasPrefix(item.title.lowercased()) {
+            if !trimmed.isEmpty {
                 activatePrefix(providerID: item.providerID, carryQuery: trimmed)
-                return
+            } else {
+                activatePrefix(providerID: item.providerID)
             }
-            activatePrefix(providerID: item.providerID)
             return
         }
 
@@ -205,28 +203,27 @@ final class LauncherViewModel: ObservableObject {
 
         switch searchState.scope {
         case .global:
-            let prefixItems = PrefixResultItemBuilder.items(matching: searchText)
             let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
+                let prefixItems = PrefixResultItemBuilder.items(matching: searchText)
                 setResults(prefixItems)
                 return
             }
 
+            let prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
-                let items = await searchEngine.search(query: trimmed, isScoped: false, providerIDs: nil)
+                let items = await searchEngine.search(
+                    query: trimmed,
+                    isScoped: false,
+                    providerIDs: [AppSearchProvider.providerID]
+                )
                 if Task.isCancelled {
                     return
                 }
                 await MainActor.run { [weak self] in
                     guard self?.searchState == currentState else { return }
-                    var combined = prefixItems + items
-                    if items.isEmpty,
-                       let entry = PrefixRegistry.entries().first(where: { $0.providerID == TranslateProvider.providerID }),
-                       !prefixItems.contains(where: { $0.title == entry.title }) {
-                        combined.append(PrefixResultItemBuilder.fallbackItem(for: entry))
-                    }
-                    self?.setResults(combined)
+                    self?.setResults(prefixItems + items)
                 }
             }
         case .prefixed(let providerID):
