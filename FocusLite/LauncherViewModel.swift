@@ -73,10 +73,17 @@ final class LauncherViewModel: ObservableObject {
 
         if item.isPrefix {
             let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                activatePrefix(providerID: item.providerID, carryQuery: trimmed)
-            } else {
+            if trimmed.isEmpty {
                 activatePrefix(providerID: item.providerID)
+                return
+            }
+
+            let lowered = trimmed.lowercased()
+            let prefixText = item.title.lowercased()
+            if prefixText.hasPrefix(lowered) {
+                activatePrefix(providerID: item.providerID)
+            } else {
+                activatePrefix(providerID: item.providerID, carryQuery: trimmed)
             }
             return
         }
@@ -210,7 +217,14 @@ final class LauncherViewModel: ObservableObject {
                 return
             }
 
-            let prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
+            var prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
+            if !trimmed.isEmpty {
+                let normalized = trimmed.lowercased()
+                let hasExactMatch = prefixItems.contains { $0.title.lowercased() == normalized }
+                if hasExactMatch {
+                    prefixItems = prefixItems.filter { $0.title.lowercased().hasPrefix(normalized) }
+                }
+            }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
                 let items = await searchEngine.search(
@@ -223,7 +237,18 @@ final class LauncherViewModel: ObservableObject {
                 }
                 await MainActor.run { [weak self] in
                     guard self?.searchState == currentState else { return }
-                    self?.setResults(prefixItems + items)
+                    if items.isEmpty {
+                        self?.setResults(prefixItems)
+                    } else {
+                        let hasExactPrefixMatch = prefixItems.contains { item in
+                            item.title.lowercased() == trimmed.lowercased()
+                        }
+                        if hasExactPrefixMatch {
+                            self?.setResults(prefixItems + items)
+                        } else {
+                            self?.setResults(items + prefixItems)
+                        }
+                    }
                 }
             }
         case .prefixed(let providerID):

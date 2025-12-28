@@ -9,7 +9,6 @@ enum PrefixResultItemBuilder {
         results.reserveCapacity(entries.count)
 
         for entry in entries {
-            guard shouldInclude(entry: entry, normalizedQuery: normalized) else { continue }
             results.append(resultItem(from: entry, normalizedQuery: normalized))
         }
 
@@ -24,19 +23,16 @@ enum PrefixResultItemBuilder {
         resultItem(from: entry, normalizedQuery: "")
     }
 
-    private static func shouldInclude(entry: PrefixEntry, normalizedQuery: String) -> Bool {
-        guard !normalizedQuery.isEmpty else { return true }
-        return entry.id.hasPrefix(normalizedQuery)
-    }
-
     private static func resultItem(from entry: PrefixEntry, normalizedQuery: String) -> ResultItem {
         let matchScore: Double
         if normalizedQuery.isEmpty {
             matchScore = 0.99
         } else if entry.id == normalizedQuery {
             matchScore = 1.0
+        } else if entry.id.hasPrefix(normalizedQuery) {
+            matchScore = 0.97
         } else {
-            matchScore = 0.95
+            matchScore = 0.6
         }
 
         return ResultItem(
