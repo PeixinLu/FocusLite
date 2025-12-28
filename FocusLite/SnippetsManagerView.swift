@@ -140,28 +140,42 @@ struct SnippetDraft: Identifiable {
 
 struct SnippetsManagerView: View {
     @StateObject var viewModel: SnippetsManagerViewModel
+    let onSaved: (() -> Void)?
+
+    init(viewModel: SnippetsManagerViewModel, onSaved: (() -> Void)? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+        self.onSaved = onSaved
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: SettingsLayout.sectionSpacing) {
             header
-            prefixSettings
+                .padding(.bottom, SettingsLayout.headerBottomPadding)
+            SettingsSection("搜索前缀") {
+                prefixSettings
+            }
 
-            if viewModel.snippets.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(viewModel.snippets) { snippet in
-                        SnippetRow(snippet: snippet,
-                                   onEdit: { viewModel.editSnippet(snippet) },
-                                   onDelete: { viewModel.deleteSnippet(snippet) })
+            SettingsSection("片段列表") {
+                if viewModel.snippets.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        ForEach(viewModel.snippets) { snippet in
+                            SnippetRow(snippet: snippet,
+                                       onEdit: { viewModel.editSnippet(snippet) },
+                                       onDelete: { viewModel.deleteSnippet(snippet) })
+                        }
+                        .onDelete(perform: viewModel.delete)
                     }
-                    .onDelete(perform: viewModel.delete)
+                    .listStyle(.inset)
+                    .frame(minHeight: 240)
                 }
-                .listStyle(.inset)
             }
         }
-        .padding(16)
-        .frame(width: 560, height: 460)
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             viewModel.load()
         }
@@ -205,9 +219,11 @@ struct SnippetsManagerView: View {
                 .frame(width: 120)
                 .onSubmit {
                     viewModel.saveSearchPrefix()
+                    onSaved?()
                 }
                 .onChange(of: viewModel.searchPrefixText) { _ in
                     viewModel.saveSearchPrefix()
+                    onSaved?()
                 }
             Spacer()
         }

@@ -2,17 +2,24 @@ import SwiftUI
 
 struct UpdateSettingsView: View {
     @ObservedObject var updater: AppUpdater
+    let onSaved: (() -> Void)?
+
+    init(updater: AppUpdater, onSaved: (() -> Void)? = nil) {
+        self._updater = ObservedObject(wrappedValue: updater)
+        self.onSaved = onSaved
+    }
 
     private var feedURL: String {
         Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String ?? ""
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: SettingsLayout.sectionSpacing) {
             header
+                .padding(.bottom, SettingsLayout.headerBottomPadding)
 
-            Form {
-                Section {
+            VStack(spacing: SettingsLayout.sectionSpacing) {
+                SettingsSection {
                     HStack {
                         Text("当前版本")
                         Spacer()
@@ -27,7 +34,7 @@ struct UpdateSettingsView: View {
                     }
                 }
 
-                Section {
+                SettingsSection {
                     Button("Check for Updates…") {
                         updater.checkForUpdates()
                     }
@@ -35,22 +42,27 @@ struct UpdateSettingsView: View {
                         "Automatically check for updates",
                         isOn: Binding(
                             get: { updater.automaticallyChecksForUpdates },
-                            set: { updater.setAutomaticallyChecksForUpdates($0) }
+                            set: { newValue in
+                                updater.setAutomaticallyChecksForUpdates(newValue)
+                                onSaved?()
+                            }
                         )
                     )
+                    .toggleStyle(.switch)
                 }
 
-                Section {
+                SettingsSection {
                     Text("使用 Sparkle 2 从 GitHub Releases 获取更新。网络或 Feed 不可用时会显示错误提示，不会中断应用。")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .formStyle(.grouped)
         }
-        .padding(16)
-        .frame(width: 520, height: 320)
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var header: some View {

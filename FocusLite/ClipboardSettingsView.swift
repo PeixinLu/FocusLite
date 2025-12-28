@@ -34,60 +34,80 @@ final class ClipboardSettingsViewModel: ObservableObject {
 
 struct ClipboardSettingsView: View {
     @StateObject var viewModel: ClipboardSettingsViewModel
+    let onSaved: (() -> Void)?
+
+    init(viewModel: ClipboardSettingsViewModel, onSaved: (() -> Void)? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+        self.onSaved = onSaved
+    }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: SettingsLayout.sectionSpacing) {
             header
+                .padding(.bottom, SettingsLayout.headerBottomPadding)
 
-            Form {
-                Toggle("启用剪贴板记录", isOn: $viewModel.isRecordingEnabled)
-                    .onChange(of: viewModel.isRecordingEnabled) { _ in
-                        ClipboardPreferences.isPaused = !viewModel.isRecordingEnabled
+            ScrollView {
+                VStack(spacing: SettingsLayout.sectionSpacing) {
+                    SettingsSection("记录") {
+                        Toggle("启用剪贴板记录", isOn: $viewModel.isRecordingEnabled)
+                            .toggleStyle(.switch)
+                            .onChange(of: viewModel.isRecordingEnabled) { _ in
+                                applyAndNotify()
+                            }
+
+                        TextField("剪贴板快捷键（如 option+v）", text: $viewModel.hotKeyText)
+                            .frame(width: 240)
+                            .onChange(of: viewModel.hotKeyText) { _ in
+                                applyAndNotify()
+                            }
+
+                        TextField("搜索前缀（如 c）", text: $viewModel.searchPrefixText)
+                            .frame(width: 160)
+                            .onChange(of: viewModel.searchPrefixText) { _ in
+                                applyAndNotify()
+                            }
+
+                        TextField("最大条目数（10-1000）", text: $viewModel.maxEntriesText)
+                            .frame(width: 200)
+                            .onChange(of: viewModel.maxEntriesText) { _ in
+                                applyAndNotify()
+                            }
+
+                        Picker("历史保留", selection: $viewModel.retentionHours) {
+                            Text("3 小时").tag(3)
+                            Text("12 小时").tag(12)
+                            Text("1 天").tag(24)
+                            Text("3 天").tag(72)
+                            Text("1 周").tag(168)
+                        }
+                        .frame(width: 200)
+                        .onChange(of: viewModel.retentionHours) { _ in
+                            applyAndNotify()
+                        }
                     }
 
-                TextField("剪贴板快捷键（如 option+v）", text: $viewModel.hotKeyText)
-                    .frame(width: 240)
-
-                TextField("搜索前缀（如 c）", text: $viewModel.searchPrefixText)
-                    .frame(width: 160)
-
-                TextField("最大条目数（10-1000）", text: $viewModel.maxEntriesText)
-                    .frame(width: 200)
-
-                Picker("历史保留", selection: $viewModel.retentionHours) {
-                    Text("3 小时").tag(3)
-                    Text("12 小时").tag(12)
-                    Text("1 天").tag(24)
-                    Text("3 天").tag(72)
-                    Text("1 周").tag(168)
+                    SettingsSection("忽略的应用") {
+                        Text("Bundle ID，每行一个")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        TextEditor(text: $viewModel.ignoredAppsText)
+                            .frame(minHeight: 120)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                            )
+                            .onChange(of: viewModel.ignoredAppsText) { _ in
+                                applyAndNotify()
+                            }
+                    }
                 }
-                .frame(width: 200)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("忽略的应用（Bundle ID，每行一个）")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    TextEditor(text: $viewModel.ignoredAppsText)
-                        .frame(minHeight: 120)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                        )
-                }
-                .padding(.vertical, 6)
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Spacer()
-                Button("保存") {
-                    viewModel.applyChanges()
-                }
-                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(16)
-        .frame(width: 520, height: 420)
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var header: some View {
@@ -99,5 +119,10 @@ struct ClipboardSettingsView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func applyAndNotify() {
+        viewModel.applyChanges()
+        onSaved?()
     }
 }

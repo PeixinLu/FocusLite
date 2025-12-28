@@ -23,14 +23,23 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func createWindowIfNeeded() {
         guard window == nil else { return }
-        let contentRect = NSRect(x: 0, y: 0, width: 720, height: 680)
+        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 560)
         let window = NSWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "设置"
+        window.title = "FocusLite 设置"
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
+        window.isMovableByWindowBackground = false
+        let toolbar = NSToolbar(identifier: "SettingsToolbar")
+        toolbar.showsBaselineSeparator = false
+        window.toolbar = toolbar
+        if #available(macOS 11.0, *) {
+            window.toolbarStyle = .unifiedCompact
+        }
         window.center()
         window.delegate = self
 
