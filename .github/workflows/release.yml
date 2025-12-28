@@ -53,6 +53,13 @@ jobs:
             -allowProvisioningUpdates \
             clean archive
 
+      - name: Ad-hoc sign app
+        run: |
+          set -euo pipefail
+          APP_PATH="$PWD/build/FocusLite.xcarchive/Products/Applications/FocusLite.app"
+          codesign -s "-" --force --deep --timestamp=none --options runtime --entitlements FocusLite/FocusLite.entitlements "$APP_PATH"
+          codesign -vvv --deep --strict "$APP_PATH"
+
       - name: Zip app
         run: |
           APP_PATH="$PWD/build/FocusLite.xcarchive/Products/Applications/FocusLite.app"
@@ -63,6 +70,9 @@ jobs:
           fi
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" || { plutil -p "$APP_PATH/Contents/Info.plist"; exit 1; }
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist" || { plutil -p "$APP_PATH/Contents/Info.plist"; exit 1; }
+          codesign -s "-" --force --deep --timestamp=none "$APP_PATH"
+          codesign -vvv --deep --strict "$APP_PATH"
+          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | egrep "flags=|Signature=|TeamIdentifier="
           mkdir -p artifacts
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
           ls -lh "$PWD/artifacts/FocusLite.zip"
