@@ -13,7 +13,7 @@ enum SettingsLayout {
     static let bottomPadding: CGFloat = 6
     static let sectionSpacing: CGFloat = 10
     static let headerBottomPadding: CGFloat = 4
-    static let statusBarPadding: CGFloat = 8
+    static let labelWidth: CGFloat = 96
 }
 
 extension SettingsTab {
@@ -24,7 +24,7 @@ extension SettingsTab {
         case .clipboard:
             return "剪贴板"
         case .snippets:
-            return "片段"
+            return "文本片段"
         case .translate:
             return "翻译"
         }
@@ -75,6 +75,21 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
+struct SettingsFieldRow<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title)
+                .frame(width: SettingsLayout.labelWidth, alignment: .leading)
+                .foregroundColor(.secondary)
+            content()
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 final class SettingsViewModel: ObservableObject {
     @Published var selectedTab: SettingsTab
     @Published var isShowingSaved = false
@@ -112,9 +127,8 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             tabBar
             contentView
-            statusBar
         }
-        .frame(minWidth: 640, minHeight: 560)
+        .frame(minWidth: 600, minHeight: 520)
     }
 
     @ViewBuilder
@@ -129,19 +143,6 @@ struct SettingsView: View {
         case .translate:
             TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
         }
-    }
-
-    private var statusBar: some View {
-        HStack(spacing: 6) {
-            Image(systemName: viewModel.isShowingSaved ? "checkmark.circle.fill" : "bolt.fill")
-            Text(viewModel.isShowingSaved ? "已保存" : "自动保存")
-        }
-        .font(.system(size: 11, weight: .medium))
-        .foregroundColor(.secondary)
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal, SettingsLayout.horizontalPadding)
-        .padding(.bottom, SettingsLayout.statusBarPadding)
-        .padding(.top, 4)
     }
 
     private var tabBar: some View {

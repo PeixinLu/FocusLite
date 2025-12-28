@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -155,17 +156,34 @@ struct SnippetsManagerView: View {
                 prefixSettings
             }
 
-            SettingsSection("片段列表") {
+            SettingsSection {
+                HStack {
+                    Text("片段列表")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Button {
+                        viewModel.addSnippet()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                }
+
                 if viewModel.snippets.isEmpty {
                     emptyState
                 } else {
                     List {
-                        ForEach(viewModel.snippets) { snippet in
+                        ForEach(displaySnippets) { snippet in
                             SnippetRow(snippet: snippet,
                                        onEdit: { viewModel.editSnippet(snippet) },
                                        onDelete: { viewModel.deleteSnippet(snippet) })
                         }
-                        .onDelete(perform: viewModel.delete)
+                        .onDelete { offsets in
+                            let targets = offsets.map { displaySnippets[$0] }
+                            for snippet in targets {
+                                viewModel.deleteSnippet(snippet)
+                            }
+                        }
                     }
                     .listStyle(.inset)
                     .frame(minHeight: 240)
@@ -191,21 +209,23 @@ struct SnippetsManagerView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("片段")
+                Text("文本片段")
                     .font(.system(size: 20, weight: .semibold))
-                Text("管理文本快捷输入与模板。")
+                Text("管理文本快捷输入与代码模板，通过快捷关键字快速获取、回填")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
 
             Spacer()
+        }
+    }
 
-            Button {
-                viewModel.addSnippet()
-            } label: {
-                Image(systemName: "plus")
+    private var displaySnippets: [Snippet] {
+        viewModel.snippets.sorted {
+            if $0.updatedAt != $1.updatedAt {
+                return $0.updatedAt < $1.updatedAt
             }
-            .buttonStyle(.borderedProminent)
+            return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
         }
     }
 
@@ -245,26 +265,31 @@ private struct SnippetRow: View {
     let snippet: Snippet
     let onEdit: () -> Void
     let onDelete: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(snippet.title)
-                    .font(.system(size: 14, weight: .semibold))
-
                 HStack(spacing: 8) {
+                    Text(snippet.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
                     if !snippet.keyword.isEmpty {
-                        Text(";" + snippet.keyword)
+                        Text(snippet.keyword)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
-                    }
-
-                    if !snippet.tags.isEmpty {
-                        Text(snippet.tags.joined(separator: ", "))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                 }
+
+                Text(snippet.content.replacingOccurrences(of: "\n", with: " "))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             Spacer()
@@ -280,6 +305,12 @@ private struct SnippetRow: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.15) : Color.clear)
+        )
     }
 }
 
@@ -287,6 +318,7 @@ private struct SnippetEditorView: View {
     @State var draft: SnippetDraft
     let onSave: (SnippetDraft) -> Void
     let onCancel: () -> Void
+    @State private var formatMessage: String?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -296,15 +328,28 @@ private struct SnippetEditorView: View {
                 TextField("标签（逗号分隔）", text: $draft.tagsText)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("内容")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Text("内容")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Button("格式化") {
+                            formatContent()
+                        }
+                        .buttonStyle(.bordered)
+                    }
                     TextEditor(text: $draft.content)
                         .frame(minHeight: 140)
+                        .padding(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
                         )
+                    if let message = formatMessage {
+                        Text(message)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .padding(.vertical, 6)
             }
@@ -324,5 +369,31 @@ private struct SnippetEditorView: View {
         }
         .padding(16)
         .frame(width: 560, height: 420)
+    }
+
+    private func formatContent() {
+        let trimmed = draft.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            formatMessage = "内容为空"
+            return
+        }
+
+        if let data = trimmed.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data),
+           let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
+           let formatted = String(data: pretty, encoding: .utf8) {
+            draft.content = formatted
+            formatMessage = "已按 JSON 格式化"
+            return
+        }
+
+        let cleaned = draft.content
+            .split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+            .map { line in
+                line.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+            }
+            .joined(separator: "\n")
+        draft.content = cleaned
+        formatMessage = "已清理行尾空格"
     }
 }

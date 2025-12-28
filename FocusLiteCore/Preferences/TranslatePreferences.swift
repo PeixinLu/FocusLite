@@ -3,6 +3,7 @@ import Foundation
 enum TranslatePreferences {
     private static let targetModeKey = "translate.targetMode"
     private static let mixedPolicyKey = "translate.mixedPolicy"
+    private static let prefixKey = "translate.prefix"
     private static let servicesKey = "translate.services"
     private static let youdaoAppKey = "translate.youdao.appKey"
     private static let youdaoSecret = "translate.youdao.secret"
@@ -40,6 +41,11 @@ enum TranslatePreferences {
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: mixedPolicyKey)
         }
+    }
+
+    static var searchPrefix: String {
+        get { UserDefaults.standard.string(forKey: prefixKey) ?? "tr" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: prefixKey) }
     }
 
     static var enabledServices: [String] {

@@ -42,9 +42,10 @@ enum PrefixRegistry {
     }
 
     private static func translateEntry() -> PrefixEntry? {
-        let prefix = "tr"
+        let prefix = TranslatePreferences.searchPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prefix.isEmpty else { return nil }
         return PrefixEntry(
-            id: prefix,
+            id: prefix.lowercased(),
             providerID: TranslateProvider.providerID,
             title: prefix,
             subtitle: "Translate",

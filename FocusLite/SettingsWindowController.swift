@@ -23,7 +23,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func createWindowIfNeeded() {
         guard window == nil else { return }
-        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 560)
+        let contentRect = NSRect(x: 0, y: 0, width: 600, height: 520)
         let window = NSWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable],
@@ -42,9 +42,14 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         }
         window.center()
         window.delegate = self
+        window.isReleasedWhenClosed = false
 
         let rootView = SettingsView(viewModel: self.viewModel)
         window.contentView = NSHostingView(rootView: rootView)
         self.window = window
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        window = nil
     }
 }

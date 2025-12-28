@@ -35,9 +35,6 @@ struct UpdateSettingsView: View {
                 }
 
                 SettingsSection {
-                    Button("Check for Updates…") {
-                        updater.checkForUpdates()
-                    }
                     Toggle(
                         "Automatically check for updates",
                         isOn: Binding(
@@ -50,13 +47,6 @@ struct UpdateSettingsView: View {
                     )
                     .toggleStyle(.switch)
                 }
-
-                SettingsSection {
-                    Text("使用 Sparkle 2 从 GitHub Releases 获取更新。网络或 Feed 不可用时会显示错误提示，不会中断应用。")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
@@ -66,12 +56,18 @@ struct UpdateSettingsView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("更新")
-                .font(.system(size: 20, weight: .semibold))
-            Text("通过 Sparkle 检查更新，并可选择自动检查。")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("更新")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("获取 app 最新版本。")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button("Check for Updates…") {
+                updater.checkForUpdates()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
