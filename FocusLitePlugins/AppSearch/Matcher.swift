@@ -78,7 +78,7 @@ enum Matcher {
             return result.scoreInBucket >= 0.7
         case .substring:
             if info.length <= 3 {
-                return result.scoreInBucket >= 0.8
+                return result.scoreInBucket >= 0.75  // 降低阈值以支持短查询的部分匹配
             }
             return result.scoreInBucket >= 0.7
         case .fuzzy:
@@ -177,11 +177,29 @@ enum Matcher {
 
     private static func substringCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
         guard Gate.allowSubstring(info) else { return [] }
-        guard let positions = positionsForSubstring(info.normalized, in: index.normalized) else { return [] }
-        let startBonus = positions.first == 0 ? 0.08 : 0.0
-        let lengthRatio = Double(info.length) / Double(max(1, index.normalized.count))
-        let score = min(0.9, 0.7 + startBonus + 0.15 * lengthRatio)
-        return [Candidate(bucket: .substring, scoreInBucket: score, field: .substring, debug: debug("substring", info, index))]
+        var candidates: [Candidate] = []
+        
+        // Check main name
+        if let positions = positionsForSubstring(info.normalized, in: index.normalized) {
+            let startBonus = positions.first == 0 ? 0.08 : 0.0
+            let lengthRatio = Double(info.length) / Double(max(1, index.normalized.count))
+            let score = min(0.9, 0.7 + startBonus + 0.15 * lengthRatio)
+            candidates.append(Candidate(bucket: .substring, scoreInBucket: score, field: .substring, debug: debug("substring", info, index)))
+        }
+        
+        // Check strong aliases (extra field contains aliases like "设置" for "系统设置")
+        for alias in index.aliasStrong {
+            if alias.contains(info.normalized) {
+                let startBonus = alias.hasPrefix(info.normalized) ? 0.08 : 0.0
+                let lengthRatio = Double(info.length) / Double(max(1, alias.count))
+                // Slightly higher score for alias matches to prioritize them
+                let score = min(0.92, 0.72 + startBonus + 0.15 * lengthRatio)
+                candidates.append(Candidate(bucket: .substring, scoreInBucket: score, field: .aliasStrong, debug: debug("substring-alias", info, index)))
+                break // Take the first matching alias
+            }
+        }
+        
+        return candidates
     }
 
     private static func fuzzyCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {

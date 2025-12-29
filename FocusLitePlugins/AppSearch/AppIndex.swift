@@ -267,7 +267,29 @@ extension AppIndex.AppEntry {
         guard !name.isEmpty else { return nil }
 
         let bundleID = bundle?.bundleIdentifier
-        let aliasEntry = aliasStore.entry(for: name, bundleID: bundleID)
+        
+        // 获取文件名（英文原名）
+        let fileName = url.deletingPathExtension().lastPathComponent
+        
+        // 合并用户配置的别名和文件名
+        var aliasEntry = aliasStore.entry(for: name, bundleID: bundleID)
+        
+        // 如果显示名和文件名不同，将文件名作为别名加入
+        if fileName != name && !fileName.isEmpty {
+            let fileNameTokens = MatchingNormalizer.tokens(from: fileName)
+            if let existing = aliasEntry {
+                // 合并现有别名和文件名 token
+                aliasEntry = AliasEntry(
+                    full: existing.full,
+                    initials: existing.initials,
+                    extra: Array(Set(existing.extra + fileNameTokens))
+                )
+            } else {
+                // 创建新的别名，包含文件名 token
+                aliasEntry = AliasEntry(full: [], initials: [], extra: fileNameTokens)
+            }
+        }
+        
         let nameIndex = AppNameIndex(name: name, aliasEntry: aliasEntry, pinyinProvider: pinyinProvider)
 
         return AppIndex.AppEntry(
