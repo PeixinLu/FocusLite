@@ -243,17 +243,53 @@ actor AppIndex {
     }
 
     private static func dedupe(_ apps: [AppEntry]) -> [AppEntry] {
-        var seen = Set<String>()
-        var result: [AppEntry] = []
-        result.reserveCapacity(apps.count)
+        var byKey: [String: AppEntry] = [:]
+        byKey.reserveCapacity(apps.count)
 
         for app in apps {
             let key = app.bundleID ?? app.path
-            if seen.insert(key).inserted {
-                result.append(app)
+            
+            // 如果已存在相同 key 的应用，比较路径优先级
+            if let existing = byKey[key] {
+                // 优先保留 /Applications 目录下的应用
+                if shouldPrefer(app.path, over: existing.path) {
+                    byKey[key] = app
+                }
+                // 否则保留现有的
+            } else {
+                byKey[key] = app
             }
         }
-        return result
+        
+        return Array(byKey.values)
+    }
+    
+    /// 判断是否应该优先选择 newPath 而不是 existingPath
+    /// 优先级：/Applications > /Applications/Utilities > ~/Applications > 其他路径
+    private static func shouldPrefer(_ newPath: String, over existingPath: String) -> Bool {
+        let newPriority = pathPriority(newPath)
+        let existingPriority = pathPriority(existingPath)
+        
+        // 优先级数字越小越优先
+        if newPriority != existingPriority {
+            return newPriority < existingPriority
+        }
+        
+        // 优先级相同时，保留路径较短的（通常是更标准的安装位置）
+        return newPath.count < existingPath.count
+    }
+    
+    private static func pathPriority(_ path: String) -> Int {
+        if path.hasPrefix("/Applications/Utilities/") {
+            return 2
+        }
+        if path.hasPrefix("/Applications/") {
+            return 1
+        }
+        if path.contains("/Applications/") && path.contains(NSHomeDirectory()) {
+            return 3
+        }
+        return 999 // 其他路径优先级最低
     }
 }
 
