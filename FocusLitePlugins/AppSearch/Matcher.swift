@@ -45,6 +45,11 @@ enum Matcher {
     static func match(query: String, index: AppNameIndex) -> MatchResult? {
         let info = QueryInfoBuilder.build(query)
         guard !info.normalized.isEmpty else { return nil }
+        
+        // 过滤低质量查询（大量重复字符）
+        if QueryInfoBuilder.isLowQualityQuery(info.normalized) {
+            return nil
+        }
 
         var candidates: [Candidate] = []
 
@@ -325,5 +330,32 @@ enum QueryInfoBuilder {
             hasCJK: hasCJK,
             tokens: tokens
         )
+    }
+    
+    /// 检测查询是否为低质量（过多重复字符）
+    static func isLowQualityQuery(_ query: String) -> Bool {
+        guard query.count >= 5 else { return false }
+        
+        // 统计每个字符出现的次数
+        var charCounts: [Character: Int] = [:]
+        for char in query {
+            charCounts[char, default: 0] += 1
+        }
+        
+        // 如果任何单个字符占比超过60%，认为是低质量查询
+        let maxCount = charCounts.values.max() ?? 0
+        let repetitionRatio = Double(maxCount) / Double(query.count)
+        if repetitionRatio > 0.6 {
+            return true
+        }
+        
+        // 如果唯一字符数太少（少于总长度的30%），认为是低质量
+        let uniqueChars = charCounts.keys.count
+        let uniqueRatio = Double(uniqueChars) / Double(query.count)
+        if uniqueRatio < 0.3 {
+            return true
+        }
+        
+        return false
     }
 }
