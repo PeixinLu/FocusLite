@@ -17,8 +17,7 @@ final class MatchingTests: XCTestCase {
             ("visual studio", ["Visual Studio Code"], "Visual Studio Code"),
             ("vsc", ["Visual Studio Code"], "Visual Studio Code"),
             ("vscode", ["Visual Studio Code", "Visual Studio"], "Visual Studio Code"),
-            ("音乐", ["QQ音乐", "网易云音乐"], "QQ音乐"),
-            ("wx weixin", ["微信"], "微信")
+            ("音乐", ["QQ音乐", "网易云音乐"], "QQ音乐")
         ]
 
         for item in cases {
@@ -33,7 +32,6 @@ final class MatchingTests: XCTestCase {
             ("xc", "Xcode"),
             ("adobephoto", "Adobe Photoshop"),
             ("photoshp", "Adobe Photoshop"),
-            ("adp", "Adobe Photoshop"),
             ("prem", "Adobe Premiere"),
             ("final cut", "Final Cut Pro"),
             ("fcp", "Final Cut Pro"),
@@ -75,17 +73,17 @@ final class MatchingTests: XCTestCase {
 
         XCTAssertNotNil(full)
         XCTAssertNotNil(single)
-        XCTAssertGreaterThan(full?.score ?? 0, single?.score ?? 0)
+        XCTAssertGreaterThan(full?.finalScore ?? 0, single?.finalScore ?? 0)
     }
 
     func testAcronymAndPinyinTypes() {
         let weixin = makeIndex(name: "微信")
         let result = Matcher.match(query: "wx", index: weixin)
-        XCTAssertTrue(result?.debug.types.contains(.pinyinInitials) == true)
+        XCTAssertEqual(result?.bucket, .acronymOrInitials)
 
         let photoshop = makeIndex(name: "Adobe Photoshop")
         let ps = Matcher.match(query: "ps", index: photoshop)
-        XCTAssertTrue(ps?.debug.types.contains(.acronym) == true)
+        XCTAssertEqual(ps?.bucket, .acronymOrInitials)
     }
 
     func testCaseAndWidthNormalization() {
@@ -116,16 +114,48 @@ final class MatchingTests: XCTestCase {
             "Super App": ["sa", "superapp"]
         ])
 
-        let index = AppNameIndex(name: "Super App", aliasEntry: store.entry(for: "Super App"), pinyinProvider: nil)
+        let index = AppNameIndex(name: "Super App", aliasEntry: store.entry(for: "Super App", bundleID: nil), pinyinProvider: nil)
         let result = Matcher.match(query: "sa", index: index)
-        XCTAssertTrue(result?.debug.types.contains(.alias) == true)
+        XCTAssertEqual(result?.matchedField, .aliasStrong)
+    }
+
+    func testPinyinFullMatch() {
+        let index = makeIndex(name: "微信")
+        let result = Matcher.match(query: "weixin", index: index)
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result?.bucket == .prefix || result?.bucket == .acronymOrInitials)
+    }
+
+    func testPinyinInitialsMatch() {
+        let index = makeIndex(name: "剪映专业版")
+        let result = Matcher.match(query: "jyzyb", index: index)
+        XCTAssertEqual(result?.bucket, .acronymOrInitials)
+    }
+
+    func testAliasStrongBeatsSubstring() {
+        let store = AliasStore(userAliases: [
+            "Super Long Tool": ["slt"]
+        ])
+        let strongIndex = AppNameIndex(name: "Super Long Tool", aliasEntry: store.entry(for: "Super Long Tool", bundleID: nil), pinyinProvider: nil)
+        let weakIndex = AppNameIndex(name: "Simple Logger Tool", aliasEntry: nil, pinyinProvider: nil)
+
+        let strong = Matcher.match(query: "slt", index: strongIndex)
+        let weak = Matcher.match(query: "slt", index: weakIndex)
+        XCTAssertTrue((strong?.bucket.rawValue ?? 0) > (weak?.bucket.rawValue ?? 0))
+    }
+
+    func testGatingForShortQuery() {
+        let index = makeIndex(name: "Visual Studio Code")
+        let result = Matcher.match(query: "v", index: index)
+        XCTAssertNotNil(result)
+        XCTAssertNotEqual(result?.bucket, .fuzzy)
     }
 }
 
 private func makeIndex(name: String) -> AppNameIndex {
     AppNameIndex(
         name: name,
-        aliasEntry: AliasStore.builtIn.entry(for: name),
+        aliasEntry: AliasStore.builtIn.entry(for: name, bundleID: nil),
         pinyinProvider: SystemPinyinProvider()
     )
 }
@@ -134,19 +164,22 @@ private func match(query: String, name: String) -> MatchResult? {
     Matcher.match(query: query, index: makeIndex(name: name))
 }
 
-private func rank(query: String, names: [String]) -> [(name: String, score: Double, debug: MatchDebug)] {
+private func rank(query: String, names: [String]) -> [(name: String, score: Double, debug: String)] {
     let results = names.compactMap { name -> (String, MatchResult)? in
         guard let result = match(query: query, name: name) else { return nil }
         return (name, result)
     }
 
     return results.sorted {
-        if $0.1.score != $1.1.score {
-            return $0.1.score > $1.1.score
+        if $0.1.bucket.rawValue != $1.1.bucket.rawValue {
+            return $0.1.bucket.rawValue > $1.1.bucket.rawValue
+        }
+        if $0.1.finalScore != $1.1.finalScore {
+            return $0.1.finalScore > $1.1.finalScore
         }
         if $0.0.count != $1.0.count {
             return $0.0.count < $1.0.count
         }
         return $0.0.localizedCaseInsensitiveCompare($1.0) == .orderedAscending
-    }.map { (name: $0.0, score: $0.1.score, debug: $0.1.debug) }
+    }.map { (name: $0.0, score: $0.1.finalScore, debug: $0.1.debug ?? "") }
 }

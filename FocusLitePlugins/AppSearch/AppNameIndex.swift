@@ -7,7 +7,8 @@ struct AppNameIndex: Codable, Hashable, Sendable {
     let acronym: String
     let pinyinFull: String?
     let pinyinInitials: String?
-    let aliases: [String]
+    let aliasStrong: [String]
+    let aliasWeak: [String]
 
     init(name: String, aliasEntry: AliasEntry?, pinyinProvider: PinyinProvider?) {
         original = name
@@ -30,13 +31,63 @@ struct AppNameIndex: Codable, Hashable, Sendable {
             pinyinInitials = nil
         }
 
-        let uniqueAliases = Set(normalizedFull + normalizedInitials + normalizedExtra)
-        aliases = uniqueAliases.sorted {
+        let strongSet = Set(normalizedFull + normalizedInitials + normalizedExtra)
+        aliasStrong = strongSet.sorted {
             if $0.count != $1.count {
                 return $0.count > $1.count
             }
             return $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
         }
+
+        var weakCandidates = tokens
+        if !acronym.isEmpty {
+            weakCandidates.append(acronym)
+        }
+        if let pinyinInitials {
+            weakCandidates.append(pinyinInitials)
+        }
+        let weakSet = Set(weakCandidates).subtracting(strongSet)
+        aliasWeak = weakSet.sorted {
+            if $0.count != $1.count {
+                return $0.count > $1.count
+            }
+            return $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        original = try container.decode(String.self, forKey: .original)
+        normalized = try container.decode(String.self, forKey: .normalized)
+        tokens = try container.decode([String].self, forKey: .tokens)
+        acronym = try container.decode(String.self, forKey: .acronym)
+        pinyinFull = try container.decodeIfPresent(String.self, forKey: .pinyinFull)
+        pinyinInitials = try container.decodeIfPresent(String.self, forKey: .pinyinInitials)
+        aliasStrong = try container.decodeIfPresent([String].self, forKey: .aliasStrong) ?? []
+        aliasWeak = try container.decodeIfPresent([String].self, forKey: .aliasWeak) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(original, forKey: .original)
+        try container.encode(normalized, forKey: .normalized)
+        try container.encode(tokens, forKey: .tokens)
+        try container.encode(acronym, forKey: .acronym)
+        try container.encodeIfPresent(pinyinFull, forKey: .pinyinFull)
+        try container.encodeIfPresent(pinyinInitials, forKey: .pinyinInitials)
+        try container.encode(aliasStrong, forKey: .aliasStrong)
+        try container.encode(aliasWeak, forKey: .aliasWeak)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case original
+        case normalized
+        case tokens
+        case acronym
+        case pinyinFull
+        case pinyinInitials
+        case aliasStrong
+        case aliasWeak
     }
 }
 
@@ -47,64 +98,87 @@ struct AliasEntry: Codable, Hashable, Sendable {
 }
 
 struct AliasStore: Sendable {
-    private let map: [String: AliasEntry]
+    private let nameMap: [String: AliasEntry]
+    private let bundleMap: [String: AliasEntry]
 
-    static let builtIn = AliasStore(map: [
+    static let builtIn = AliasStore(nameMap: [
         "微信": AliasEntry(full: ["weixin", "wechat"], initials: ["wx"], extra: []),
+        "WeChat": AliasEntry(full: ["weixin", "wechat"], initials: ["wx"], extra: ["微信"]),
+        "Terminal": AliasEntry(full: [], initials: [], extra: ["终端"]),
+        "系统设置": AliasEntry(full: [], initials: [], extra: ["设置"]),
         "支付宝": AliasEntry(full: ["zhifubao"], initials: ["zfb"], extra: []),
         "QQ音乐": AliasEntry(full: ["qqyinyue", "qqmusic"], initials: ["qqyy"], extra: []),
         "网易云音乐": AliasEntry(full: ["wangyiyun", "wangyiyunyinyue"], initials: ["wyy"], extra: []),
         "Final Cut Pro": AliasEntry(full: [], initials: ["fcp"], extra: []),
         "Visual Studio Code": AliasEntry(full: [], initials: ["vsc"], extra: ["vscode"])
-    ])
+    ], bundleMap: [:])
 
-    init(map: [String: AliasEntry]) {
-        self.map = map
+    init(nameMap: [String: AliasEntry], bundleMap: [String: AliasEntry]) {
+        self.nameMap = nameMap
+        self.bundleMap = bundleMap
     }
 
-    init(userAliases: [String: [String]]) {
-        var derived: [String: AliasEntry] = [:]
-        for (name, aliases) in userAliases {
-            let grouped = AliasStore.splitAliases(aliases)
-            derived[name] = grouped
+    init(userAliases: [String: [String]], bundleAliases: [String: [String]] = [:]) {
+        nameMap = AliasStore.buildMap(from: userAliases)
+        bundleMap = AliasStore.buildMap(from: bundleAliases)
+    }
+
+    func entry(for name: String, bundleID: String?) -> AliasEntry? {
+        if let bundleID, let entry = bundleMap[bundleID] {
+            return entry
         }
-        map = derived
-    }
-
-    func entry(for name: String) -> AliasEntry? {
-        map[name]
+        return nameMap[name]
     }
 
     func merged(with other: AliasStore) -> AliasStore {
-        var mergedMap = map
-        for (name, entry) in other.map {
-            if let existing = mergedMap[name] {
-                mergedMap[name] = AliasEntry(
+        let mergedNames = AliasStore.mergeMap(nameMap, other.nameMap)
+        let mergedBundles = AliasStore.mergeMap(bundleMap, other.bundleMap)
+        return AliasStore(nameMap: mergedNames, bundleMap: mergedBundles)
+    }
+
+    static func loadUserAliases(from url: URL) -> AliasStore {
+        guard let data = try? Data(contentsOf: url) else {
+            return AliasStore(nameMap: [:], bundleMap: [:])
+        }
+
+        struct Payload: Codable {
+            let byBundleID: [String: [String]]?
+            let byName: [String: [String]]?
+            let aliases: [String: [String]]?
+        }
+
+        guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
+            return AliasStore(nameMap: [:], bundleMap: [:])
+        }
+
+        let byName = payload.byName ?? payload.aliases ?? [:]
+        let byBundleID = payload.byBundleID ?? [:]
+        return AliasStore(userAliases: byName, bundleAliases: byBundleID)
+    }
+
+    private static func buildMap(from source: [String: [String]]) -> [String: AliasEntry] {
+        var derived: [String: AliasEntry] = [:]
+        for (name, aliases) in source {
+            let grouped = splitAliases(aliases)
+            derived[name] = grouped
+        }
+        return derived
+    }
+
+    private static func mergeMap(_ lhs: [String: AliasEntry], _ rhs: [String: AliasEntry]) -> [String: AliasEntry] {
+        var merged = lhs
+        for (name, entry) in rhs {
+            if let existing = merged[name] {
+                merged[name] = AliasEntry(
                     full: Array(Set(existing.full + entry.full)),
                     initials: Array(Set(existing.initials + entry.initials)),
                     extra: Array(Set(existing.extra + entry.extra))
                 )
             } else {
-                mergedMap[name] = entry
+                merged[name] = entry
             }
         }
-        return AliasStore(map: mergedMap)
-    }
-
-    static func loadUserAliases(from url: URL) -> AliasStore {
-        guard let data = try? Data(contentsOf: url) else {
-            return AliasStore(map: [:])
-        }
-
-        struct Payload: Codable {
-            let aliases: [String: [String]]
-        }
-
-        guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
-            return AliasStore(map: [:])
-        }
-
-        return AliasStore(userAliases: payload.aliases)
+        return merged
     }
 
     private static func splitAliases(_ aliases: [String]) -> AliasEntry {
@@ -204,7 +278,7 @@ enum MatchingNormalizer {
         return isCJKUnifiedIdeograph(scalar)
     }
 
-    private static func isCJKUnifiedIdeograph(_ scalar: UnicodeScalar) -> Bool {
+    static func isCJKUnifiedIdeograph(_ scalar: UnicodeScalar) -> Bool {
         switch scalar.value {
         case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0x20000...0x2A6DF, 0x2A700...0x2B73F,
              0x2B740...0x2B81F, 0x2B820...0x2CEAF, 0xF900...0xFAFF:

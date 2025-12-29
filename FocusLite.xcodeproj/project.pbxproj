@@ -32,7 +32,16 @@
 		1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */; };
 		1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000134 /* Matcher.swift */; };
 		1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */; };
+		1A2B3C4D5E6F000000000236 /* UserAliasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */; };
+		1A2B3C4D5E6F000000000237 /* Bundle+Pinyin4Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */; };
+		1A2B3C4D5E6F000000000238 /* OutputFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000138 /* OutputFormat.swift */; };
+		1A2B3C4D5E6F000000000239 /* PinyinFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */; };
+		1A2B3C4D5E6F00000000023A /* PinyinHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */; };
+		1A2B3C4D5E6F00000000023B /* PinyinResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013B /* PinyinResource.swift */; };
+		1A2B3C4D5E6F00000000023C /* String+Pinyin4Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */; };
+		1A2B3C4D5E6F00000000023D /* unicode_to_hanyu_pinyin.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */; };
 		1A2B3C4D5E6F000000000241 /* MatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000141 /* MatchingTests.swift */; };
+		1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */; };
 		1A2B3C4D5E6F000000000250 /* SnippetsManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */; };
 		1A2B3C4D5E6F000000000251 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000151 /* Snippet.swift */; };
 		1A2B3C4D5E6F000000000252 /* SnippetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000152 /* SnippetStore.swift */; };
@@ -106,7 +115,16 @@
 		1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNameIndex.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000134 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinProvider.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAliasStore.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Pinyin4Swift.swift"; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000138 /* OutputFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputFormat.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinFormatter.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinHelper.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000013B /* PinyinResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinResource.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Pinyin4Swift.swift"; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/unicode_to_hanyu_pinyin.txt; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000141 /* MatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingTests.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsManagerView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000151 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000152 /* SnippetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetStore.swift; sourceTree = "<group>"; };
@@ -207,6 +225,7 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */,
+				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
 				81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */,
 				1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */,
 				1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */,
@@ -292,8 +311,24 @@
 				1A2B3C4D5E6F000000000133 /* AppNameIndex.swift */,
 				1A2B3C4D5E6F000000000134 /* Matcher.swift */,
 				1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */,
+				1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */,
+				1A2B3C4D5E6F00000000013E /* Pinyin4Swift */,
 			);
 			path = AppSearch;
+			sourceTree = "<group>";
+		};
+		1A2B3C4D5E6F00000000013E /* Pinyin4Swift */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */,
+				1A2B3C4D5E6F000000000138 /* OutputFormat.swift */,
+				1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */,
+				1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */,
+				1A2B3C4D5E6F00000000013B /* PinyinResource.swift */,
+				1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */,
+				1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */,
+			);
+			path = Vendors/Pinyin4Swift;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F00000000000D /* Snippets */ = {
@@ -423,6 +458,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */,
+				1A2B3C4D5E6F00000000023D /* unicode_to_hanyu_pinyin.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -444,6 +480,7 @@
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */,
 				81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */,
+				1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,
 				98746D42D3E646CCB757A85D /* AppUpdater.swift in Sources */,
 				1A2B3C4D5E6F000000000260 /* ClipboardSettingsView.swift in Sources */,
@@ -466,6 +503,13 @@
 				1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */,
 				1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */,
 				1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000236 /* UserAliasStore.swift in Sources */,
+				1A2B3C4D5E6F000000000237 /* Bundle+Pinyin4Swift.swift in Sources */,
+				1A2B3C4D5E6F000000000238 /* OutputFormat.swift in Sources */,
+				1A2B3C4D5E6F000000000239 /* PinyinFormatter.swift in Sources */,
+				1A2B3C4D5E6F00000000023A /* PinyinHelper.swift in Sources */,
+				1A2B3C4D5E6F00000000023B /* PinyinResource.swift in Sources */,
+				1A2B3C4D5E6F00000000023C /* String+Pinyin4Swift.swift in Sources */,
 				1A2B3C4D5E6F000000000251 /* Snippet.swift in Sources */,
 				1A2B3C4D5E6F000000000252 /* SnippetStore.swift in Sources */,
 				1A2B3C4D5E6F000000000253 /* SnippetMatcher.swift in Sources */,

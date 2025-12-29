@@ -5,6 +5,7 @@ enum SettingsTab: String, CaseIterable {
     case clipboard
     case snippets
     case translate
+    case apps
 }
 
 enum SettingsLayout {
@@ -27,6 +28,8 @@ extension SettingsTab {
             return "文本片段"
         case .translate:
             return "翻译"
+        case .apps:
+            return "应用"
         }
     }
 }
@@ -142,6 +145,8 @@ struct SettingsView: View {
             SnippetsManagerView(viewModel: viewModel.snippetsViewModel, onSaved: viewModel.markSaved)
         case .translate:
             TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
+        case .apps:
+            AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         }
     }
 

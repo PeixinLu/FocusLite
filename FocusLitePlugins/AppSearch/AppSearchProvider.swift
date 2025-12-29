@@ -21,22 +21,30 @@ struct AppSearchProvider: ResultProvider {
         await index.warmUp()
         let apps = await index.snapshot()
 
-        var items: [ResultItem] = []
-        items.reserveCapacity(min(apps.count, 80))
-        let threshold = 0.55
+        let info = Matcher.queryInfo(for: trimmed)
+        var candidates: [(ResultItem, MatchResult, String)] = []
+        candidates.reserveCapacity(min(apps.count, 80))
 
         for app in apps {
             guard let match = Matcher.match(query: trimmed, index: app.nameIndex) else {
                 continue
             }
 
-            if match.score >= threshold {
-                Log.debug("AppSearch: \(app.name) -> \(match.debug)")
-                items.append(resultItem(for: app, score: match.score))
+            if Matcher.shouldInclude(match, info: info) {
+                Log.debug("AppSearch: \(app.name) -> \(match.debug ?? "")")
+                candidates.append((resultItem(for: app, score: match.finalScore), match, app.name))
             }
         }
 
-        return items
+        return candidates.sorted {
+            if $0.1.bucket.rawValue != $1.1.bucket.rawValue {
+                return $0.1.bucket.rawValue > $1.1.bucket.rawValue
+            }
+            if $0.1.finalScore != $1.1.finalScore {
+                return $0.1.finalScore > $1.1.finalScore
+            }
+            return $0.2.localizedCaseInsensitiveCompare($1.2) == .orderedAscending
+        }.map { $0.0 }
     }
 
     private func resultItem(for app: AppIndex.AppEntry, score: Double) -> ResultItem {
