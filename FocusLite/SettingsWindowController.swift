@@ -17,6 +17,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             Log.info("Settings window was not created.")
             return
         }
+        // 打开设置窗口时，切换到 regular 模式，显示 Dock 图标
+        NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -50,6 +52,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        // 关闭设置窗口时，切换回 accessory 模式，隐藏 Dock 图标
+        NSApp.setActivationPolicy(.accessory)
         window = nil
     }
 }

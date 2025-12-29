@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let clipboardHotKeyID: UInt32 = 2
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 设置为 accessory 模式，不显示 Dock 图标，只显示菜单栏图标
+        NSApp.setActivationPolicy(.accessory)
+        
         let providers: [any ResultProvider] = [
             CalcProvider(),
             SnippetsProvider(),
