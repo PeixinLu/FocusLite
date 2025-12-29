@@ -93,7 +93,13 @@ final class LauncherViewModel: ObservableObject {
             copyToPasteboard(text)
             showToast("已复制")
         case .openURL(let url):
-            NSWorkspace.shared.open(url)
+            // 先退出避免焦点切换冲突
+            onExit?()
+            // 延迟打开以确保窗口先隐藏
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NSWorkspace.shared.open(url)
+            }
+            return
         case .pasteText(let text):
             copyToPasteboard(text)
             if onPaste?(text) == true {
@@ -101,12 +107,18 @@ final class LauncherViewModel: ObservableObject {
             }
             showToast("已复制，开启辅助功能权限可自动粘贴")
         case .runApp(let bundleID):
-            NSWorkspace.shared.launchApplication(
-                withBundleIdentifier: bundleID,
-                options: [.default],
-                additionalEventParamDescriptor: nil,
-                launchIdentifier: nil
-            )
+            // 先退出避免焦点切换冲突
+            onExit?()
+            // 延迟启动以确保窗口先隐藏
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NSWorkspace.shared.launchApplication(
+                    withBundleIdentifier: bundleID,
+                    options: [.default],
+                    additionalEventParamDescriptor: nil,
+                    launchIdentifier: nil
+                )
+            }
+            return
         case .copyImage(let data, let type):
             copyImageToPasteboard(data, type: type)
             showToast("已复制图片")

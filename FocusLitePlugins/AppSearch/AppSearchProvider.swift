@@ -48,11 +48,19 @@ struct AppSearchProvider: ResultProvider {
     }
 
     private func resultItem(for app: AppIndex.AppEntry, score: Double) -> ResultItem {
-        let subtitle = app.bundleID ?? app.path
+        // 简化路径显示：用 ~ 代替 home 目录
+        let homeDir = NSHomeDirectory()
+        let displayPath: String
+        if app.path.hasPrefix(homeDir) {
+            displayPath = app.path.replacingOccurrences(of: homeDir, with: "~")
+        } else {
+            displayPath = app.path
+        }
+        
         let url = URL(fileURLWithPath: app.path)
         return ResultItem(
             title: app.name,
-            subtitle: subtitle,
+            subtitle: displayPath,
             icon: .filePath(app.path),
             score: score,
             action: .openURL(url),
