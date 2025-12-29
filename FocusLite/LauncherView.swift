@@ -29,9 +29,9 @@ struct LauncherView: View {
                     }
 
                 Button {
-                    viewModel.openSnippetsManager()
+                    viewModel.openSettings()
                 } label: {
-                    Image(systemName: "square.and.pencil")
+                    Image(systemName: "gearshape")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .buttonStyle(.plain)
@@ -111,7 +111,9 @@ struct LauncherView: View {
 
     private var showsPreviewPane: Bool {
         guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
-        return providerID == ClipboardProvider.providerID || providerID == SnippetsProvider.providerID
+        return providerID == ClipboardProvider.providerID || 
+               providerID == SnippetsProvider.providerID || 
+               providerID == TranslateProvider.providerID
     }
 }
 
@@ -297,8 +299,21 @@ private struct PreviewPane: View {
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
+        } else if item.providerID == TranslateProvider.providerID {
+            // 翻译结果预览
+            ScrollView {
+                Text(item.title)
+                    .font(.system(size: 15, weight: .regular))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(12)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
         } else {
-            Text("预览仅适用于剪贴板和 Snippets")
+            Text("预览仅适用于剪贴板、Snippets 和翻译")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             Spacer()

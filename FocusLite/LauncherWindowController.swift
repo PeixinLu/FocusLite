@@ -12,10 +12,12 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         self.viewModel = viewModel
     }
 
-    func show() {
+    func show(resetSearch: Bool = true) {
         createWindowIfNeeded()
-        Task { @MainActor in
-            viewModel.resetSearch()
+        if resetSearch {
+            Task { @MainActor in
+                viewModel.resetSearch()
+            }
         }
         capturePreviousApp()
         centerWindow()

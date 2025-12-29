@@ -13,9 +13,17 @@ enum PrefixResultItemBuilder {
         }
 
         return results.sorted { lhs, rhs in
-            lhs.score == rhs.score
-                ? lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-                : lhs.score > rhs.score
+            // 如果分数相同，翻译前缀优先
+            if lhs.score == rhs.score {
+                if lhs.providerID == TranslateProvider.providerID && rhs.providerID != TranslateProvider.providerID {
+                    return true
+                }
+                if lhs.providerID != TranslateProvider.providerID && rhs.providerID == TranslateProvider.providerID {
+                    return false
+                }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+            return lhs.score > rhs.score
         }
     }
 

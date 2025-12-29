@@ -148,8 +148,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             identifier: clipboardHotKeyID
         ) { [weak self] in
             DispatchQueue.main.async {
-                self?.windowController?.show()
+                // 先重置搜索，再激活剪贴板模式，最后显示窗口
+                self?.launcherViewModel?.resetSearch()
                 self?.launcherViewModel?.activateClipboardSearch()
+                self?.windowController?.show(resetSearch: false)
             }
         }
 
