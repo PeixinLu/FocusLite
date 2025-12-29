@@ -61,12 +61,15 @@ struct SnippetsProvider: ResultProvider {
 
     private func resultItem(snippet: Snippet, score: Double) -> ResultItem {
         let subtitle = contentPreview(snippet.content)
+        let action: ResultAction = SnippetsPreferences.autoPasteAfterSelect
+            ? .pasteText(snippet.content)
+            : .copyText(snippet.content)
         return ResultItem(
             title: snippet.title,
             subtitle: subtitle,
             icon: .system("text.append"),
             score: score,
-            action: .pasteText(snippet.content),
+            action: action,
             providerID: id,
             category: .standard,
             preview: .text(snippet.content)

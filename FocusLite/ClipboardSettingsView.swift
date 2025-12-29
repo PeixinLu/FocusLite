@@ -9,6 +9,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
     @Published var hotKeyText: String
     @Published var searchPrefixText: String
     @Published var retentionHours: Int
+    @Published var autoPasteEnabled: Bool
 
     init() {
         isRecordingEnabled = !ClipboardPreferences.isPaused
@@ -17,6 +18,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
         hotKeyText = ClipboardPreferences.hotKeyText
         searchPrefixText = ClipboardPreferences.searchPrefix
         retentionHours = ClipboardPreferences.historyRetentionHours
+        autoPasteEnabled = ClipboardPreferences.autoPasteAfterSelect
     }
 
     func applyChanges() {
@@ -31,6 +33,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
         ClipboardPreferences.hotKeyText = hotKeyText
         ClipboardPreferences.searchPrefix = searchPrefixText
         ClipboardPreferences.historyRetentionHours = retentionHours
+        ClipboardPreferences.autoPasteAfterSelect = autoPasteEnabled
     }
 }
 
@@ -57,6 +60,14 @@ struct ClipboardSettingsView: View {
                                 .labelsHidden()
                                 .toggleStyle(.switch)
                                 .onChange(of: viewModel.isRecordingEnabled) { _ in
+                                    applyAndNotify()
+                                }
+                        }
+
+                        SettingsFieldRow(title: "自动粘贴") {
+                            Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                                .toggleStyle(.switch)
+                                .onChange(of: viewModel.autoPasteEnabled) { _ in
                                     applyAndNotify()
                                 }
                         }

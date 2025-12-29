@@ -13,6 +13,7 @@ enum TranslatePreferences {
     private static let bingAPIKey = "translate.bing.apiKey"
     private static let bingRegion = "translate.bing.region"
     private static let bingEndpoint = "translate.bing.endpoint"
+    private static let autoPasteKey = "translate.autoPasteAfterSelect"
 
     enum TargetMode: String {
         case auto
@@ -46,6 +47,18 @@ enum TranslatePreferences {
     static var searchPrefix: String {
         get { UserDefaults.standard.string(forKey: prefixKey) ?? "tr" }
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: prefixKey) }
+    }
+
+    static var autoPasteAfterSelect: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: autoPasteKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoPasteKey)
+        }
     }
 
     static var enabledServices: [String] {

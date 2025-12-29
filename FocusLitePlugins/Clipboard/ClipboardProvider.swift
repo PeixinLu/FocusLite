@@ -43,12 +43,15 @@ struct ClipboardProvider: ResultProvider {
     private func resultItem(entry: ClipboardEntry, score: Double, query: String) -> ResultItem {
         switch entry.content {
         case .text(let text):
+            let action: ResultAction = ClipboardPreferences.autoPasteAfterSelect
+                ? .pasteText(text)
+                : .copyText(text)
             return ResultItem(
                 title: contentPreview(text),
                 subtitle: subtitle(for: entry),
                 icon: .system("doc.on.clipboard"),
                 score: score,
-                action: .pasteText(text),
+                action: action,
                 providerID: id,
                 category: .standard,
                 preview: .text(text)

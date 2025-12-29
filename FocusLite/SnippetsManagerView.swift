@@ -7,12 +7,14 @@ final class SnippetsManagerViewModel: ObservableObject {
     @Published var editorDraft: SnippetDraft?
     @Published var isLoading = false
     @Published var searchPrefixText: String
+    @Published var autoPasteEnabled: Bool
 
     private let store: SnippetStore
 
     init(store: SnippetStore = .shared) {
         self.store = store
         self.searchPrefixText = SnippetsPreferences.searchPrefix
+        self.autoPasteEnabled = SnippetsPreferences.autoPasteAfterSelect
     }
 
     func load() {
@@ -78,6 +80,10 @@ final class SnippetsManagerViewModel: ObservableObject {
 
     func saveSearchPrefix() {
         SnippetsPreferences.searchPrefix = searchPrefixText
+    }
+
+    func saveAutoPaste() {
+        SnippetsPreferences.autoPasteAfterSelect = autoPasteEnabled
     }
 }
 
@@ -154,6 +160,15 @@ struct SnippetsManagerView: View {
                 .padding(.bottom, SettingsLayout.headerBottomPadding)
             SettingsSection("搜索前缀") {
                 prefixSettings
+            }
+
+            SettingsSection("行为") {
+                Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                    .toggleStyle(.switch)
+                    .onChange(of: viewModel.autoPasteEnabled) { _ in
+                        viewModel.saveAutoPaste()
+                        onSaved?()
+                    }
             }
 
             SettingsSection {

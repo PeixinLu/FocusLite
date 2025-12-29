@@ -2,6 +2,7 @@ import Foundation
 
 enum SnippetsPreferences {
     private static let prefixKey = "snippets.searchPrefix"
+    private static let autoPasteKey = "snippets.autoPasteAfterSelect"
 
     static var searchPrefix: String {
         get {
@@ -10,6 +11,18 @@ enum SnippetsPreferences {
         set {
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
             UserDefaults.standard.set(trimmed, forKey: prefixKey)
+        }
+    }
+
+    static var autoPasteAfterSelect: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: autoPasteKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoPasteKey)
         }
     }
 }

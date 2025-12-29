@@ -10,6 +10,7 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var mixedPolicy: TranslatePreferences.MixedTextPolicy
     @Published var enabledServices: [String]
     @Published var translatePrefixText: String
+    @Published var autoPasteEnabled: Bool
 
     @Published var youdaoAppKey: String
     @Published var youdaoSecret: String
@@ -29,6 +30,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         mixedPolicy = TranslatePreferences.mixedTextPolicy
         enabledServices = TranslatePreferences.enabledServices
         translatePrefixText = TranslatePreferences.searchPrefix
+        autoPasteEnabled = TranslatePreferences.autoPasteAfterSelect
         youdaoAppKey = TranslatePreferences.youdaoAppKeyValue
         youdaoSecret = TranslatePreferences.youdaoSecretValue
         baiduAppID = TranslatePreferences.baiduAppIDValue
@@ -43,6 +45,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.mixedTextPolicy = mixedPolicy
         TranslatePreferences.enabledServices = enabledServices
         TranslatePreferences.searchPrefix = translatePrefixText
+        TranslatePreferences.autoPasteAfterSelect = autoPasteEnabled
         TranslatePreferences.youdaoAppKeyValue = youdaoAppKey
         TranslatePreferences.youdaoSecretValue = youdaoSecret
         TranslatePreferences.baiduAppIDValue = baiduAppID
@@ -103,6 +106,13 @@ struct TranslateSettingsView: View {
                             TextField("如 tr", text: $viewModel.translatePrefixText)
                                 .frame(width: 120)
                                 .onChange(of: viewModel.translatePrefixText) { _ in
+                                    applyAndNotify()
+                                }
+                        }
+                        SettingsFieldRow(title: "自动粘贴") {
+                            Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                                .toggleStyle(.switch)
+                                .onChange(of: viewModel.autoPasteEnabled) { _ in
                                     applyAndNotify()
                                 }
                         }
