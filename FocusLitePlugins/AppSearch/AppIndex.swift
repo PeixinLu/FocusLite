@@ -316,12 +316,8 @@ extension AppIndex.AppEntry {
         }
 
         let info = bundle.infoDictionary ?? [:]
-        if let uiElement = info["LSUIElement"] as? Bool, uiElement {
-            return true
-        }
-        if let uiElement = info["LSUIElement"] as? String, uiElement == "1" {
-            return true
-        }
+        // LSUIElement 表示应用不在 Dock 显示，但仍可正常使用（如 Alfred、1Password）
+        // 只排除真正的后台应用 LSBackgroundOnly
         if let background = info["LSBackgroundOnly"] as? Bool, background {
             return true
         }
