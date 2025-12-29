@@ -29,9 +29,12 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide() {
+    func hide(restoreFocus: Bool = true) {
         stopKeyMonitor()
         window?.orderOut(nil)
+        if restoreFocus {
+            previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        }
     }
 
     func toggle() {
@@ -47,7 +50,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
             return false
         }
 
-        hide()
+        hide(restoreFocus: false)
         previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
