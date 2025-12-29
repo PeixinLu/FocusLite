@@ -62,7 +62,10 @@ struct ClipboardSettingsView: View {
                         }
 
                         SettingsFieldRow(title: "快捷键") {
-                            HotKeyRecorderField(text: $viewModel.hotKeyText) {
+                            HotKeyRecorderField(
+                                text: $viewModel.hotKeyText,
+                                conflictHotKeys: [GeneralPreferences.launcherHotKeyText]
+                            ) {
                                 applyAndNotify()
                             }
                         }
@@ -212,26 +215,106 @@ struct HotKeyRecorderField: View {
     @Binding var text: String
     var onRecorded: (() -> Void)?
     @State private var isRecording = false
+    @State private var previousText: String
+    private let captureSession = HotKeyCaptureSession()
+    private let conflictHotKeys: [String]
+
+    init(
+        text: Binding<String>,
+        conflictHotKeys: [String] = [],
+        onRecorded: (() -> Void)? = nil
+    ) {
+        _text = text
+        _previousText = State(initialValue: text.wrappedValue)
+        self.onRecorded = onRecorded
+        self.conflictHotKeys = conflictHotKeys
+    }
 
     var body: some View {
         HStack(spacing: 8) {
-            KeyRecorderTextField(text: $text, isRecording: $isRecording, onRecorded: onRecorded)
-                .frame(width: 200)
-            Button(isRecording ? "按键中…" : "录制") {
-                isRecording = true
+            KeyRecorderTextField(
+                text: $text,
+                isRecording: $isRecording,
+                onCaptured: handleCaptured,
+                onCancel: { stopRecording(revert: true) }
+            )
+            .frame(width: 200)
+            Button(isRecording ? "取消" : "录制") {
+                if isRecording {
+                    stopRecording(revert: true)
+                } else {
+                    startRecording()
+                }
             }
             .buttonStyle(.bordered)
         }
+    }
+
+    private func handleCaptured(_ combo: String) {
+        guard isRecording else { return }
+        guard let descriptor = HotKeyDescriptor.parse(combo) else { return }
+        if let conflict = conflictDescriptor(for: descriptor) {
+            stopRecording(revert: true, conflictMessage: "与现有快捷键「\(conflict)」冲突，请选择其他组合。")
+            return
+        }
+        text = combo
+        stopRecording(revert: false)
+        onRecorded?()
+    }
+
+    private func startRecording() {
+        previousText = text
+        guard captureSession.start(onCaptured: handleCaptured) else {
+            return
+        }
+        NotificationCenter.default.post(name: .hotKeyRecordingWillBegin, object: nil)
+        isRecording = true
+    }
+
+    private func stopRecording(revert: Bool, conflictMessage: String? = nil) {
+        if revert {
+            text = previousText
+        }
+        captureSession.stop()
+        isRecording = false
+        NotificationCenter.default.post(name: .hotKeyRecordingDidEnd, object: nil)
+        if let conflictMessage {
+            presentConflictAlert(conflictMessage)
+        }
+    }
+
+    private func conflictDescriptor(for descriptor: HotKeyDescriptor) -> String? {
+        for item in conflictHotKeys {
+            guard let other = HotKeyDescriptor.parse(item) else { continue }
+            if other == descriptor {
+                return item
+            }
+        }
+        return nil
+    }
+
+    private func presentConflictAlert(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "快捷键冲突"
+        alert.informativeText = message
+        alert.runModal()
     }
 }
 
 private struct KeyRecorderTextField: NSViewRepresentable {
     @Binding var text: String
     @Binding var isRecording: Bool
-    var onRecorded: (() -> Void)?
+    var onCaptured: (String) -> Void
+    var onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, isRecording: $isRecording, onRecorded: onRecorded)
+        Coordinator(
+            text: $text,
+            isRecording: $isRecording,
+            onCaptured: onCaptured,
+            onCancel: onCancel
+        )
     }
 
     func makeNSView(context: Context) -> RecordingTextField {
@@ -259,12 +342,19 @@ private struct KeyRecorderTextField: NSViewRepresentable {
     final class Coordinator {
         @Binding var text: String
         @Binding var isRecording: Bool
-        let onRecorded: (() -> Void)?
+        let onCaptured: (String) -> Void
+        let onCancel: () -> Void
 
-        init(text: Binding<String>, isRecording: Binding<Bool>, onRecorded: (() -> Void)?) {
+        init(
+            text: Binding<String>,
+            isRecording: Binding<Bool>,
+            onCaptured: @escaping (String) -> Void,
+            onCancel: @escaping () -> Void
+        ) {
             _text = text
             _isRecording = isRecording
-            self.onRecorded = onRecorded
+            self.onCaptured = onCaptured
+            self.onCancel = onCancel
         }
 
         func beginRecording() {
@@ -276,41 +366,108 @@ private struct KeyRecorderTextField: NSViewRepresentable {
 
             if event.keyCode == kVK_Escape {
                 isRecording = false
+                onCancel()
                 return
             }
 
             guard let key = keyToken(for: event) else { return }
             let tokens = modifierTokens(from: event) + [key]
-            text = tokens.joined(separator: "+")
-            isRecording = false
-            onRecorded?()
-        }
-
-        private func modifierTokens(from event: NSEvent) -> [String] {
-            var tokens: [String] = []
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if flags.contains(.command) { tokens.append("command") }
-            if flags.contains(.option) { tokens.append("option") }
-            if flags.contains(.shift) { tokens.append("shift") }
-            if flags.contains(.control) { tokens.append("control") }
-            return tokens
-        }
-
-        private func keyToken(for event: NSEvent) -> String? {
-            if event.keyCode == kVK_Space {
-                return "space"
-            }
-
-            if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
-                let char = chars.first!
-                if char.isLetter || char.isNumber {
-                    return String(char)
-                }
-            }
-
-            return nil
+            let candidate = tokens.joined(separator: "+")
+            onCaptured(candidate)
         }
     }
+}
+
+private final class HotKeyCaptureSession {
+    private var eventTap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+    private var onCaptured: ((String) -> Void)?
+
+    @discardableResult
+    func start(onCaptured: @escaping (String) -> Void) -> Bool {
+        stop()
+        self.onCaptured = onCaptured
+
+        let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
+        let callback: CGEventTapCallBack = { _, type, event, userData in
+            guard let userData else { return Unmanaged.passUnretained(event) }
+            let session = Unmanaged<HotKeyCaptureSession>.fromOpaque(userData).takeUnretainedValue()
+            session.handle(event: event, type: type)
+            return Unmanaged.passUnretained(event)
+        }
+
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .listenOnly,
+            eventsOfInterest: CGEventMask(mask),
+            callback: callback,
+            userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        ) else {
+            return false
+        }
+
+        eventTap = tap
+        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        if let source = runLoopSource {
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        CGEvent.tapEnable(tap: tap, enable: true)
+        return true
+    }
+
+    func stop() {
+        if let source = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        runLoopSource = nil
+
+        if let tap = eventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+        }
+        eventTap = nil
+        onCaptured = nil
+    }
+
+    private func handle(event: CGEvent, type: CGEventType) {
+        guard type == .keyDown else { return }
+        guard let nsEvent = NSEvent(cgEvent: event) else { return }
+        guard let key = keyToken(for: nsEvent) else { return }
+        let tokens = modifierTokens(from: nsEvent) + [key]
+        let candidate = tokens.joined(separator: "+")
+        DispatchQueue.main.async { [weak self] in
+            self?.onCaptured?(candidate)
+        }
+    }
+
+    deinit {
+        stop()
+    }
+}
+
+private func modifierTokens(from event: NSEvent) -> [String] {
+    var tokens: [String] = []
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    if flags.contains(.command) { tokens.append("command") }
+    if flags.contains(.option) { tokens.append("option") }
+    if flags.contains(.shift) { tokens.append("shift") }
+    if flags.contains(.control) { tokens.append("control") }
+    return tokens
+}
+
+private func keyToken(for event: NSEvent) -> String? {
+    if event.keyCode == kVK_Space {
+        return "space"
+    }
+
+    if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
+        let char = chars.first!
+        if char.isLetter || char.isNumber {
+            return String(char)
+        }
+    }
+
+    return nil
 }
 
 private final class RecordingTextField: NSTextField {
@@ -329,4 +486,8 @@ private final class RecordingTextField: NSTextField {
     override var acceptsFirstResponder: Bool {
         true
     }
+}
+extension Notification.Name {
+    static let hotKeyRecordingWillBegin = Notification.Name("HotKeyRecordingWillBegin")
+    static let hotKeyRecordingDidEnd = Notification.Name("HotKeyRecordingDidEnd")
 }

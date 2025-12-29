@@ -31,6 +31,10 @@ struct HotKeyDescriptor: Hashable, Sendable {
         }
 
         guard let keyToken else { return nil }
+
+        let requiredModifierMask = UInt32(cmdKey | optionKey | controlKey)
+        guard modifiers & requiredModifierMask != 0 else { return nil }
+
         if keyToken == "space" {
             return HotKeyDescriptor(keyCode: UInt32(kVK_Space), modifiers: modifiers)
         }

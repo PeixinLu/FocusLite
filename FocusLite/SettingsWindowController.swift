@@ -10,7 +10,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.viewModel = viewModel
     }
 
-    func show(tab: SettingsTab = .clipboard) {
+    func show(tab: SettingsTab = .general) {
         viewModel.selectedTab = tab
         createWindowIfNeeded()
         guard let window else {

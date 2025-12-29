@@ -124,7 +124,7 @@ final class LauncherViewModel: ObservableObject {
         onOpenSettings?(.snippets)
     }
 
-    func openSettings(tab: SettingsTab = .clipboard) {
+    func openSettings(tab: SettingsTab = .general) {
         onOpenSettings?(tab)
     }
 

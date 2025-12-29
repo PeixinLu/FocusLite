@@ -39,10 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.windowController?.pasteTextAndHide(text) ?? false
         }
 
+        let generalSettingsViewModel = GeneralSettingsViewModel()
         let snippetsViewModel = SnippetsManagerViewModel(store: .shared)
         let clipboardSettingsViewModel = ClipboardSettingsViewModel()
         let translateSettingsViewModel = TranslateSettingsViewModel()
         let settingsViewModel = SettingsViewModel(
+            generalViewModel: generalSettingsViewModel,
             appUpdater: appUpdater,
             clipboardViewModel: clipboardSettingsViewModel,
             snippetsViewModel: snippetsViewModel,
@@ -61,6 +63,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: UserDefaults.didChangeNotification,
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(pauseHotKeys),
+            name: .hotKeyRecordingWillBegin,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(resumeHotKeys),
+            name: .hotKeyRecordingDidEnd,
+            object: nil
+        )
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -76,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor @objc private func showSettingsWindow() {
-        showSettings(tab: .clipboard)
+        showSettings(tab: .general)
     }
 
     @MainActor private func showSettings(tab: SettingsTab) {
@@ -94,11 +109,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleUserDefaultsChange() {
         clipboardPauseItem?.state = ClipboardPreferences.isPaused ? .on : .off
+        registerLauncherHotKey()
         registerClipboardHotKey()
     }
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func pauseHotKeys() {
+        hotKeyManager.unregisterAll()
+    }
+
+    @objc private func resumeHotKeys() {
+        registerLauncherHotKey()
+        registerClipboardHotKey()
     }
 
     private func setupStatusItem() {
@@ -125,16 +150,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerLauncherHotKey() {
-        let keyCode = UInt32(kVK_Space)
-        let modifiers = UInt32(cmdKey)
-        let registered = hotKeyManager.register(keyCode: keyCode, modifiers: modifiers, identifier: launcherHotKeyID) { [weak self] in
+        guard let descriptor = HotKeyDescriptor.parse(GeneralPreferences.launcherHotKeyText) else {
+            hotKeyManager.unregister(identifier: launcherHotKeyID)
+            Log.info("Launcher hotkey is invalid. Use format like command+space.")
+            return
+        }
+
+        let registered = hotKeyManager.register(
+            keyCode: descriptor.keyCode,
+            modifiers: descriptor.modifiers,
+            identifier: launcherHotKeyID
+        ) { [weak self] in
             DispatchQueue.main.async {
                 self?.toggleWindow()
             }
         }
 
-        if !registered {
-            Log.info("Global hotkey registration failed (Cmd+Space). Use the menu bar icon instead.")
+        guard registered else {
+            Log.info("Global hotkey registration failed (\(GeneralPreferences.launcherHotKeyText)). Use the menu bar icon instead.")
+            return
         }
     }
 

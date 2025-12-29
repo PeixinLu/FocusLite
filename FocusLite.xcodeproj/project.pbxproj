@@ -39,7 +39,7 @@
 		1A2B3C4D5E6F00000000023A /* PinyinHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */; };
 		1A2B3C4D5E6F00000000023B /* PinyinResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013B /* PinyinResource.swift */; };
 		1A2B3C4D5E6F00000000023C /* String+Pinyin4Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */; };
-		1A2B3C4D5E6F00000000023D /* unicode_to_hanyu_pinyin.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */; };
+		1A2B3C4D5E6F00000000023D /* Resources/unicode_to_hanyu_pinyin.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000013D /* Resources/unicode_to_hanyu_pinyin.txt */; };
 		1A2B3C4D5E6F000000000241 /* MatchingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000141 /* MatchingTests.swift */; };
 		1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */; };
 		1A2B3C4D5E6F000000000250 /* SnippetsManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */; };
@@ -70,6 +70,8 @@
 		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
 		1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */; };
+		1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */; };
+		1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */; };
 		81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */; };
 		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
 		98746D42D3E646CCB757A85D /* AppUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98746D42D3E646CCB757A85C /* AppUpdater.swift */; };
@@ -122,7 +124,7 @@
 		1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinHelper.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000013B /* PinyinResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinResource.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Pinyin4Swift.swift"; sourceTree = "<group>"; };
-		1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/unicode_to_hanyu_pinyin.txt; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000013D /* Resources/unicode_to_hanyu_pinyin.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Resources/unicode_to_hanyu_pinyin.txt; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000141 /* MatchingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchingTests.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000150 /* SnippetsManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsManagerView.swift; sourceTree = "<group>"; };
@@ -153,6 +155,8 @@
 		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000430 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferences.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -223,6 +227,7 @@
 				1A2B3C4D5E6F000000000103 /* LauncherView.swift */,
 				1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */,
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
+				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */,
 				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
@@ -312,23 +317,9 @@
 				1A2B3C4D5E6F000000000134 /* Matcher.swift */,
 				1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */,
 				1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */,
-				1A2B3C4D5E6F00000000013E /* Pinyin4Swift */,
+				1A2B3C4D5E6F00000000013E /* Vendors/Pinyin4Swift */,
 			);
 			path = AppSearch;
-			sourceTree = "<group>";
-		};
-		1A2B3C4D5E6F00000000013E /* Pinyin4Swift */ = {
-			isa = PBXGroup;
-			children = (
-				1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */,
-				1A2B3C4D5E6F000000000138 /* OutputFormat.swift */,
-				1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */,
-				1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */,
-				1A2B3C4D5E6F00000000013B /* PinyinResource.swift */,
-				1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */,
-				1A2B3C4D5E6F00000000013D /* unicode_to_hanyu_pinyin.txt */,
-			);
-			path = Vendors/Pinyin4Swift;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F00000000000D /* Snippets */ = {
@@ -354,9 +345,24 @@
 			path = Clipboard;
 			sourceTree = "<group>";
 		};
+		1A2B3C4D5E6F00000000013E /* Vendors/Pinyin4Swift */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */,
+				1A2B3C4D5E6F000000000138 /* OutputFormat.swift */,
+				1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */,
+				1A2B3C4D5E6F00000000013A /* PinyinHelper.swift */,
+				1A2B3C4D5E6F00000000013B /* PinyinResource.swift */,
+				1A2B3C4D5E6F00000000013C /* String+Pinyin4Swift.swift */,
+				1A2B3C4D5E6F00000000013D /* Resources/unicode_to_hanyu_pinyin.txt */,
+			);
+			path = Vendors/Pinyin4Swift;
+			sourceTree = "<group>";
+		};
 		1A2B3C4D5E6F000000000306 /* Preferences */ = {
 			isa = PBXGroup;
 			children = (
+				1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */,
 				1A2B3C4D5E6F000000000304 /* SnippetsPreferences.swift */,
 				1A2B3C4D5E6F000000000420 /* TranslatePreferences.swift */,
 			);
@@ -385,6 +391,7 @@
 				1A2B3C4D5E6F000000000020 /* Sources */,
 				1A2B3C4D5E6F000000000021 /* Resources */,
 				1A2B3C4D5E6F000000000022 /* Frameworks */,
+				96AE65922F02874600F4C762 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -458,11 +465,31 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A2B3C4D5E6F00000000020B /* Assets.xcassets in Resources */,
-				1A2B3C4D5E6F00000000023D /* unicode_to_hanyu_pinyin.txt in Resources */,
+				1A2B3C4D5E6F00000000023D /* Resources/unicode_to_hanyu_pinyin.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		96AE65922F02874600F4C762 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\n\nAPP_NAME=\"${FULL_PRODUCT_NAME}\"\nSRC_APP=\"${TARGET_BUILD_DIR}/${APP_NAME}\"\n\nDEST_DIR=\"/Applications\"\nDEST_APP=\"${DEST_DIR}/${APP_NAME}\"\n\necho \"Syncing app to ${DEST_APP}\"\n\nrm -rf \"${DEST_APP}\"\ncp -R \"${SRC_APP}\" \"${DEST_APP}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1A2B3C4D5E6F000000000020 /* Sources */ = {
@@ -476,6 +503,7 @@
 				1A2B3C4D5E6F000000000202 /* LauncherWindowController.swift in Sources */,
 				1A2B3C4D5E6F000000000203 /* LauncherView.swift in Sources */,
 				1A2B3C4D5E6F000000000325 /* TagView.swift in Sources */,
+				1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */,
@@ -494,6 +522,7 @@
 				1A2B3C4D5E6F000000000321 /* PrefixRegistry.swift in Sources */,
 				1A2B3C4D5E6F000000000322 /* PrefixResultItem.swift in Sources */,
 				1A2B3C4D5E6F000000000323 /* SearchStateReducer.swift in Sources */,
+				1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000324 /* SnippetsPreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000330 /* TranslatePreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */,

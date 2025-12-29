@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable {
+    case general
     case updates
     case clipboard
     case snippets
@@ -20,6 +21,8 @@ enum SettingsLayout {
 extension SettingsTab {
     var title: String {
         switch self {
+        case .general:
+            return "通用"
         case .updates:
             return "更新"
         case .clipboard:
@@ -96,19 +99,22 @@ struct SettingsFieldRow<Content: View>: View {
 final class SettingsViewModel: ObservableObject {
     @Published var selectedTab: SettingsTab
     @Published var isShowingSaved = false
+    let generalViewModel: GeneralSettingsViewModel
     let appUpdater: AppUpdater
     let clipboardViewModel: ClipboardSettingsViewModel
     let snippetsViewModel: SnippetsManagerViewModel
     let translateViewModel: TranslateSettingsViewModel
 
     init(
-        selectedTab: SettingsTab = .clipboard,
+        selectedTab: SettingsTab = .general,
+        generalViewModel: GeneralSettingsViewModel,
         appUpdater: AppUpdater,
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
         translateViewModel: TranslateSettingsViewModel
     ) {
         self.selectedTab = selectedTab
+        self.generalViewModel = generalViewModel
         self.appUpdater = appUpdater
         self.clipboardViewModel = clipboardViewModel
         self.snippetsViewModel = snippetsViewModel
@@ -137,6 +143,8 @@ struct SettingsView: View {
     @ViewBuilder
     private var contentView: some View {
         switch viewModel.selectedTab {
+        case .general:
+            GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
         case .updates:
             UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
         case .clipboard:
