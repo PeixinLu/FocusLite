@@ -5,13 +5,25 @@ import SwiftUI
 final class AppIndexSettingsViewModel: ObservableObject {
     @Published var apps: [AppIndex.AppEntry] = []
     @Published var aliasText: [String: String] = [:]
+    @Published var searchText: String = ""
 
     private let appIndex = AppIndex.shared
     private let aliasStore: UserAliasStore
     private var pendingSave: DispatchWorkItem?
+    private var allApps: [AppIndex.AppEntry] = []
 
     init(aliasStore: UserAliasStore = UserAliasStore(fileURL: AppIndex.aliasFileURL())) {
         self.aliasStore = aliasStore
+    }
+    
+    var filteredApps: [AppIndex.AppEntry] {
+        guard !searchText.isEmpty else { return apps }
+        let query = searchText.lowercased()
+        return apps.filter { app in
+            app.name.lowercased().contains(query) ||
+            app.path.lowercased().contains(query) ||
+            (app.bundleID?.lowercased().contains(query) ?? false)
+        }
     }
 
     func load() {
@@ -67,8 +79,24 @@ struct AppIndexSettingsView: View {
             header
                 .padding(.bottom, SettingsLayout.headerBottomPadding)
 
+            // 搜索框
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("搜索应用名称、路径或 Bundle ID", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                if !viewModel.searchText.isEmpty {
+                    Button(action: { viewModel.searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, 8)
+
             SettingsSection {
-                Table(viewModel.apps) {
+                Table(viewModel.filteredApps) {
                     TableColumn("App 名称") { entry in
                         HStack(spacing: 8) {
                             Image(nsImage: NSWorkspace.shared.icon(forFile: entry.path))
@@ -104,8 +132,15 @@ struct AppIndexSettingsView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("应用索引")
-                    .font(.system(size: 20, weight: .semibold))
+                HStack(spacing: 8) {
+                    Text("应用索引")
+                        .font(.system(size: 20, weight: .semibold))
+                    if !viewModel.searchText.isEmpty {
+                        Text("\(viewModel.filteredApps.count) 个结果")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
                 Text("维护应用别名，优化搜索命中。")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
