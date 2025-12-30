@@ -43,7 +43,7 @@ struct LauncherView: View {
                                     .padding(.top, 40)
                             } else {
                                 ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
+                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
                                         .onTapGesture {
                                             viewModel.selectIndex(index)
                                         }
@@ -67,13 +67,13 @@ struct LauncherView: View {
                             EmptyStateView()
                                 .padding(.top, 40)
                         } else {
-                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
-                                    .onTapGesture {
-                                        viewModel.selectIndex(index)
-                                    }
-                            }
+                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                                .onTapGesture {
+                                    viewModel.selectIndex(index)
+                                }
                         }
+                    }
                     }
                     .padding(12)
                 }
@@ -140,6 +140,7 @@ struct LauncherView: View {
 private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
+    let searchText: String
 
     var body: some View {
         HStack(spacing: 12) {
@@ -178,6 +179,10 @@ private struct ResultRow: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
         )
+        .overlay(alignment: .trailing) {
+            actionHint
+                .padding(.trailing, 10)
+        }
     }
 
     @ViewBuilder
@@ -216,6 +221,44 @@ private struct ResultRow: View {
             .fill(Color(nsColor: .tertiaryLabelColor))
             .frame(width: 28, height: 28)
             .opacity(0.4)
+    }
+
+    @ViewBuilder
+    private var actionHint: some View {
+        if !isSelected {
+            EmptyView()
+        } else if item.isPrefix {
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let prefixText = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let labels = query == prefixText ? ["␣", "⏎"] : ["⏎"]
+            keyCaps(labels: labels, description: "进入")
+        } else if item.providerID == AppSearchProvider.providerID {
+            keyCaps(labels: ["⏎"], description: "打开")
+        } else if item.providerID == SnippetsProvider.providerID ||
+                    item.providerID == ClipboardProvider.providerID ||
+                    item.providerID == TranslateProvider.providerID {
+            keyCaps(labels: ["⏎"], description: "拷贝")
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func keyCaps(labels: [String], description: String) -> some View {
+        HStack(spacing: 6) {
+            let joined = labels.joined(separator: "/")
+            Text("\(joined) \(description)")
+                .font(.system(size: 11, weight: .semibold))
+                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                )
+        }
     }
 }
 
