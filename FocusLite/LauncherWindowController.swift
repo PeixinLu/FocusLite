@@ -7,12 +7,18 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let showOnAllSpaces = true
     private var keyMonitor: Any?
     private var previousApp: NSRunningApplication?
+    
+    // 用于关闭设置页的回调
+    var onCloseSettings: (() -> Void)?
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
     }
 
     func show(resetSearch: Bool = true) {
+        // 先关闭设置页（如果打开了）
+        onCloseSettings?()
+        
         createWindowIfNeeded()
         if resetSearch {
             Task { @MainActor in

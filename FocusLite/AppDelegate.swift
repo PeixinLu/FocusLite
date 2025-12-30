@@ -52,6 +52,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         windowController = LauncherWindowController(viewModel: viewModel)
         settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
+        
+        // 设置回调：唤起搜索框时关闭设置页
+        windowController?.onCloseSettings = { [weak self] in
+            self?.settingsWindowController?.close()
+        }
+        
         setupStatusItem()
         registerLauncherHotKey()
         registerClipboardHotKey()

@@ -22,6 +22,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+    
+    func close() {
+        window?.close()
+    }
 
     private func createWindowIfNeeded() {
         guard window == nil else { return }
