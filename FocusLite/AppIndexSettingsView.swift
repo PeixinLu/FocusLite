@@ -11,6 +11,7 @@ final class AppIndexSettingsViewModel: ObservableObject {
     private let aliasStore: UserAliasStore
     private var pendingSave: DispatchWorkItem?
     private var allApps: [AppIndex.AppEntry] = []
+    private let iconCache = NSCache<NSString, NSImage>()
 
     init(aliasStore: UserAliasStore = UserAliasStore(fileURL: AppIndex.aliasFileURL())) {
         self.aliasStore = aliasStore
@@ -69,6 +70,15 @@ final class AppIndexSettingsViewModel: ObservableObject {
         aliasStore.setAliases(bundleID: bundleID, aliases: aliases)
         Task { await appIndex.refreshAliases() }
     }
+
+    func icon(for path: String) -> NSImage {
+        if let cached = iconCache.object(forKey: path as NSString) {
+            return cached
+        }
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        iconCache.setObject(icon, forKey: path as NSString)
+        return icon
+    }
 }
 
 struct AppIndexSettingsView: View {
@@ -76,9 +86,6 @@ struct AppIndexSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            header
-                .padding(.bottom, SettingsLayout.headerBottomPadding)
-
             // 搜索框
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -92,6 +99,15 @@ struct AppIndexSettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                Spacer()
+                if !viewModel.searchText.isEmpty {
+                    Text("\(viewModel.filteredApps.count) 个结果")
+                        .foregroundColor(.secondary)
+                }
+                Button("刷新索引") {
+                    viewModel.refreshIndex()
+                }
+                .buttonStyle(.bordered)
             }
             .padding(.bottom, 8)
 
@@ -99,7 +115,7 @@ struct AppIndexSettingsView: View {
                 Table(viewModel.filteredApps) {
                     TableColumn("App 名称") { entry in
                         HStack(spacing: 8) {
-                            Image(nsImage: NSWorkspace.shared.icon(forFile: entry.path))
+                            Image(nsImage: viewModel.icon(for: entry.path))
                                 .resizable()
                                 .frame(width: 18, height: 18)
                             Text(entry.name)
@@ -117,7 +133,7 @@ struct AppIndexSettingsView: View {
                         aliasEditor(for: entry)
                     }
                 }
-                .frame(minHeight: 320)
+                .frame(minHeight: 320, maxHeight: .infinity, alignment: .top)
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
@@ -127,31 +143,6 @@ struct AppIndexSettingsView: View {
         .onAppear {
             viewModel.load()
         }
-    }
-
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("应用索引")
-                        .font(.system(size: 20, weight: .semibold))
-                    if !viewModel.searchText.isEmpty {
-                        Text("\(viewModel.filteredApps.count) 个结果")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Text("维护应用别名，优化搜索命中。")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-            Button("刷新索引") {
-                viewModel.refreshIndex()
-            }
-            .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

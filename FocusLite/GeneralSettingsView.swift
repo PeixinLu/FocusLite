@@ -32,9 +32,6 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            header
-                .padding(.bottom, SettingsLayout.headerBottomPadding)
-
             VStack(spacing: SettingsLayout.sectionSpacing) {
                 SettingsSection("启动") {
                     SettingsFieldRow(title: "登录后自动启动") {
@@ -66,17 +63,6 @@ struct GeneralSettingsView: View {
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("通用设置")
-                .font(.system(size: 20, weight: .semibold))
-            Text("配置唤起搜索框的全局快捷键。")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func applyAndNotify() {

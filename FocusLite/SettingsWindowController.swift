@@ -29,7 +29,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func createWindowIfNeeded() {
         guard window == nil else { return }
-        let contentRect = NSRect(x: 0, y: 0, width: 600, height: 520)
+        let contentRect = NSRect(
+            x: 0,
+            y: 0,
+            width: SettingsLayout.windowWidth,
+            height: SettingsLayout.windowHeight
+        )
         let window = NSWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable],

@@ -96,147 +96,128 @@ struct TranslateSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            header
-                .padding(.bottom, SettingsLayout.headerBottomPadding)
+            SettingsSection("翻译前缀") {
+                SettingsFieldRow(title: "前缀") {
+                    TextField("如 tr", text: $viewModel.translatePrefixText)
+                        .frame(width: 120)
+                        .onChange(of: viewModel.translatePrefixText) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "自动粘贴") {
+                    Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoPasteEnabled) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
 
-            ScrollView {
-                VStack(spacing: SettingsLayout.sectionSpacing) {
-                    SettingsSection("翻译前缀") {
-                        SettingsFieldRow(title: "前缀") {
-                            TextField("如 tr", text: $viewModel.translatePrefixText)
-                                .frame(width: 120)
-                                .onChange(of: viewModel.translatePrefixText) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                        SettingsFieldRow(title: "自动粘贴") {
-                            Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
-                                .toggleStyle(.switch)
-                                .onChange(of: viewModel.autoPasteEnabled) { _ in
-                                    applyAndNotify()
-                                }
-                        }
+            SettingsSection("混合文本") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("是否翻译中英混合输入文本")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Picker("是否翻译中英混合输入文本", selection: $viewModel.mixedPolicy) {
+                        Text("自动判断").tag(TranslatePreferences.MixedTextPolicy.auto)
+                        Text("不翻译").tag(TranslatePreferences.MixedTextPolicy.none)
                     }
-
-                    SettingsSection("混合文本") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("是否翻译中英混合输入文本")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                            Picker("是否翻译中英混合输入文本", selection: $viewModel.mixedPolicy) {
-                                Text("自动判断").tag(TranslatePreferences.MixedTextPolicy.auto)
-                                Text("不翻译").tag(TranslatePreferences.MixedTextPolicy.none)
-                            }
-                            .frame(width: 160)
-                            .labelsHidden()
-                            .onChange(of: viewModel.mixedPolicy) { _ in
-                                applyAndNotify()
-                            }
-                        }
-                    }
-
-                    serviceSection(
-                        title: "有道翻译（官方 API）",
-                        note: "需要有道智云应用密钥",
-                        id: .youdaoAPI
-                    ) {
-                        SettingsFieldRow(title: "App Key") {
-                            TextField("应用 ID", text: $viewModel.youdaoAppKey)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.youdaoAppKey) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                        SettingsFieldRow(title: "App Secret") {
-                            SecureField("应用密钥", text: $viewModel.youdaoSecret)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.youdaoSecret) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                    }
-
-                    serviceSection(
-                        title: "百度翻译（官方 API）",
-                        note: "需要百度翻译开放平台密钥",
-                        id: .baiduAPI
-                    ) {
-                        SettingsFieldRow(title: "App ID") {
-                            TextField("应用 ID", text: $viewModel.baiduAppID)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.baiduAppID) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                        SettingsFieldRow(title: "App Secret") {
-                            SecureField("应用密钥", text: $viewModel.baiduSecret)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.baiduSecret) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                    }
-
-                    serviceSection(
-                        title: "Google 翻译（官方 API）",
-                        note: "需要 Google Cloud API Key",
-                        id: .googleAPI
-                    ) {
-                        SettingsFieldRow(title: "API Key") {
-                            SecureField("密钥", text: $viewModel.googleAPIKey)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.googleAPIKey) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                    }
-
-                    serviceSection(
-                        title: "微软翻译（官方 API）",
-                        note: "需要 Azure Translator Key",
-                        id: .bingAPI
-                    ) {
-                        SettingsFieldRow(title: "API Key") {
-                            SecureField("密钥", text: $viewModel.bingAPIKey)
-                                .frame(width: 220)
-                                .onChange(of: viewModel.bingAPIKey) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                        SettingsFieldRow(title: "区域") {
-                            TextField("可选", text: $viewModel.bingRegion)
-                                .frame(width: 160)
-                                .onChange(of: viewModel.bingRegion) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-                        SettingsFieldRow(title: "接口地址") {
-                            TextField("https://...", text: $viewModel.bingEndpoint)
-                                .frame(width: 240)
-                                .onChange(of: viewModel.bingEndpoint) { _ in
-                                    applyAndNotify()
-                                }
-                        }
+                    .frame(width: 160)
+                    .labelsHidden()
+                    .onChange(of: viewModel.mixedPolicy) { _ in
+                        applyAndNotify()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            serviceSection(
+                title: "有道翻译（官方 API）",
+                note: "需要有道智云应用密钥",
+                id: .youdaoAPI
+            ) {
+                SettingsFieldRow(title: "App Key") {
+                    TextField("应用 ID", text: $viewModel.youdaoAppKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.youdaoAppKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "App Secret") {
+                    SecureField("应用密钥", text: $viewModel.youdaoSecret)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.youdaoSecret) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "百度翻译（官方 API）",
+                note: "需要百度翻译开放平台密钥",
+                id: .baiduAPI
+            ) {
+                SettingsFieldRow(title: "App ID") {
+                    TextField("应用 ID", text: $viewModel.baiduAppID)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.baiduAppID) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "App Secret") {
+                    SecureField("应用密钥", text: $viewModel.baiduSecret)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.baiduSecret) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "Google 翻译（官方 API）",
+                note: "需要 Google Cloud API Key",
+                id: .googleAPI
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.googleAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.googleAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "微软翻译（官方 API）",
+                note: "需要 Azure Translator Key",
+                id: .bingAPI
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.bingAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.bingAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "区域") {
+                    TextField("可选", text: $viewModel.bingRegion)
+                        .frame(width: 160)
+                        .onChange(of: viewModel.bingRegion) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "接口地址") {
+                    TextField("https://...", text: $viewModel.bingEndpoint)
+                        .frame(width: 240)
+                        .onChange(of: viewModel.bingEndpoint) { _ in
+                            applyAndNotify()
+                        }
+                }
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("翻译设置")
-                .font(.system(size: 20, weight: .semibold))
-            Text("配置合规的翻译 API，结果会按服务顺序返回。")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func serviceSection<Content: View>(

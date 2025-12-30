@@ -28,13 +28,7 @@ struct LauncherView: View {
                         viewModel.submitPrimaryAction()
                     }
 
-                Button {
-                    viewModel.openSettings()
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .buttonStyle(.plain)
+                settingsButton
             }
             .padding(16)
 
@@ -114,6 +108,32 @@ struct LauncherView: View {
         return providerID == ClipboardProvider.providerID || 
                providerID == SnippetsProvider.providerID || 
                providerID == TranslateProvider.providerID
+    }
+
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14, *) {
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: .command)
+            .simultaneousGesture(TapGesture().onEnded {
+                viewModel.prepareSettings(tab: .clipboard)
+            })
+            .help("设置")
+        } else {
+            Button {
+                viewModel.openSettings(tab: .clipboard)
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: .command)
+            .help("设置")
+        }
     }
 }
 

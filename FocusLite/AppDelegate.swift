@@ -5,11 +5,24 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: LauncherWindowController?
-    private var settingsWindowController: SettingsWindowController?
     private var launcherViewModel: LauncherViewModel?
     private let clipboardMonitor = ClipboardMonitor()
     private let hotKeyManager = HotKeyManager.shared
     private let appUpdater = AppUpdater.shared
+    lazy var settingsViewModel: SettingsViewModel = {
+        let generalSettingsViewModel = GeneralSettingsViewModel()
+        let snippetsViewModel = SnippetsManagerViewModel(store: .shared)
+        let clipboardSettingsViewModel = ClipboardSettingsViewModel()
+        let translateSettingsViewModel = TranslateSettingsViewModel()
+        return SettingsViewModel(
+            generalViewModel: generalSettingsViewModel,
+            appUpdater: appUpdater,
+            clipboardViewModel: clipboardSettingsViewModel,
+            snippetsViewModel: snippetsViewModel,
+            translateViewModel: translateSettingsViewModel
+        )
+    }()
+    private lazy var settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
     private var statusItem: NSStatusItem?
     private var clipboardPauseItem: NSMenuItem?
     private let launcherHotKeyID: UInt32 = 1
@@ -35,27 +48,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.onOpenSettings = { [weak self] tab in
             self?.showSettings(tab: tab)
         }
+        viewModel.onPrepareSettings = { [weak self] tab in
+            self?.settingsViewModel.selectedTab = tab
+        }
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
         }
 
-        let generalSettingsViewModel = GeneralSettingsViewModel()
-        let snippetsViewModel = SnippetsManagerViewModel(store: .shared)
-        let clipboardSettingsViewModel = ClipboardSettingsViewModel()
-        let translateSettingsViewModel = TranslateSettingsViewModel()
-        let settingsViewModel = SettingsViewModel(
-            generalViewModel: generalSettingsViewModel,
-            appUpdater: appUpdater,
-            clipboardViewModel: clipboardSettingsViewModel,
-            snippetsViewModel: snippetsViewModel,
-            translateViewModel: translateSettingsViewModel
-        )
         windowController = LauncherWindowController(viewModel: viewModel)
-        settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
         
         // 设置回调：唤起搜索框时关闭设置页
         windowController?.onCloseSettings = { [weak self] in
-            self?.settingsWindowController?.close()
+            self?.settingsWindowController.close()
         }
         
         setupStatusItem()
@@ -101,7 +105,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor private func showSettings(tab: SettingsTab) {
-        settingsWindowController?.show(tab: tab)
+        settingsViewModel.selectedTab = tab
+        let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        if !openedBySystem {
+            settingsWindowController.show(tab: tab)
+        }
     }
 
     @objc private func toggleClipboardRecording() {

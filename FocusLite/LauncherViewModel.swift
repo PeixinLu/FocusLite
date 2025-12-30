@@ -16,6 +16,7 @@ final class LauncherViewModel: ObservableObject {
 
     var onExit: (() -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
+    var onPrepareSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
 
     init(searchEngine: SearchEngine) {
@@ -134,6 +135,10 @@ final class LauncherViewModel: ObservableObject {
 
     func openSnippetsManager() {
         onOpenSettings?(.snippets)
+    }
+
+    func prepareSettings(tab: SettingsTab) {
+        onPrepareSettings?(tab)
     }
 
     func openSettings(tab: SettingsTab = .general) {

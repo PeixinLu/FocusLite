@@ -7,6 +7,40 @@ enum SettingsTab: String, CaseIterable {
     case snippets
     case translate
     case apps
+
+    var iconName: String {
+        switch self {
+        case .general:
+            return "gearshape"
+        case .updates:
+            return "arrow.triangle.2.circlepath"
+        case .clipboard:
+            return "doc.on.clipboard"
+        case .snippets:
+            return "text.append"
+        case .translate:
+            return "character.bubble"
+        case .apps:
+            return "square.grid.2x2"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .general:
+            return "设置启动行为与唤起快捷键"
+        case .updates:
+            return "检查并获取最新版本"
+        case .clipboard:
+            return "管理剪贴板记录与过滤规则"
+        case .snippets:
+            return "维护文本片段与快捷填充"
+        case .translate:
+            return "配置翻译服务与前缀"
+        case .apps:
+            return "管理应用索引与搜索"
+        }
+    }
 }
 
 enum SettingsLayout {
@@ -16,6 +50,9 @@ enum SettingsLayout {
     static let sectionSpacing: CGFloat = 10
     static let headerBottomPadding: CGFloat = 4
     static let labelWidth: CGFloat = 96
+    static let sidebarWidth: CGFloat = 220
+    static let windowWidth: CGFloat = 900
+    static let windowHeight: CGFloat = 620
 }
 
 extension SettingsTab {
@@ -134,10 +171,83 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            tabBar
-            contentView
+            HStack(spacing: 0) {
+                sidebar
+                Divider()
+                contentColumn
+            }
         }
-        .frame(minWidth: 600, minHeight: 520)
+        .frame(width: SettingsLayout.windowWidth, height: SettingsLayout.windowHeight)
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(SettingsTab.allCases, id: \.self) { tab in
+                Button {
+                    viewModel.selectedTab = tab
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 20)
+                        Text(tab.title)
+                            .font(.system(size: 13, weight: .semibold))
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(viewModel.selectedTab == tab ? Color.accentColor.opacity(0.12) : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 18)
+        .padding(.horizontal, 14)
+        .frame(width: SettingsLayout.sidebarWidth, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private var contentColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            Divider()
+            ScrollView {
+                contentView
+                    .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+                    .padding(.vertical, SettingsLayout.topPadding + 8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(viewModel.selectedTab.title)
+                    .font(.system(size: 20, weight: .semibold))
+                Text(viewModel.selectedTab.subtitle)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            if viewModel.selectedTab == .updates {
+                Button("Check for Updates…") {
+                    viewModel.appUpdater.checkForUpdates()
+                }
+            }
+        }
+        .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     @ViewBuilder
@@ -156,23 +266,5 @@ struct SettingsView: View {
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         }
-    }
-
-    private var tabBar: some View {
-        HStack {
-            Spacer()
-            Picker("设置", selection: $viewModel.selectedTab) {
-                ForEach(SettingsTab.allCases, id: \.self) { tab in
-                    Text(tab.title).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 340)
-            Spacer()
-        }
-        .padding(.top, 8)
-        .padding(.bottom, 8)
-        .padding(.horizontal, SettingsLayout.horizontalPadding)
     }
 }

@@ -49,128 +49,109 @@ struct ClipboardSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            header
-                .padding(.bottom, SettingsLayout.headerBottomPadding)
-
-            ScrollView {
-                VStack(spacing: SettingsLayout.sectionSpacing) {
-                    SettingsSection("记录") {
-                        SettingsFieldRow(title: "启用记录") {
-                            Toggle("", isOn: $viewModel.isRecordingEnabled)
-                                .labelsHidden()
-                                .toggleStyle(.switch)
-                                .onChange(of: viewModel.isRecordingEnabled) { _ in
-                                    applyAndNotify()
-                                }
+            SettingsSection("记录") {
+                SettingsFieldRow(title: "启用记录") {
+                    Toggle("", isOn: $viewModel.isRecordingEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.isRecordingEnabled) { _ in
+                            applyAndNotify()
                         }
+                }
 
-                        SettingsFieldRow(title: "自动粘贴") {
-                            Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
-                                .toggleStyle(.switch)
-                                .onChange(of: viewModel.autoPasteEnabled) { _ in
-                                    applyAndNotify()
-                                }
+                SettingsFieldRow(title: "自动粘贴") {
+                    Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoPasteEnabled) { _ in
+                            applyAndNotify()
                         }
+                }
 
-                        SettingsFieldRow(title: "快捷键") {
-                            HotKeyRecorderField(
-                                text: $viewModel.hotKeyText,
-                                conflictHotKeys: [GeneralPreferences.launcherHotKeyText]
-                            ) {
-                                applyAndNotify()
-                            }
-                        }
-
-                        SettingsFieldRow(title: "搜索前缀") {
-                            TextField("如 c", text: $viewModel.searchPrefixText)
-                                .frame(width: 120)
-                                .onChange(of: viewModel.searchPrefixText) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-
-                        SettingsFieldRow(title: "最大条目") {
-                            TextField("10-1000", text: $viewModel.maxEntriesText)
-                                .frame(width: 120)
-                                .onChange(of: viewModel.maxEntriesText) { _ in
-                                    applyAndNotify()
-                                }
-                        }
-
-                        SettingsFieldRow(title: "历史保留") {
-                            Picker("历史保留", selection: $viewModel.retentionHours) {
-                                Text("3 小时").tag(3)
-                                Text("12 小时").tag(12)
-                                Text("1 天").tag(24)
-                                Text("3 天").tag(72)
-                                Text("1 周").tag(168)
-                            }
-                            .frame(width: 140)
-                            .onChange(of: viewModel.retentionHours) { _ in
-                                applyAndNotify()
-                            }
-                        }
-                    }
-
-                    SettingsSection("忽略的应用") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            if ignoredBundleIDs.isEmpty {
-                                Text("未选择应用")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            } else {
-                                ForEach(ignoredBundleIDs, id: \.self) { id in
-                                    HStack(spacing: 8) {
-                                        Text(id)
-                                            .font(.system(size: 12))
-                                        Spacer()
-                                        Button {
-                                            removeIgnoredBundleID(id)
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                        }
-                                        .buttonStyle(.borderless)
-                                    }
-                                }
-                            }
-
-                            HStack(spacing: 8) {
-                                Button("选择应用…") {
-                                    pickIgnoredApp()
-                                }
-                                .buttonStyle(.bordered)
-
-                                TextField("输入 Bundle ID", text: $manualBundleID)
-                                    .frame(width: 200)
-
-                                Button("添加") {
-                                    addIgnoredBundleID(manualBundleID)
-                                    manualBundleID = ""
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(manualBundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            }
-                        }
+                SettingsFieldRow(title: "快捷键") {
+                    HotKeyRecorderField(
+                        text: $viewModel.hotKeyText,
+                        conflictHotKeys: [GeneralPreferences.launcherHotKeyText]
+                    ) {
+                        applyAndNotify()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                SettingsFieldRow(title: "搜索前缀") {
+                    TextField("如 c", text: $viewModel.searchPrefixText)
+                        .frame(width: 120)
+                        .onChange(of: viewModel.searchPrefixText) { _ in
+                            applyAndNotify()
+                        }
+                }
+
+                SettingsFieldRow(title: "最大条目") {
+                    TextField("10-1000", text: $viewModel.maxEntriesText)
+                        .frame(width: 120)
+                        .onChange(of: viewModel.maxEntriesText) { _ in
+                            applyAndNotify()
+                        }
+                }
+
+                SettingsFieldRow(title: "历史保留") {
+                    Picker("历史保留", selection: $viewModel.retentionHours) {
+                        Text("3 小时").tag(3)
+                        Text("12 小时").tag(12)
+                        Text("1 天").tag(24)
+                        Text("3 天").tag(72)
+                        Text("1 周").tag(168)
+                    }
+                    .frame(width: 140)
+                    .onChange(of: viewModel.retentionHours) { _ in
+                        applyAndNotify()
+                    }
+                }
+            }
+
+            SettingsSection("忽略的应用") {
+                VStack(alignment: .leading, spacing: 10) {
+                    if ignoredBundleIDs.isEmpty {
+                        Text("未选择应用")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(ignoredBundleIDs, id: \.self) { id in
+                            HStack(spacing: 8) {
+                                Text(id)
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Button {
+                                    removeIgnoredBundleID(id)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Button("选择应用…") {
+                            pickIgnoredApp()
+                        }
+                        .buttonStyle(.bordered)
+
+                        TextField("输入 Bundle ID", text: $manualBundleID)
+                            .frame(width: 200)
+
+                        Button("添加") {
+                            addIgnoredBundleID(manualBundleID)
+                            manualBundleID = ""
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(manualBundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("剪贴板设置")
-                .font(.system(size: 20, weight: .semibold))
-            Text("剪贴板记录仅保存在本地，不会上传。")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func applyAndNotify() {

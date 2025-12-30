@@ -156,8 +156,6 @@ struct SnippetsManagerView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            header
-                .padding(.bottom, SettingsLayout.headerBottomPadding)
             SettingsSection("搜索前缀") {
                 prefixSettings
             }
@@ -218,20 +216,6 @@ struct SnippetsManagerView: View {
                 onSave: { viewModel.save(draft: $0) },
                 onCancel: { viewModel.dismissEditor() }
             )
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("文本片段")
-                    .font(.system(size: 20, weight: .semibold))
-                Text("管理文本快捷输入与代码模板，通过快捷关键字快速获取、回填")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
         }
     }
 

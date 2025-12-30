@@ -106,12 +106,10 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             guard self.window?.isVisible == true, self.window?.isKeyWindow == true else { return event }
-            if event.modifierFlags.contains(.command) {
-                if event.keyCode == 43 {
-                    Task { @MainActor in
-                        self.viewModel.openSettings(tab: .clipboard)
-                    }
-                    return nil
+
+            if event.modifierFlags.contains(.command), event.keyCode == 43 {
+                Task { @MainActor in
+                    self.viewModel.prepareSettings(tab: .clipboard)
                 }
                 return event
             }
