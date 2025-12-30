@@ -247,49 +247,17 @@ actor AppIndex {
         byKey.reserveCapacity(apps.count)
 
         for app in apps {
-            let key = app.bundleID ?? app.path
+            // 使用路径作为 key，允许同一应用的不同版本共存
+            // 这样 WebStorm 2024.1 和 WebStorm 2024.2 可以同时显示
+            let key = app.path
             
-            // 如果已存在相同 key 的应用，比较路径优先级
-            if let existing = byKey[key] {
-                // 优先保留 /Applications 目录下的应用
-                if shouldPrefer(app.path, over: existing.path) {
-                    byKey[key] = app
-                }
-                // 否则保留现有的
-            } else {
+            // 直接按路径去重，不再比较优先级
+            if byKey[key] == nil {
                 byKey[key] = app
             }
         }
         
         return Array(byKey.values)
-    }
-    
-    /// 判断是否应该优先选择 newPath 而不是 existingPath
-    /// 优先级：/Applications > /Applications/Utilities > ~/Applications > 其他路径
-    private static func shouldPrefer(_ newPath: String, over existingPath: String) -> Bool {
-        let newPriority = pathPriority(newPath)
-        let existingPriority = pathPriority(existingPath)
-        
-        // 优先级数字越小越优先
-        if newPriority != existingPriority {
-            return newPriority < existingPriority
-        }
-        
-        // 优先级相同时，保留路径较短的（通常是更标准的安装位置）
-        return newPath.count < existingPath.count
-    }
-    
-    private static func pathPriority(_ path: String) -> Int {
-        if path.hasPrefix("/Applications/Utilities/") {
-            return 2
-        }
-        if path.hasPrefix("/Applications/") {
-            return 1
-        }
-        if path.contains("/Applications/") && path.contains(NSHomeDirectory()) {
-            return 3
-        }
-        return 999 // 其他路径优先级最低
     }
 }
 
