@@ -119,7 +119,7 @@ struct TranslateSettingsView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                     Picker("是否翻译中英混合输入文本", selection: $viewModel.mixedPolicy) {
-                        Text("自动判断").tag(TranslatePreferences.MixedTextPolicy.auto)
+                        Text("自动交给服务处理").tag(TranslatePreferences.MixedTextPolicy.auto)
                         Text("不翻译").tag(TranslatePreferences.MixedTextPolicy.none)
                     }
                     .frame(width: 160)

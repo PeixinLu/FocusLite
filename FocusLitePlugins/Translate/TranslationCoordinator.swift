@@ -40,7 +40,7 @@ actor TranslationCoordinator {
             return []
         }
 
-        let direction = TranslationDirection.from(detected: detected, policy: policy)
+        let direction = TranslationDirection.from(detected: detected)
         guard let direction else { return [] }
 
         let request = TranslationRequest(
@@ -93,21 +93,8 @@ private struct TranslationDirection {
     let source: String
     let target: String
 
-    static func from(detected: DetectedLanguage, policy: TranslatePreferences.MixedTextPolicy) -> TranslationDirection? {
+    static func from(detected: DetectedLanguage) -> TranslationDirection? {
         let code = detected.code.lowercased()
-        if code.hasPrefix("zh") {
-            return TranslationDirection(source: "zh-Hans", target: "en")
-        }
-        if code.hasPrefix("en") {
-            return TranslationDirection(source: "en", target: "zh-Hans")
-        }
-        if detected.isMixed && policy == .auto {
-            return fallbackForMixed(code: code)
-        }
-        return nil
-    }
-
-    private static func fallbackForMixed(code: String) -> TranslationDirection? {
         if code.hasPrefix("zh") {
             return TranslationDirection(source: "zh-Hans", target: "en")
         }
