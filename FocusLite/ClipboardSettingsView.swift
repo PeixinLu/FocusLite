@@ -324,8 +324,14 @@ private struct KeyRecorderTextField: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: RecordingTextField, context: Context) {
-        nsView.stringValue = isRecording ? "按下快捷键…" : text
-        nsView.textColor = isRecording ? NSColor.secondaryLabelColor : NSColor.labelColor
+        if isRecording {
+            let attributes: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]
+            nsView.attributedStringValue = NSAttributedString(string: "按下快捷键…", attributes: attributes)
+        } else {
+            nsView.attributedStringValue = hotKeyDisplayString(for: text)
+        }
         if isRecording, nsView.window?.firstResponder != nsView {
             nsView.window?.makeFirstResponder(nsView)
         }
@@ -445,6 +451,81 @@ private func modifierTokens(from event: NSEvent) -> [String] {
     if flags.contains(.shift) { tokens.append("shift") }
     if flags.contains(.control) { tokens.append("control") }
     return tokens
+}
+
+private func hotKeyDisplayString(for text: String) -> NSAttributedString {
+    let (modifiers, key) = parsedHotKeyTokens(from: text)
+    let defaultFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+    let activeFont = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+    let base = NSMutableAttributedString()
+    let modifierOrder = ["command", "option", "shift", "control"]
+    let symbolMap: [String: String] = [
+        "command": "⌘",
+        "option": "⌥",
+        "shift": "⇧",
+        "control": "⌃"
+    ]
+    for (index, name) in modifierOrder.enumerated() {
+        let symbol = symbolMap[name] ?? name
+        let isActive = modifiers.contains(name)
+        let color = isActive ? NSColor.controlAccentColor : NSColor.tertiaryLabelColor
+        let attrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: color,
+            .font: isActive ? activeFont : defaultFont
+        ]
+        base.append(NSAttributedString(string: symbol, attributes: attrs))
+        if index < modifierOrder.count - 1 || key != nil {
+            base.append(NSAttributedString(string: " ", attributes: attrs))
+        }
+    }
+    if let key {
+        let keySymbol = keyDisplaySymbol(for: key)
+        let attrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: NSColor.controlAccentColor,
+            .font: activeFont
+        ]
+        base.append(NSAttributedString(string: keySymbol, attributes: attrs))
+    }
+    return base
+}
+
+private func parsedHotKeyTokens(from text: String) -> (Set<String>, String?) {
+    let parts = text
+        .split(separator: "+")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        .filter { !$0.isEmpty }
+    if parts.isEmpty {
+        return ([], nil)
+    }
+    var modifiers: Set<String> = []
+    var keyToken: String?
+    for token in parts {
+        switch token {
+        case "command", "cmd", "⌘":
+            modifiers.insert("command")
+        case "option", "opt", "alt", "⌥":
+            modifiers.insert("option")
+        case "shift", "⇧":
+            modifiers.insert("shift")
+        case "control", "ctrl", "⌃":
+            modifiers.insert("control")
+        default:
+            keyToken = token
+        }
+    }
+    return (modifiers, keyToken)
+}
+
+private func keyDisplaySymbol(for token: String) -> String {
+    switch token {
+    case "space":
+        return "␣"
+    default:
+        if token.count == 1 {
+            return token.uppercased()
+        }
+        return token.uppercased()
+    }
 }
 
 private func keyToken(for event: NSEvent) -> String? {
