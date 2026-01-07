@@ -33,7 +33,6 @@
 		1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000134 /* Matcher.swift */; };
 		1A2B3C4D5E6F000000000235 /* PinyinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */; };
 		1A2B3C4D5E6F000000000236 /* UserAliasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */; };
-		1A2B3C4D5E6F000000000571 /* AppIndexWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */; };
 		1A2B3C4D5E6F000000000237 /* Bundle+Pinyin4Swift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */; };
 		1A2B3C4D5E6F000000000238 /* OutputFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000138 /* OutputFormat.swift */; };
 		1A2B3C4D5E6F000000000239 /* PinyinFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */; };
@@ -76,6 +75,7 @@
 		1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */; };
 		1A2B3C4D5E6F000000000552 /* AppearancePreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000551 /* AppearancePreferences.swift */; };
 		1A2B3C4D5E6F000000000562 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */; };
+		1A2B3C4D5E6F000000000571 /* AppIndexWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */; };
 		81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */; };
 		9605C7C92F02D299002AD45A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 9605C7C82F02D299002AD45A /* LaunchAtLogin */; };
 		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
@@ -123,7 +123,6 @@
 		1A2B3C4D5E6F000000000134 /* Matcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matcher.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000135 /* PinyinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000136 /* UserAliasStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAliasStore.swift; sourceTree = "<group>"; };
-		1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexWatcher.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000137 /* Bundle+Pinyin4Swift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Pinyin4Swift.swift"; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000138 /* OutputFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputFormat.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000139 /* PinyinFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinyinFormatter.swift; sourceTree = "<group>"; };
@@ -166,6 +165,7 @@
 		1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchPreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000551 /* AppearancePreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexWatcher.swift; sourceTree = "<group>"; };
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -628,7 +628,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FocusLite/FocusLite.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_TESTABILITY = YES;
 				INFOPLIST_FILE = FocusLite/Info.plist;
@@ -639,7 +639,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.5;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.peixinlu.focuslite;
 				PRODUCT_NAME = FocusLite;
 				SWIFT_VERSION = 5.9;
@@ -652,7 +652,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FocusLite/FocusLite.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = FocusLite/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusLite;
@@ -662,7 +662,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.5;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.peixinlu.focuslite;
 				PRODUCT_NAME = FocusLite;
 				SWIFT_VERSION = 5.9;
