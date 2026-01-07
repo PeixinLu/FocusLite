@@ -27,6 +27,8 @@ actor AppIndex {
         searchRoots = [
             URL(fileURLWithPath: "/Applications", isDirectory: true),
             URL(fileURLWithPath: "/Applications/Utilities", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications/Utilities", isDirectory: true),
             fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true)
         ]
     }
@@ -314,6 +316,10 @@ extension AppIndex.AppEntry {
     }
 
     static func shouldExclude(bundle: Bundle, url: URL) -> Bool {
+        if !isLaunchpadApp(url) {
+            return true
+        }
+
         if let packageType = bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String,
            packageType != "APPL" {
             return true
@@ -349,6 +355,34 @@ extension AppIndex.AppEntry {
         }
 
         return false
+    }
+
+    private static func isLaunchpadApp(_ url: URL) -> Bool {
+        for root in launchpadRoots() {
+            if isUnder(url, root: root) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static func launchpadRoots() -> [URL] {
+        let homeApplications = FileManager.default
+            .homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications", isDirectory: true)
+        return [
+            URL(fileURLWithPath: "/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/Applications/Utilities", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications", isDirectory: true),
+            URL(fileURLWithPath: "/System/Applications/Utilities", isDirectory: true),
+            homeApplications
+        ]
+    }
+
+    private static func isUnder(_ url: URL, root: URL) -> Bool {
+        let path = url.path
+        let rootPath = root.path
+        return path == rootPath || path.hasPrefix(rootPath + "/")
     }
 
     static func displayNameFromLaunchServices(_ url: URL) -> String? {

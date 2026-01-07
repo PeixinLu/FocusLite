@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         viewModel.onPrepareSettings = { [weak self] tab in
             self?.settingsViewModel.selectedTab = tab
+            self?.windowController?.prepareForSettingsOpen()
         }
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
@@ -106,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor private func showSettings(tab: SettingsTab) {
         settingsViewModel.selectedTab = tab
+        windowController?.prepareForSettingsOpen()
         let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         if !openedBySystem {

@@ -7,6 +7,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let showOnAllSpaces = true
     private var keyMonitor: Any?
     private var previousApp: NSRunningApplication?
+    private var suppressRestoreFocusOnResign = false
     
     // 用于关闭设置页的回调
     var onCloseSettings: (() -> Void)?
@@ -33,6 +34,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         Task { @MainActor in
             viewModel.requestFocus()
         }
+    }
+
+    func prepareForSettingsOpen() {
+        guard window?.isVisible == true else { return }
+        suppressRestoreFocusOnResign = true
     }
 
     func hide(restoreFocus: Bool = true) {
@@ -178,7 +184,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
 extension LauncherWindowController {
     func windowDidResignKey(_ notification: Notification) {
-        hide()
+        let frontmostID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        let isSwitchingWithinApp = frontmostID == Bundle.main.bundleIdentifier
+        let shouldRestore = !suppressRestoreFocusOnResign && !isSwitchingWithinApp
+        suppressRestoreFocusOnResign = false
+        hide(restoreFocus: shouldRestore)
     }
 }
 

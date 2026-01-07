@@ -39,6 +39,12 @@ final class AppUpdater: NSObject, ObservableObject {
 
 extension AppUpdater: SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
+        let nsError = error as NSError
+        if nsError.domain == "SUSparkleErrorDomain",
+           nsError.localizedDescription.localizedCaseInsensitiveContains("up to date") {
+            // Sparkle already shows the "up to date" dialog.
+            return
+        }
         let alert = NSAlert()
         alert.messageText = "无法检查更新"
         alert.informativeText = error.localizedDescription

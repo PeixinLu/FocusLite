@@ -6,6 +6,8 @@ final class AppIndexSettingsViewModel: ObservableObject {
     @Published var apps: [AppIndex.AppEntry] = []
     @Published var aliasText: [String: String] = [:]
     @Published var searchText: String = ""
+    @Published var excludedBundleIDs: Set<String> = []
+    @Published var excludedPaths: Set<String> = []
 
     private let appIndex = AppIndex.shared
     private let aliasStore: UserAliasStore
@@ -49,6 +51,8 @@ final class AppIndexSettingsViewModel: ObservableObject {
             self.aliasText = aliases.reduce(into: [:]) { result, pair in
                 result[pair.key] = pair.value.joined(separator: ", ")
             }
+            self.excludedBundleIDs = AppSearchPreferences.excludedBundleIDs
+            self.excludedPaths = AppSearchPreferences.excludedPaths
         }
     }
 
@@ -78,6 +82,38 @@ final class AppIndexSettingsViewModel: ObservableObject {
         let icon = NSWorkspace.shared.icon(forFile: path)
         iconCache.setObject(icon, forKey: path as NSString)
         return icon
+    }
+
+    func isExcluded(_ entry: AppIndex.AppEntry) -> Bool {
+        AppSearchPreferences.isExcluded(
+            bundleID: entry.bundleID,
+            path: entry.path,
+            excludedBundleIDs: excludedBundleIDs,
+            excludedPaths: excludedPaths
+        )
+    }
+
+    func setExcluded(_ entry: AppIndex.AppEntry, isExcluded: Bool) {
+        if let bundleID = entry.bundleID {
+            var updated = excludedBundleIDs
+            if isExcluded {
+                updated.insert(bundleID)
+            } else {
+                updated.remove(bundleID)
+            }
+            excludedBundleIDs = updated
+            AppSearchPreferences.excludedBundleIDs = updated
+            return
+        }
+
+        var updated = excludedPaths
+        if isExcluded {
+            updated.insert(entry.path)
+        } else {
+            updated.remove(entry.path)
+        }
+        excludedPaths = updated
+        AppSearchPreferences.excludedPaths = updated
     }
 }
 
@@ -124,10 +160,26 @@ struct AppIndexSettingsView: View {
                         }
                     }
                     TableColumn("路径") { entry in
-                        Text(entry.path)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        Button {
+                            let url = URL(fileURLWithPath: entry.path)
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        } label: {
+                            Text(entry.path)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        .buttonStyle(.plain)
+                        .help(entry.path)
+                    }
+                    TableColumn("排除") { entry in
+                        let binding = Binding<Bool>(
+                            get: { viewModel.isExcluded(entry) },
+                            set: { viewModel.setExcluded(entry, isExcluded: $0) }
+                        )
+                        Toggle("", isOn: binding)
+                            .toggleStyle(.checkbox)
+                            .labelsHidden()
                     }
                     TableColumn("别名") { entry in
                         aliasEditor(for: entry)
@@ -135,6 +187,7 @@ struct AppIndexSettingsView: View {
                 }
                 .frame(minHeight: 320, maxHeight: .infinity, alignment: .top)
             }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
         .padding(.top, SettingsLayout.topPadding)

@@ -20,12 +20,22 @@ struct AppSearchProvider: ResultProvider {
 
         await index.warmUp()
         let apps = await index.snapshot()
+        let excludedBundleIDs = AppSearchPreferences.excludedBundleIDs
+        let excludedPaths = AppSearchPreferences.excludedPaths
 
         let info = Matcher.queryInfo(for: trimmed)
         var candidates: [(ResultItem, MatchResult, String)] = []
         candidates.reserveCapacity(min(apps.count, 80))
 
         for app in apps {
+            if AppSearchPreferences.isExcluded(
+                bundleID: app.bundleID,
+                path: app.path,
+                excludedBundleIDs: excludedBundleIDs,
+                excludedPaths: excludedPaths
+            ) {
+                continue
+            }
             guard let match = Matcher.match(query: trimmed, index: app.nameIndex) else {
                 continue
             }
