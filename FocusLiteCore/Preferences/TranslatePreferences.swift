@@ -13,6 +13,9 @@ enum TranslatePreferences {
     private static let bingAPIKey = "translate.bing.apiKey"
     private static let bingRegion = "translate.bing.region"
     private static let bingEndpoint = "translate.bing.endpoint"
+    private static let deepseekAPIKey = "translate.deepseek.apiKey"
+    private static let deepseekEndpoint = "translate.deepseek.endpoint"
+    private static let deepseekModel = "translate.deepseek.model"
     private static let autoPasteKey = "translate.autoPasteAfterSelect"
 
     enum TargetMode: String {
@@ -115,6 +118,21 @@ enum TranslatePreferences {
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: bingEndpoint) }
     }
 
+    static var deepseekAPIKeyValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekAPIKey) ?? "" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekAPIKey) }
+    }
+
+    static var deepseekEndpointValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekEndpoint) ?? "https://api.deepseek.com/chat/completions" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekEndpoint) }
+    }
+
+    static var deepseekModelValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekModel) ?? "deepseek-chat" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekModel) }
+    }
+
     static func isConfigured(serviceID: TranslateServiceID) -> Bool {
         switch serviceID {
         case .youdaoAPI:
@@ -125,6 +143,8 @@ enum TranslatePreferences {
             return !googleAPIKeyValue.isEmpty
         case .bingAPI:
             return !bingAPIKeyValue.isEmpty
+        case .deepseekAPI:
+            return !deepseekAPIKeyValue.isEmpty
         }
     }
 }

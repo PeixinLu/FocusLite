@@ -18,6 +18,8 @@ enum TranslationProxy {
             return await translateWithGoogle(request: request).text
         case .bingAPI:
             return await translateWithBing(request: request).text
+        case .deepseekAPI:
+            return await translateWithDeepSeek(request: request).text
         }
     }
 
@@ -39,6 +41,9 @@ enum TranslationProxy {
             return TranslationServiceTestResult(success: response.text != nil, message: response.message)
         case .bingAPI:
             let response = await translateWithBing(request: request)
+            return TranslationServiceTestResult(success: response.text != nil, message: response.message)
+        case .deepseekAPI:
+            let response = await translateWithDeepSeek(request: request)
             return TranslationServiceTestResult(success: response.text != nil, message: response.message)
         }
     }
@@ -228,6 +233,59 @@ enum TranslationProxy {
                 return (nil, "解析失败")
             }
             return (text, "成功")
+        } catch {
+            return (nil, "网络错误")
+        }
+    }
+
+    private static func translateWithDeepSeek(request: TranslationRequest) async -> (text: String?, message: String) {
+        let apiKey = TranslatePreferences.deepseekAPIKeyValue
+        guard !apiKey.isEmpty else {
+            return (nil, "缺少 API Key")
+        }
+
+        let endpoint = TranslatePreferences.deepseekEndpointValue
+        guard let url = URL(string: endpoint) else {
+            return (nil, "参数错误")
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        let systemPrompt = "Translate from \(request.sourceLanguage) to \(request.targetLanguage). Only return the translated text."
+        let payload: [String: Any] = [
+            "model": TranslatePreferences.deepseekModelValue,
+            "messages": [
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": request.text]
+            ],
+            "temperature": 1.3,
+            "stream": false
+        ]
+        urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                return (nil, "请求失败")
+            }
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return (nil, "解析失败")
+            }
+            if let error = json["error"] as? [String: Any],
+               let message = error["message"] as? String {
+                return (nil, message)
+            }
+            if let choices = json["choices"] as? [[String: Any]],
+               let first = choices.first,
+               let message = first["message"] as? [String: Any],
+               let text = message["content"] as? String,
+               !text.isEmpty {
+                return (text.trimmingCharacters(in: .whitespacesAndNewlines), "成功")
+            }
+            return (nil, "无翻译结果")
         } catch {
             return (nil, "网络错误")
         }

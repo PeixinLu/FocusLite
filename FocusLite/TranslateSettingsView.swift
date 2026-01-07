@@ -24,6 +24,10 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var bingRegion: String
     @Published var bingEndpoint: String
 
+    @Published var deepseekAPIKey: String
+    @Published var deepseekEndpoint: String
+    @Published var deepseekModel: String
+
     @Published var testStatus: [String: TranslateServiceTestStatus] = [:]
 
     init() {
@@ -39,6 +43,9 @@ final class TranslateSettingsViewModel: ObservableObject {
         bingAPIKey = TranslatePreferences.bingAPIKeyValue
         bingRegion = TranslatePreferences.bingRegionValue
         bingEndpoint = TranslatePreferences.bingEndpointValue
+        deepseekAPIKey = TranslatePreferences.deepseekAPIKeyValue
+        deepseekEndpoint = TranslatePreferences.deepseekEndpointValue
+        deepseekModel = TranslatePreferences.deepseekModelValue
     }
 
     func applyChanges() {
@@ -54,6 +61,9 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.bingAPIKeyValue = bingAPIKey
         TranslatePreferences.bingRegionValue = bingRegion
         TranslatePreferences.bingEndpointValue = bingEndpoint
+        TranslatePreferences.deepseekAPIKeyValue = deepseekAPIKey
+        TranslatePreferences.deepseekEndpointValue = deepseekEndpoint
+        TranslatePreferences.deepseekModelValue = deepseekModel
     }
 
     func toggleService(_ id: String, isOn: Bool) {
@@ -209,6 +219,34 @@ struct TranslateSettingsView: View {
                     TextField("https://...", text: $viewModel.bingEndpoint)
                         .frame(width: 240)
                         .onChange(of: viewModel.bingEndpoint) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "DeepSeek 翻译（开放平台）",
+                note: "需要 DeepSeek API Key",
+                id: .deepseekAPI
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.deepseekAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "模型") {
+                    TextField("deepseek-chat", text: $viewModel.deepseekModel)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekModel) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "接口地址") {
+                    TextField("https://api.deepseek.com/chat/completions", text: $viewModel.deepseekEndpoint)
+                        .frame(width: 240)
+                        .onChange(of: viewModel.deepseekEndpoint) { _ in
                             applyAndNotify()
                         }
                 }

@@ -6,6 +6,7 @@ enum TranslateServiceID: String, CaseIterable {
     case baiduAPI
     case googleAPI
     case bingAPI
+    case deepseekAPI
 }
 
 struct TranslationResult: Hashable, Sendable {
