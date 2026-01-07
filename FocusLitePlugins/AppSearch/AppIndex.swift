@@ -16,9 +16,12 @@ actor AppIndex {
     private var apps: [AppEntry] = []
     private var refreshTask: Task<Void, Never>?
     private var didScheduleRefresh = false
+    private var rebuildTask: Task<Void, Never>?
+    private var watcher: AppIndexWatcher?
     private let cacheURL: URL
     private let aliasURL: URL
     private let searchRoots: [URL]
+    private let rebuildDebounceNanos: UInt64 = 1_200_000_000
 
     init(fileManager: FileManager = .default) {
         let focusLiteDir = AppIndex.defaultSupportDirectory(fileManager: fileManager)
@@ -36,6 +39,7 @@ actor AppIndex {
     func warmUp() {
         guard !didScheduleRefresh else { return }
         didScheduleRefresh = true
+        startWatchingIfNeeded()
 
         refreshTask = Task.detached(priority: .utility) { [cacheURL, aliasURL, searchRoots] in
             let cachedApps = AppIndex.loadCache(from: cacheURL)
@@ -133,6 +137,24 @@ actor AppIndex {
 
     private func finishRefresh() {
         refreshTask = nil
+    }
+
+    private func startWatchingIfNeeded() {
+        guard watcher == nil else { return }
+        watcher = AppIndexWatcher(roots: searchRoots, debounceInterval: 1.0) { [weak self] in
+            guard let self else { return }
+            Task { await self.scheduleRebuild() }
+        }
+        watcher?.start()
+    }
+
+    private func scheduleRebuild() {
+        guard refreshTask == nil else { return }
+        rebuildTask?.cancel()
+        rebuildTask = Task {
+            try? await Task.sleep(nanoseconds: rebuildDebounceNanos)
+            await self.rebuild()
+        }
     }
 
     private static func loadCache(from url: URL) -> [AppEntry] {
