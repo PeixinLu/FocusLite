@@ -71,8 +71,8 @@
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
 		1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */; };
 		1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */; };
-		1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */; };
 		1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */; };
+		1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */; };
 		81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */; };
 		9605C7C92F02D299002AD45A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 9605C7C82F02D299002AD45A /* LaunchAtLogin */; };
 		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
@@ -158,8 +158,8 @@
 		1A2B3C4D5E6F000000000430 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferences.swift; sourceTree = "<group>"; };
-		1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchPreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchPreferences.swift; sourceTree = "<group>"; };
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -627,7 +627,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.peixinlu.focuslite;
 				PRODUCT_NAME = FocusLite;
 				SWIFT_VERSION = 5.9;
@@ -650,7 +650,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.peixinlu.focuslite;
 				PRODUCT_NAME = FocusLite;
 				SWIFT_VERSION = 5.9;
