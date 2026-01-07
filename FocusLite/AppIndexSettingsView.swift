@@ -1,0 +1,215 @@
+import AppKit
+import SwiftUI
+
+@MainActor
+final class AppIndexSettingsViewModel: ObservableObject {
+    @Published var apps: [AppIndex.AppEntry] = []
+    @Published var aliasText: [String: String] = [:]
+    @Published var searchText: String = ""
+    @Published var excludedBundleIDs: Set<String> = []
+    @Published var excludedPaths: Set<String> = []
+
+    private let appIndex = AppIndex.shared
+    private let aliasStore: UserAliasStore
+    private var pendingSave: DispatchWorkItem?
+    private var allApps: [AppIndex.AppEntry] = []
+    private let iconCache = NSCache<NSString, NSImage>()
+
+    init(aliasStore: UserAliasStore = UserAliasStore(fileURL: AppIndex.aliasFileURL())) {
+        self.aliasStore = aliasStore
+    }
+    
+    var filteredApps: [AppIndex.AppEntry] {
+        guard !searchText.isEmpty else { return apps }
+        let query = searchText.lowercased()
+        return apps.filter { app in
+            app.name.lowercased().contains(query) ||
+            app.path.lowercased().contains(query) ||
+            (app.bundleID?.lowercased().contains(query) ?? false)
+        }
+    }
+
+    func load() {
+        Task {
+            await reload()
+        }
+    }
+
+    func refreshIndex() {
+        Task {
+            await appIndex.rebuild()
+            await reload()
+        }
+    }
+
+    private func reload() async {
+        let snapshot = await appIndex.snapshot()
+        let payload = aliasStore.snapshot()
+        let aliases = payload.byBundleID
+        await MainActor.run {
+            self.apps = snapshot
+            self.aliasText = aliases.reduce(into: [:]) { result, pair in
+                result[pair.key] = pair.value.joined(separator: ", ")
+            }
+            self.excludedBundleIDs = AppSearchPreferences.excludedBundleIDs
+            self.excludedPaths = AppSearchPreferences.excludedPaths
+        }
+    }
+
+    func updateAlias(for bundleID: String, text: String) {
+        aliasText[bundleID] = text
+        pendingSave?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.saveAlias(bundleID: bundleID, text: text)
+        }
+        pendingSave = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: workItem)
+    }
+
+    private func saveAlias(bundleID: String, text: String) {
+        let aliases = text
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        aliasStore.setAliases(bundleID: bundleID, aliases: aliases)
+        Task { await appIndex.refreshAliases() }
+    }
+
+    func icon(for path: String) -> NSImage {
+        if let cached = iconCache.object(forKey: path as NSString) {
+            return cached
+        }
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        iconCache.setObject(icon, forKey: path as NSString)
+        return icon
+    }
+
+    func isExcluded(_ entry: AppIndex.AppEntry) -> Bool {
+        AppSearchPreferences.isExcluded(
+            bundleID: entry.bundleID,
+            path: entry.path,
+            excludedBundleIDs: excludedBundleIDs,
+            excludedPaths: excludedPaths
+        )
+    }
+
+    func setExcluded(_ entry: AppIndex.AppEntry, isExcluded: Bool) {
+        if let bundleID = entry.bundleID {
+            var updated = excludedBundleIDs
+            if isExcluded {
+                updated.insert(bundleID)
+            } else {
+                updated.remove(bundleID)
+            }
+            excludedBundleIDs = updated
+            AppSearchPreferences.excludedBundleIDs = updated
+            return
+        }
+
+        var updated = excludedPaths
+        if isExcluded {
+            updated.insert(entry.path)
+        } else {
+            updated.remove(entry.path)
+        }
+        excludedPaths = updated
+        AppSearchPreferences.excludedPaths = updated
+    }
+}
+
+struct AppIndexSettingsView: View {
+    @StateObject var viewModel: AppIndexSettingsViewModel
+
+    var body: some View {
+        VStack(spacing: SettingsLayout.sectionSpacing) {
+            // 搜索框
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("搜索应用名称、路径或 Bundle ID", text: $viewModel.searchText)
+                    .textFieldStyle(.roundedBorder)
+                if !viewModel.searchText.isEmpty {
+                    Button(action: { viewModel.searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+                if !viewModel.searchText.isEmpty {
+                    Text("\(viewModel.filteredApps.count) 个结果")
+                        .foregroundColor(.secondary)
+                }
+                Button("刷新索引") {
+                    viewModel.refreshIndex()
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.bottom, 8)
+
+            SettingsSection {
+                Table(viewModel.filteredApps) {
+                    TableColumn("App 名称") { entry in
+                        HStack(spacing: 8) {
+                            Image(nsImage: viewModel.icon(for: entry.path))
+                                .resizable()
+                                .frame(width: 18, height: 18)
+                            Text(entry.name)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                    TableColumn("路径") { entry in
+                        Button {
+                            let url = URL(fileURLWithPath: entry.path)
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        } label: {
+                            Text(entry.path)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        .buttonStyle(.plain)
+                        .help(entry.path)
+                    }
+                    TableColumn("排除") { entry in
+                        let binding = Binding<Bool>(
+                            get: { viewModel.isExcluded(entry) },
+                            set: { viewModel.setExcluded(entry, isExcluded: $0) }
+                        )
+                        Toggle("", isOn: binding)
+                            .toggleStyle(.checkbox)
+                            .labelsHidden()
+                    }
+                    TableColumn("别名") { entry in
+                        aliasEditor(for: entry)
+                    }
+                }
+                .frame(minHeight: 320, maxHeight: .infinity, alignment: .top)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            viewModel.load()
+        }
+    }
+
+    @ViewBuilder
+    private func aliasEditor(for entry: AppIndex.AppEntry) -> some View {
+        if let bundleID = entry.bundleID {
+            let binding = Binding<String>(
+                get: { viewModel.aliasText[bundleID] ?? "" },
+                set: { viewModel.updateAlias(for: bundleID, text: $0) }
+            )
+            TextField("别名（逗号分隔）", text: binding)
+                .textFieldStyle(.roundedBorder)
+        } else {
+            Text("无 bundleID")
+                .foregroundColor(.secondary)
+        }
+    }
+}

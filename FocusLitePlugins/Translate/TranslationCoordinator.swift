@@ -40,7 +40,7 @@ actor TranslationCoordinator {
             return []
         }
 
-        let direction = TranslationDirection.from(detected: detected, policy: policy)
+        let direction = TranslationDirection.from(detected: detected)
         guard let direction else { return [] }
 
         let request = TranslationRequest(
@@ -54,6 +54,9 @@ actor TranslationCoordinator {
             return []
         }
 
+        let order = TranslatePreferences.enabledServices
+        let orderMap = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+
         return await withTaskGroup(of: TranslationResult?.self) { group in
             for service in services {
                 group.addTask {
@@ -65,9 +68,20 @@ actor TranslationCoordinator {
             for await result in group {
                 if let result {
                     results.append(result)
+                    let sorted = sortResults(results, orderMap: orderMap)
+                    await MainActor.run {
+                        NotificationCenter.default.post(
+                            name: .translationResultsUpdated,
+                            object: nil,
+                            userInfo: [
+                                TranslationCoordinator.queryKey: text,
+                                TranslationCoordinator.resultsKey: sorted
+                            ]
+                        )
+                    }
                 }
             }
-            return results
+            return sortResults(results, orderMap: orderMap)
         }
     }
 
@@ -76,8 +90,6 @@ actor TranslationCoordinator {
         return order.compactMap { rawValue in
             guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
             switch id {
-            case .system:
-                return SystemTranslationService()
             case .youdaoAPI:
                 return APITranslationService(id: id, displayName: "有道 API")
             case .baiduAPI:
@@ -86,32 +98,42 @@ actor TranslationCoordinator {
                 return APITranslationService(id: id, displayName: "Google API")
             case .bingAPI:
                 return APITranslationService(id: id, displayName: "微软翻译 API")
-            case .mock:
-                return MockTranslationService()
+            case .deepseekAPI:
+                return APITranslationService(id: id, displayName: "DeepSeek API")
             }
         }
     }
+
+    private func sortResults(
+        _ results: [TranslationResult],
+        orderMap: [String: Int]
+    ) -> [TranslationResult] {
+        results.sorted { lhs, rhs in
+            let left = orderMap[lhs.serviceID.rawValue] ?? Int.max
+            let right = orderMap[rhs.serviceID.rawValue] ?? Int.max
+            if left != right {
+                return left < right
+            }
+            return lhs.serviceName.localizedCaseInsensitiveCompare(rhs.serviceName) == .orderedAscending
+        }
+    }
+}
+
+extension TranslationCoordinator {
+    static let queryKey = "query"
+    static let resultsKey = "results"
+}
+
+extension Notification.Name {
+    static let translationResultsUpdated = Notification.Name("translationResultsUpdated")
 }
 
 private struct TranslationDirection {
     let source: String
     let target: String
 
-    static func from(detected: DetectedLanguage, policy: TranslatePreferences.MixedTextPolicy) -> TranslationDirection? {
+    static func from(detected: DetectedLanguage) -> TranslationDirection? {
         let code = detected.code.lowercased()
-        if code.hasPrefix("zh") {
-            return TranslationDirection(source: "zh-Hans", target: "en")
-        }
-        if code.hasPrefix("en") {
-            return TranslationDirection(source: "en", target: "zh-Hans")
-        }
-        if detected.isMixed && policy == .auto {
-            return fallbackForMixed(code: code)
-        }
-        return nil
-    }
-
-    private static func fallbackForMixed(code: String) -> TranslationDirection? {
         if code.hasPrefix("zh") {
             return TranslationDirection(source: "zh-Hans", target: "en")
         }

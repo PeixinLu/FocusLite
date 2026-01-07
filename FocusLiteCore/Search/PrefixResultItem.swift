@@ -9,20 +9,26 @@ enum PrefixResultItemBuilder {
         results.reserveCapacity(entries.count)
 
         for entry in entries {
-            guard shouldInclude(entry: entry, normalizedQuery: normalized) else { continue }
             results.append(resultItem(from: entry, normalizedQuery: normalized))
         }
 
         return results.sorted { lhs, rhs in
-            lhs.score == rhs.score
-                ? lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-                : lhs.score > rhs.score
+            // 如果分数相同，翻译前缀优先
+            if lhs.score == rhs.score {
+                if lhs.providerID == TranslateProvider.providerID && rhs.providerID != TranslateProvider.providerID {
+                    return true
+                }
+                if lhs.providerID != TranslateProvider.providerID && rhs.providerID == TranslateProvider.providerID {
+                    return false
+                }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+            return lhs.score > rhs.score
         }
     }
 
-    private static func shouldInclude(entry: PrefixEntry, normalizedQuery: String) -> Bool {
-        guard !normalizedQuery.isEmpty else { return true }
-        return entry.id.hasPrefix(normalizedQuery)
+    static func fallbackItem(for entry: PrefixEntry) -> ResultItem {
+        resultItem(from: entry, normalizedQuery: "")
     }
 
     private static func resultItem(from entry: PrefixEntry, normalizedQuery: String) -> ResultItem {
@@ -31,8 +37,10 @@ enum PrefixResultItemBuilder {
             matchScore = 0.99
         } else if entry.id == normalizedQuery {
             matchScore = 1.0
+        } else if entry.id.hasPrefix(normalizedQuery) {
+            matchScore = 0.97
         } else {
-            matchScore = 0.95
+            matchScore = 0.6
         }
 
         return ResultItem(

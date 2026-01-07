@@ -39,6 +39,20 @@ enum SearchStateReducer {
         return UpdateResult(state: nextState, textFieldValue: "")
     }
 
+    static func selectPrefix(state: SearchState, prefix: PrefixEntry, carryQuery: String) -> UpdateResult {
+        var nextState = state
+        nextState.scope = .prefixed(providerID: prefix.providerID)
+        nextState.activePrefix = ActivePrefix(
+            id: prefix.id,
+            providerID: prefix.providerID,
+            title: prefix.title,
+            subtitle: prefix.subtitle
+        )
+        let trimmed = carryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        nextState.query = trimmed
+        return UpdateResult(state: nextState, textFieldValue: trimmed)
+    }
+
     static func exitScope(state: SearchState) -> UpdateResult {
         var nextState = state
         nextState.scope = .global

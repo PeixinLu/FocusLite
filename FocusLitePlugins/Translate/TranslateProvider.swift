@@ -36,12 +36,15 @@ struct TranslateProvider: ResultProvider {
         }
 
         return results.enumerated().map { index, result in
-            ResultItem(
+            let action: ResultAction = TranslatePreferences.autoPasteAfterSelect
+                ? .pasteText(result.translatedText)
+                : .copyText(result.translatedText)
+            return ResultItem(
                 title: result.translatedText,
                 subtitle: "\(result.serviceName) · \(result.sourceLanguage) → \(result.targetLanguage)",
                 icon: .system("globe"),
                 score: 0.9 - Double(index) * 0.05,
-                action: .copyText(result.translatedText),
+                action: action,
                 providerID: id,
                 category: .standard
             )

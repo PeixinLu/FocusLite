@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TranslateServiceTestStatus: Hashable {
     var isTesting: Bool
@@ -9,6 +10,8 @@ struct TranslateServiceTestStatus: Hashable {
 final class TranslateSettingsViewModel: ObservableObject {
     @Published var mixedPolicy: TranslatePreferences.MixedTextPolicy
     @Published var enabledServices: [String]
+    @Published var translatePrefixText: String
+    @Published var autoPasteEnabled: Bool
 
     @Published var youdaoAppKey: String
     @Published var youdaoSecret: String
@@ -22,11 +25,17 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var bingRegion: String
     @Published var bingEndpoint: String
 
+    @Published var deepseekAPIKey: String
+    @Published var deepseekEndpoint: String
+    @Published var deepseekModel: String
+
     @Published var testStatus: [String: TranslateServiceTestStatus] = [:]
 
     init() {
         mixedPolicy = TranslatePreferences.mixedTextPolicy
         enabledServices = TranslatePreferences.enabledServices
+        translatePrefixText = TranslatePreferences.searchPrefix
+        autoPasteEnabled = TranslatePreferences.autoPasteAfterSelect
         youdaoAppKey = TranslatePreferences.youdaoAppKeyValue
         youdaoSecret = TranslatePreferences.youdaoSecretValue
         baiduAppID = TranslatePreferences.baiduAppIDValue
@@ -35,11 +44,16 @@ final class TranslateSettingsViewModel: ObservableObject {
         bingAPIKey = TranslatePreferences.bingAPIKeyValue
         bingRegion = TranslatePreferences.bingRegionValue
         bingEndpoint = TranslatePreferences.bingEndpointValue
+        deepseekAPIKey = TranslatePreferences.deepseekAPIKeyValue
+        deepseekEndpoint = TranslatePreferences.deepseekEndpointValue
+        deepseekModel = TranslatePreferences.deepseekModelValue
     }
 
     func applyChanges() {
         TranslatePreferences.mixedTextPolicy = mixedPolicy
         TranslatePreferences.enabledServices = enabledServices
+        TranslatePreferences.searchPrefix = translatePrefixText
+        TranslatePreferences.autoPasteAfterSelect = autoPasteEnabled
         TranslatePreferences.youdaoAppKeyValue = youdaoAppKey
         TranslatePreferences.youdaoSecretValue = youdaoSecret
         TranslatePreferences.baiduAppIDValue = baiduAppID
@@ -48,6 +62,9 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.bingAPIKeyValue = bingAPIKey
         TranslatePreferences.bingRegionValue = bingRegion
         TranslatePreferences.bingEndpointValue = bingEndpoint
+        TranslatePreferences.deepseekAPIKeyValue = deepseekAPIKey
+        TranslatePreferences.deepseekEndpointValue = deepseekEndpoint
+        TranslatePreferences.deepseekModelValue = deepseekModel
     }
 
     func toggleService(_ id: String, isOn: Bool) {
@@ -81,102 +98,251 @@ final class TranslateSettingsViewModel: ObservableObject {
 
 struct TranslateSettingsView: View {
     @StateObject var viewModel: TranslateSettingsViewModel
+    let onSaved: (() -> Void)?
+    @State private var draggingService: String?
 
-    var body: some View {
-        VStack(spacing: 16) {
-            header
-
-            Form {
-                Picker("混合文本", selection: $viewModel.mixedPolicy) {
-                    Text("自动判断").tag(TranslatePreferences.MixedTextPolicy.auto)
-                    Text("不翻译").tag(TranslatePreferences.MixedTextPolicy.none)
-                }
-                .frame(width: 240)
-
-                serviceSection(
-                    title: "有道翻译（官方 API）",
-                    note: "需要有道智云应用密钥",
-                    id: .youdaoAPI
-                ) {
-                    TextField("App Key", text: $viewModel.youdaoAppKey)
-                    SecureField("App Secret", text: $viewModel.youdaoSecret)
-                }
-
-                serviceSection(
-                    title: "百度翻译（官方 API）",
-                    note: "需要百度翻译开放平台密钥",
-                    id: .baiduAPI
-                ) {
-                    TextField("App ID", text: $viewModel.baiduAppID)
-                    SecureField("App Secret", text: $viewModel.baiduSecret)
-                }
-
-                serviceSection(
-                    title: "Google 翻译（官方 API）",
-                    note: "需要 Google Cloud API Key",
-                    id: .googleAPI
-                ) {
-                    SecureField("API Key", text: $viewModel.googleAPIKey)
-                }
-
-                serviceSection(
-                    title: "微软翻译（官方 API）",
-                    note: "需要 Azure Translator Key",
-                    id: .bingAPI
-                ) {
-                    SecureField("API Key", text: $viewModel.bingAPIKey)
-                    TextField("Region (可选)", text: $viewModel.bingRegion)
-                    TextField("Endpoint", text: $viewModel.bingEndpoint)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Toggle("系统翻译（本地）", isOn: serviceBinding(.system))
-                    Toggle("Mock（调试）", isOn: serviceBinding(.mock))
-                }
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Spacer()
-                Button("保存") {
-                    viewModel.applyChanges()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding(16)
-        .frame(width: 620, height: 640)
+    init(viewModel: TranslateSettingsViewModel, onSaved: (() -> Void)? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+        self.onSaved = onSaved
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("翻译设置")
-                .font(.system(size: 20, weight: .semibold))
-            Text("配置合规的翻译 API，结果会按服务顺序返回。")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+    var body: some View {
+        VStack(spacing: SettingsLayout.sectionSpacing) {
+            SettingsSection("翻译前缀") {
+                SettingsFieldRow(title: "前缀") {
+                    TextField("如 tr", text: $viewModel.translatePrefixText)
+                        .frame(width: 120)
+                        .onChange(of: viewModel.translatePrefixText) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "自动粘贴") {
+                    Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoPasteEnabled) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            SettingsSection("排序") {
+                if viewModel.enabledServices.isEmpty {
+                    Text("启用服务后可拖拽排序")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            ForEach(viewModel.enabledServices, id: \.self) { rawValue in
+                                HStack(spacing: 10) {
+                                    Image(systemName: "line.3.horizontal")
+                                        .foregroundColor(.secondary)
+                                    Text(displayName(for: rawValue))
+                                        .font(.system(size: 13, weight: .medium))
+                                    if rawValue == TranslateServiceID.deepseekAPI.rawValue {
+                                        Text("推荐")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundColor(.accentColor)
+                                            .padding(.vertical, 2)
+                                            .padding(.horizontal, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(Color.accentColor.opacity(0.12))
+                                            )
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                                )
+                                .onDrag {
+                                    draggingService = rawValue
+                                    return NSItemProvider(object: rawValue as NSString)
+                                }
+                                .onDrop(
+                                    of: [UTType.text],
+                                    delegate: ServiceOrderDropDelegate(
+                                        item: rawValue,
+                                        items: $viewModel.enabledServices,
+                                        draggingItem: $draggingService,
+                                        onReordered: applyAndNotify
+                                    )
+                                )
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .frame(height: min(CGFloat(viewModel.enabledServices.count) * 36 + 12, 220))
+                }
+            }
+
+            SettingsSection("混合文本") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("是否翻译中英混合输入文本")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Picker("是否翻译中英混合输入文本", selection: $viewModel.mixedPolicy) {
+                        Text("自动交给服务处理").tag(TranslatePreferences.MixedTextPolicy.auto)
+                        Text("不翻译").tag(TranslatePreferences.MixedTextPolicy.none)
+                    }
+                    .frame(width: 160)
+                    .labelsHidden()
+                    .onChange(of: viewModel.mixedPolicy) { _ in
+                        applyAndNotify()
+                    }
+                }
+            }
+
+            serviceSection(
+                title: "DeepSeek 翻译（开放平台）· 推荐",
+                note: "需要 DeepSeek API Key",
+                id: .deepseekAPI,
+                apiKeyURL: "https://platform.deepseek.com/api_keys"
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.deepseekAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "模型") {
+                    TextField("deepseek-chat", text: $viewModel.deepseekModel)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekModel) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "接口地址") {
+                    TextField("https://api.deepseek.com/chat/completions", text: $viewModel.deepseekEndpoint)
+                        .frame(width: 240)
+                        .onChange(of: viewModel.deepseekEndpoint) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "有道翻译（官方 API）",
+                note: "需要有道智云应用密钥",
+                id: .youdaoAPI,
+                apiKeyURL: "https://ai.youdao.com/console/#/"
+            ) {
+                SettingsFieldRow(title: "App Key") {
+                    TextField("应用 ID", text: $viewModel.youdaoAppKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.youdaoAppKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "App Secret") {
+                    SecureField("应用密钥", text: $viewModel.youdaoSecret)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.youdaoSecret) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "百度翻译（官方 API）",
+                note: "需要百度翻译开放平台密钥",
+                id: .baiduAPI,
+                apiKeyURL: "https://fanyi-api.baidu.com/manage/developer"
+            ) {
+                SettingsFieldRow(title: "App ID") {
+                    TextField("应用 ID", text: $viewModel.baiduAppID)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.baiduAppID) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "App Secret") {
+                    SecureField("应用密钥", text: $viewModel.baiduSecret)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.baiduSecret) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "Google 翻译（官方 API）",
+                note: "需要 Google Cloud API Key",
+                id: .googleAPI
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.googleAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.googleAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
+                title: "微软翻译（官方 API）",
+                note: "需要 Azure Translator Key",
+                id: .bingAPI
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.bingAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.bingAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "区域") {
+                    TextField("可选", text: $viewModel.bingRegion)
+                        .frame(width: 160)
+                        .onChange(of: viewModel.bingRegion) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "接口地址") {
+                    TextField("https://...", text: $viewModel.bingEndpoint)
+                        .frame(width: 240)
+                        .onChange(of: viewModel.bingEndpoint) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func serviceSection<Content: View>(
         title: String,
         note: String,
         id: TranslateServiceID,
-        @ViewBuilder content: () -> Content
+        apiKeyURL: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        SettingsSection(note: note) {
             HStack {
                 Toggle(title, isOn: serviceBinding(id))
+                    .toggleStyle(.switch)
                 Spacer()
+                if let apiKeyURL, let url = URL(string: apiKeyURL) {
+                    Link("申请 API Key", destination: url)
+                        .font(.system(size: 12, weight: .semibold))
+                }
                 Button("测试") {
                     viewModel.testService(id)
+                    onSaved?()
                 }
                 .disabled(isTesting(id))
             }
-            Text(note)
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
             content()
             testStatusView(id)
         }
@@ -185,7 +351,10 @@ struct TranslateSettingsView: View {
     private func serviceBinding(_ id: TranslateServiceID) -> Binding<Bool> {
         Binding(
             get: { viewModel.enabledServices.contains(id.rawValue) },
-            set: { viewModel.toggleService(id.rawValue, isOn: $0) }
+            set: { isOn in
+                viewModel.toggleService(id.rawValue, isOn: isOn)
+                applyAndNotify()
+            }
         )
     }
 
@@ -200,5 +369,54 @@ struct TranslateSettingsView: View {
                 .font(.system(size: 11))
                 .foregroundColor(status.isSuccess ? .green : .red)
         }
+    }
+
+    private func applyAndNotify() {
+        viewModel.applyChanges()
+        onSaved?()
+    }
+
+    private func displayName(for rawValue: String) -> String {
+        guard let id = TranslateServiceID(rawValue: rawValue) else { return rawValue }
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
+        }
+    }
+}
+
+private struct ServiceOrderDropDelegate: DropDelegate {
+    let item: String
+    @Binding var items: [String]
+    @Binding var draggingItem: String?
+    let onReordered: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging = draggingItem, dragging != item else { return }
+        guard let fromIndex = items.firstIndex(of: dragging),
+              let toIndex = items.firstIndex(of: item) else { return }
+        if items[toIndex] == dragging { return }
+
+        withAnimation(.easeInOut(duration: 0.12)) {
+            items.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingItem = nil
+        onReordered()
+        return true
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
     }
 }

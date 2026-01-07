@@ -8,6 +8,7 @@ enum ClipboardPreferences {
     private static let prefixKey = "clipboard.searchPrefix"
     private static let retentionDaysKey = "clipboard.retentionDays"
     private static let retentionHoursKey = "clipboard.retentionHours"
+    private static let autoPasteKey = "clipboard.autoPasteAfterSelect"
 
     static var isPaused: Bool {
         get {
@@ -80,6 +81,18 @@ enum ClipboardPreferences {
         }
         set {
             UserDefaults.standard.set(max(0, newValue), forKey: retentionHoursKey)
+        }
+    }
+
+    static var autoPasteAfterSelect: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: autoPasteKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoPasteKey)
         }
     }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -6,12 +7,14 @@ final class SnippetsManagerViewModel: ObservableObject {
     @Published var editorDraft: SnippetDraft?
     @Published var isLoading = false
     @Published var searchPrefixText: String
+    @Published var autoPasteEnabled: Bool
 
     private let store: SnippetStore
 
     init(store: SnippetStore = .shared) {
         self.store = store
         self.searchPrefixText = SnippetsPreferences.searchPrefix
+        self.autoPasteEnabled = SnippetsPreferences.autoPasteAfterSelect
     }
 
     func load() {
@@ -78,6 +81,10 @@ final class SnippetsManagerViewModel: ObservableObject {
     func saveSearchPrefix() {
         SnippetsPreferences.searchPrefix = searchPrefixText
     }
+
+    func saveAutoPaste() {
+        SnippetsPreferences.autoPasteAfterSelect = autoPasteEnabled
+    }
 }
 
 struct SnippetDraft: Identifiable {
@@ -140,28 +147,66 @@ struct SnippetDraft: Identifiable {
 
 struct SnippetsManagerView: View {
     @StateObject var viewModel: SnippetsManagerViewModel
+    let onSaved: (() -> Void)?
+
+    init(viewModel: SnippetsManagerViewModel, onSaved: (() -> Void)? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+        self.onSaved = onSaved
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
-            header
-            prefixSettings
+        VStack(spacing: SettingsLayout.sectionSpacing) {
+            SettingsSection("搜索前缀") {
+                prefixSettings
+            }
 
-            if viewModel.snippets.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(viewModel.snippets) { snippet in
-                        SnippetRow(snippet: snippet,
-                                   onEdit: { viewModel.editSnippet(snippet) },
-                                   onDelete: { viewModel.deleteSnippet(snippet) })
+            SettingsSection("行为") {
+                Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                    .toggleStyle(.switch)
+                    .onChange(of: viewModel.autoPasteEnabled) { _ in
+                        viewModel.saveAutoPaste()
+                        onSaved?()
                     }
-                    .onDelete(perform: viewModel.delete)
+            }
+
+            SettingsSection {
+                HStack {
+                    Text("片段列表")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Button {
+                        viewModel.addSnippet()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .listStyle(.inset)
+
+                if viewModel.snippets.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        ForEach(displaySnippets) { snippet in
+                            SnippetRow(snippet: snippet,
+                                       onEdit: { viewModel.editSnippet(snippet) },
+                                       onDelete: { viewModel.deleteSnippet(snippet) })
+                        }
+                        .onDelete { offsets in
+                            let targets = offsets.map { displaySnippets[$0] }
+                            for snippet in targets {
+                                viewModel.deleteSnippet(snippet)
+                            }
+                        }
+                    }
+                    .listStyle(.inset)
+                    .frame(minHeight: 240)
+                }
             }
         }
-        .padding(16)
-        .frame(width: 560, height: 460)
+        .padding(.horizontal, SettingsLayout.horizontalPadding)
+        .padding(.top, SettingsLayout.topPadding)
+        .padding(.bottom, SettingsLayout.bottomPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             viewModel.load()
         }
@@ -174,40 +219,30 @@ struct SnippetsManagerView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Snippets")
-                    .font(.system(size: 20, weight: .semibold))
-                Text("Manage text shortcuts and reusable templates.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+    private var displaySnippets: [Snippet] {
+        viewModel.snippets.sorted {
+            if $0.updatedAt != $1.updatedAt {
+                return $0.updatedAt < $1.updatedAt
             }
-
-            Spacer()
-
-            Button {
-                viewModel.addSnippet()
-            } label: {
-                Image(systemName: "plus")
-            }
-            .buttonStyle(.borderedProminent)
+            return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
         }
     }
 
     private var prefixSettings: some View {
         HStack(spacing: 8) {
-            Text("Search prefix")
+            Text("搜索前缀")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
-            TextField("e.g. sn", text: $viewModel.searchPrefixText)
+            TextField("如 sn", text: $viewModel.searchPrefixText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 120)
                 .onSubmit {
                     viewModel.saveSearchPrefix()
+                    onSaved?()
                 }
                 .onChange(of: viewModel.searchPrefixText) { _ in
                     viewModel.saveSearchPrefix()
+                    onSaved?()
                 }
             Spacer()
         }
@@ -215,9 +250,9 @@ struct SnippetsManagerView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Text("No snippets yet")
+            Text("还没有片段")
                 .font(.system(size: 14, weight: .medium))
-            Text("Click + to add your first snippet.")
+            Text("点击 + 添加你的第一个片段。")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
@@ -229,26 +264,31 @@ private struct SnippetRow: View {
     let snippet: Snippet
     let onEdit: () -> Void
     let onDelete: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(snippet.title)
-                    .font(.system(size: 14, weight: .semibold))
-
                 HStack(spacing: 8) {
+                    Text(snippet.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
                     if !snippet.keyword.isEmpty {
-                        Text(";" + snippet.keyword)
+                        Text(snippet.keyword)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
-                    }
-
-                    if !snippet.tags.isEmpty {
-                        Text(snippet.tags.joined(separator: ", "))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                 }
+
+                Text(snippet.content.replacingOccurrences(of: "\n", with: " "))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             Spacer()
@@ -264,6 +304,12 @@ private struct SnippetRow: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.15) : Color.clear)
+        )
     }
 }
 
@@ -271,24 +317,38 @@ private struct SnippetEditorView: View {
     @State var draft: SnippetDraft
     let onSave: (SnippetDraft) -> Void
     let onCancel: () -> Void
+    @State private var formatMessage: String?
 
     var body: some View {
         VStack(spacing: 16) {
             Form {
-                TextField("Title", text: $draft.title)
-                TextField("Keyword (optional, without ;)", text: $draft.keyword)
-                TextField("Tags (comma separated)", text: $draft.tagsText)
+                TextField("标题", text: $draft.title)
+                TextField("关键词（可选，不含 ;）", text: $draft.keyword)
+                TextField("标签（逗号分隔）", text: $draft.tagsText)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Content")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Text("内容")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Button("格式化") {
+                            formatContent()
+                        }
+                        .buttonStyle(.bordered)
+                    }
                     TextEditor(text: $draft.content)
                         .frame(minHeight: 140)
+                        .padding(6)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
                         )
+                    if let message = formatMessage {
+                        Text(message)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .padding(.vertical, 6)
             }
@@ -297,9 +357,9 @@ private struct SnippetEditorView: View {
             HStack {
                 Spacer()
 
-                Button("Cancel", action: onCancel)
+                Button("取消", action: onCancel)
 
-                Button("Save") {
+                Button("保存") {
                     onSave(draft)
                 }
                 .buttonStyle(.borderedProminent)
@@ -308,5 +368,31 @@ private struct SnippetEditorView: View {
         }
         .padding(16)
         .frame(width: 560, height: 420)
+    }
+
+    private func formatContent() {
+        let trimmed = draft.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            formatMessage = "内容为空"
+            return
+        }
+
+        if let data = trimmed.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data),
+           let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
+           let formatted = String(data: pretty, encoding: .utf8) {
+            draft.content = formatted
+            formatMessage = "已按 JSON 格式化"
+            return
+        }
+
+        let cleaned = draft.content
+            .split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+            .map { line in
+                line.replacingOccurrences(of: "\\s+$", with: "", options: .regularExpression)
+            }
+            .joined(separator: "\n")
+        draft.content = cleaned
+        formatMessage = "已清理行尾空格"
     }
 }

@@ -13,13 +13,28 @@ final class LauncherViewModel: ObservableObject {
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
+    private var translationObserver: NSObjectProtocol?
 
     var onExit: (() -> Void)?
-    var onOpenSnippetsManager: (() -> Void)?
+    var onOpenSettings: ((SettingsTab) -> Void)?
+    var onPrepareSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
 
     init(searchEngine: SearchEngine) {
         self.searchEngine = searchEngine
+        translationObserver = NotificationCenter.default.addObserver(
+            forName: .translationResultsUpdated,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleTranslationUpdate(notification)
+        }
+    }
+
+    deinit {
+        if let translationObserver {
+            NotificationCenter.default.removeObserver(translationObserver)
+        }
     }
 
     func handleExit() {
@@ -72,7 +87,19 @@ final class LauncherViewModel: ObservableObject {
         guard let item = selectedItem() else { return }
 
         if item.isPrefix {
-            activatePrefix(providerID: item.providerID)
+            let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                activatePrefix(providerID: item.providerID)
+                return
+            }
+
+            let lowered = trimmed.lowercased()
+            let prefixText = item.title.lowercased()
+            if prefixText.hasPrefix(lowered) {
+                activatePrefix(providerID: item.providerID)
+            } else {
+                activatePrefix(providerID: item.providerID, carryQuery: trimmed)
+            }
             return
         }
 
@@ -81,7 +108,13 @@ final class LauncherViewModel: ObservableObject {
             copyToPasteboard(text)
             showToast("已复制")
         case .openURL(let url):
-            NSWorkspace.shared.open(url)
+            // 先退出避免焦点切换冲突
+            onExit?()
+            // 延迟打开以确保窗口先隐藏
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NSWorkspace.shared.open(url)
+            }
+            return
         case .pasteText(let text):
             copyToPasteboard(text)
             if onPaste?(text) == true {
@@ -89,12 +122,18 @@ final class LauncherViewModel: ObservableObject {
             }
             showToast("已复制，开启辅助功能权限可自动粘贴")
         case .runApp(let bundleID):
-            NSWorkspace.shared.launchApplication(
-                withBundleIdentifier: bundleID,
-                options: [.default],
-                additionalEventParamDescriptor: nil,
-                launchIdentifier: nil
-            )
+            // 先退出避免焦点切换冲突
+            onExit?()
+            // 延迟启动以确保窗口先隐藏
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NSWorkspace.shared.launchApplication(
+                    withBundleIdentifier: bundleID,
+                    options: [.default],
+                    additionalEventParamDescriptor: nil,
+                    launchIdentifier: nil
+                )
+            }
+            return
         case .copyImage(let data, let type):
             copyImageToPasteboard(data, type: type)
             showToast("已复制图片")
@@ -109,7 +148,15 @@ final class LauncherViewModel: ObservableObject {
     }
 
     func openSnippetsManager() {
-        onOpenSnippetsManager?()
+        onOpenSettings?(.snippets)
+    }
+
+    func prepareSettings(tab: SettingsTab) {
+        onPrepareSettings?(tab)
+    }
+
+    func openSettings(tab: SettingsTab = .general) {
+        onOpenSettings?(tab)
     }
 
     func activateClipboardSearch() {
@@ -194,25 +241,54 @@ final class LauncherViewModel: ObservableObject {
 
         switch searchState.scope {
         case .global:
-            let prefixItems = PrefixResultItemBuilder.items(matching: searchText)
             let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
+                let prefixItems = PrefixResultItemBuilder.items(matching: searchText)
                 setResults(prefixItems)
                 return
             }
 
+            var prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
+            if !trimmed.isEmpty {
+                let normalized = trimmed.lowercased()
+                let hasExactMatch = prefixItems.contains { $0.title.lowercased() == normalized }
+                if hasExactMatch {
+                    prefixItems = prefixItems.filter { $0.title.lowercased().hasPrefix(normalized) }
+                }
+            }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
-                let items = await searchEngine.search(query: trimmed, isScoped: false, providerIDs: nil)
+                let items = await searchEngine.search(
+                    query: trimmed,
+                    isScoped: false,
+                    providerIDs: [AppSearchProvider.providerID, CalcProvider.providerID]
+                )
                 if Task.isCancelled {
                     return
                 }
                 await MainActor.run { [weak self] in
                     guard self?.searchState == currentState else { return }
-                    self?.setResults(prefixItems + items)
+                    if items.isEmpty {
+                        self?.setResults(prefixItems)
+                    } else {
+                        let hasExactPrefixMatch = prefixItems.contains { item in
+                            item.title.lowercased() == trimmed.lowercased()
+                        }
+                        if hasExactPrefixMatch {
+                            self?.setResults(prefixItems + items)
+                        } else {
+                            self?.setResults(items + prefixItems)
+                        }
+                    }
                 }
             }
         case .prefixed(let providerID):
+            if providerID == TranslateProvider.providerID {
+                let trimmed = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    setResults(translateItems(from: []))
+                }
+            }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
                 let items = await searchEngine.search(
@@ -238,13 +314,94 @@ final class LauncherViewModel: ObservableObject {
         isUpdatingText = false
     }
 
-    private func activatePrefix(providerID: String) {
+    private func activatePrefix(providerID: String, carryQuery: String? = nil) {
         guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == providerID }) else { return }
-        let update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        let update: SearchStateReducer.UpdateResult
+        if let carryQuery, !carryQuery.isEmpty {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry, carryQuery: carryQuery)
+        } else {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        }
         applyUpdate(update)
         focusToken = UUID()
         performSearch()
     }
 
     private var isUpdatingText = false
+
+    private func translateItems(from results: [TranslationResult]) -> [ResultItem] {
+        let enabled = TranslatePreferences.enabledServices
+        let configured = enabled.compactMap { rawValue -> TranslateServiceID? in
+            guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
+            return TranslatePreferences.isConfigured(serviceID: id) ? id : nil
+        }
+        guard !configured.isEmpty else {
+            return [ResultItem(
+                title: "正在翻译…",
+                subtitle: "未配置翻译服务",
+                icon: .system("arrow.triangle.2.circlepath"),
+                score: 0.1,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )]
+        }
+
+        let resultMap = Dictionary(uniqueKeysWithValues: results.map { ($0.serviceID, $0) })
+        return configured.enumerated().map { index, id in
+            if let result = resultMap[id] {
+                let action: ResultAction = TranslatePreferences.autoPasteAfterSelect
+                    ? .pasteText(result.translatedText)
+                    : .copyText(result.translatedText)
+                return ResultItem(
+                    title: result.translatedText,
+                    subtitle: "\(result.serviceName) · \(result.sourceLanguage) → \(result.targetLanguage)",
+                    icon: .system("globe"),
+                    score: 0.9 - Double(index) * 0.05,
+                    action: action,
+                    providerID: TranslateProvider.providerID,
+                    category: .standard
+                )
+            }
+            return ResultItem(
+                title: "正在翻译…",
+                subtitle: serviceDisplayName(for: id),
+                icon: .system("arrow.triangle.2.circlepath"),
+                score: 0.2 - Double(index) * 0.01,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )
+        }
+    }
+
+    private func handleTranslationUpdate(_ notification: Notification) {
+        guard case .prefixed(let providerID) = searchState.scope,
+              providerID == TranslateProvider.providerID else {
+            return
+        }
+        let currentQuery = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let info = notification.userInfo,
+              let query = info[TranslationCoordinator.queryKey] as? String,
+              let results = info[TranslationCoordinator.resultsKey] as? [TranslationResult] else {
+            return
+        }
+        guard !query.isEmpty, query == currentQuery else { return }
+        setResults(translateItems(from: results))
+    }
+
+    private func serviceDisplayName(for id: TranslateServiceID) -> String {
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
+        }
+    }
 }

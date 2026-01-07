@@ -1,20 +1,28 @@
 import Cocoa
 import SwiftUI
 
+@MainActor
 final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let viewModel: LauncherViewModel
     private var window: NSWindow?
     private let showOnAllSpaces = true
     private var keyMonitor: Any?
     private var previousApp: NSRunningApplication?
+    private var suppressRestoreFocusOnResign = false
+    
+    // 用于关闭设置页的回调
+    var onCloseSettings: (() -> Void)?
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
     }
 
-    func show() {
+    func show(resetSearch: Bool = true) {
+        // 先关闭设置页（如果打开了）
+        onCloseSettings?()
+        
         createWindowIfNeeded()
-        Task { @MainActor in
+        if resetSearch {
             viewModel.resetSearch()
         }
         capturePreviousApp()
@@ -27,9 +35,17 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide() {
+    func prepareForSettingsOpen() {
+        guard window?.isVisible == true else { return }
+        suppressRestoreFocusOnResign = true
+    }
+
+    func hide(restoreFocus: Bool = true) {
         stopKeyMonitor()
         window?.orderOut(nil)
+        if restoreFocus {
+            previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        }
     }
 
     func toggle() {
@@ -45,7 +61,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
             return false
         }
 
-        hide()
+        hide(restoreFocus: false)
         previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
@@ -95,7 +111,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             guard self.window?.isVisible == true, self.window?.isKeyWindow == true else { return event }
-            if event.modifierFlags.contains(.command) {
+
+            if event.modifierFlags.contains(.command), event.keyCode == 43 {
+                Task { @MainActor in
+                    self.viewModel.prepareSettings(tab: .clipboard)
+                }
                 return event
             }
 
@@ -163,7 +183,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
 extension LauncherWindowController {
     func windowDidResignKey(_ notification: Notification) {
-        hide()
+        let frontmostID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        let isSwitchingWithinApp = frontmostID == Bundle.main.bundleIdentifier
+        let shouldRestore = !suppressRestoreFocusOnResign && !isSwitchingWithinApp
+        suppressRestoreFocusOnResign = false
+        hide(restoreFocus: shouldRestore)
     }
 }
 

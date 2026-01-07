@@ -3,6 +3,7 @@ import Foundation
 enum TranslatePreferences {
     private static let targetModeKey = "translate.targetMode"
     private static let mixedPolicyKey = "translate.mixedPolicy"
+    private static let prefixKey = "translate.prefix"
     private static let servicesKey = "translate.services"
     private static let youdaoAppKey = "translate.youdao.appKey"
     private static let youdaoSecret = "translate.youdao.secret"
@@ -12,6 +13,10 @@ enum TranslatePreferences {
     private static let bingAPIKey = "translate.bing.apiKey"
     private static let bingRegion = "translate.bing.region"
     private static let bingEndpoint = "translate.bing.endpoint"
+    private static let deepseekAPIKey = "translate.deepseek.apiKey"
+    private static let deepseekEndpoint = "translate.deepseek.endpoint"
+    private static let deepseekModel = "translate.deepseek.model"
+    private static let autoPasteKey = "translate.autoPasteAfterSelect"
 
     enum TargetMode: String {
         case auto
@@ -42,13 +47,36 @@ enum TranslatePreferences {
         }
     }
 
+    static var searchPrefix: String {
+        get { UserDefaults.standard.string(forKey: prefixKey) ?? "tr" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: prefixKey) }
+    }
+
+    static var autoPasteAfterSelect: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: autoPasteKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoPasteKey)
+        }
+    }
+
     static var enabledServices: [String] {
         get {
             if let values = UserDefaults.standard.array(forKey: servicesKey) as? [String], !values.isEmpty {
                 let cleaned = values.filter { TranslateServiceID(rawValue: $0) != nil }
-                return cleaned.isEmpty ? ["system"] : cleaned
+                return cleaned
             }
-            return ["system"]
+            return [
+                TranslateServiceID.deepseekAPI.rawValue,
+                TranslateServiceID.youdaoAPI.rawValue,
+                TranslateServiceID.baiduAPI.rawValue,
+                TranslateServiceID.googleAPI.rawValue,
+                TranslateServiceID.bingAPI.rawValue
+            ]
         }
         set {
             let cleaned = newValue.filter { !$0.isEmpty }
@@ -96,10 +124,23 @@ enum TranslatePreferences {
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: bingEndpoint) }
     }
 
+    static var deepseekAPIKeyValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekAPIKey) ?? "" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekAPIKey) }
+    }
+
+    static var deepseekEndpointValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekEndpoint) ?? "https://api.deepseek.com/chat/completions" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekEndpoint) }
+    }
+
+    static var deepseekModelValue: String {
+        get { UserDefaults.standard.string(forKey: deepseekModel) ?? "deepseek-chat" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekModel) }
+    }
+
     static func isConfigured(serviceID: TranslateServiceID) -> Bool {
         switch serviceID {
-        case .system:
-            return true
         case .youdaoAPI:
             return !youdaoAppKeyValue.isEmpty && !youdaoSecretValue.isEmpty
         case .baiduAPI:
@@ -108,8 +149,8 @@ enum TranslatePreferences {
             return !googleAPIKeyValue.isEmpty
         case .bingAPI:
             return !bingAPIKeyValue.isEmpty
-        case .mock:
-            return true
+        case .deepseekAPI:
+            return !deepseekAPIKeyValue.isEmpty
         }
     }
 }

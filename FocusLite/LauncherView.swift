@@ -4,6 +4,25 @@ import SwiftUI
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @FocusState private var isSearchFocused: Bool
+    @State private var isHovered = false
+    @AppStorage(AppearancePreferences.materialStyleKey)
+    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    @AppStorage(AppearancePreferences.glassStyleKey)
+    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    @AppStorage(AppearancePreferences.glassTintKey)
+    private var glassTintRaw = ""
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+    }
+
+    private var glassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+    }
+
+    private var glassTint: NSColor? {
+        colorFromRGBA(glassTintRaw)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,13 +47,7 @@ struct LauncherView: View {
                         viewModel.submitPrimaryAction()
                     }
 
-                Button {
-                    viewModel.openSnippetsManager()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .buttonStyle(.plain)
+                settingsButton
             }
             .padding(16)
 
@@ -49,7 +62,7 @@ struct LauncherView: View {
                                     .padding(.top, 40)
                             } else {
                                 ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
+                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
                                         .onTapGesture {
                                             viewModel.selectIndex(index)
                                         }
@@ -73,26 +86,32 @@ struct LauncherView: View {
                             EmptyStateView()
                                 .padding(.top, 40)
                         } else {
-                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(item: item, isSelected: viewModel.selectedIndex == index)
-                                    .onTapGesture {
-                                        viewModel.selectIndex(index)
-                                    }
-                            }
+                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                                .onTapGesture {
+                                    viewModel.selectIndex(index)
+                                }
                         }
+                    }
                     }
                     .padding(12)
                 }
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(nsColor: .windowBackgroundColor))
+            LiquidGlassBackground(
+                cornerRadius: 16,
+                isHighlighted: isHovered || isSearchFocused,
+                style: materialStyle,
+                glassStyle: glassStyle,
+                glassTint: glassTint
+            )
         )
         .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
         .onAppear {
             isSearchFocused = true
         }
+        .onHover { isHovered = $0 }
         .onChange(of: viewModel.focusToken) { _ in
             isSearchFocused = true
         }
@@ -111,13 +130,209 @@ struct LauncherView: View {
 
     private var showsPreviewPane: Bool {
         guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
-        return providerID == ClipboardProvider.providerID || providerID == SnippetsProvider.providerID
+        return providerID == ClipboardProvider.providerID || 
+               providerID == SnippetsProvider.providerID || 
+               providerID == TranslateProvider.providerID
+    }
+
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14, *) {
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: .command)
+            .simultaneousGesture(TapGesture().onEnded {
+                viewModel.prepareSettings(tab: .clipboard)
+            })
+            .help("设置")
+        } else {
+            Button {
+                viewModel.openSettings(tab: .clipboard)
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: .command)
+            .help("设置")
+        }
+    }
+}
+
+private struct LiquidGlassBackground: View {
+    let cornerRadius: CGFloat
+    let isHighlighted: Bool
+    let style: AppearancePreferences.MaterialStyle
+    let glassStyle: AppearancePreferences.GlassStyle
+    let glassTint: NSColor?
+
+    var body: some View {
+        ZStack {
+            backgroundBase
+            highlightOverlay
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(borderColor, lineWidth: borderWidth)
+        )
+        .animation(.easeInOut(duration: 0.18), value: isHighlighted)
+    }
+
+    @ViewBuilder
+    private var backgroundBase: some View {
+        switch style {
+        case .classic:
+            VisualEffectView(
+                material: .popover,
+                blendingMode: .behindWindow,
+                state: .active
+            )
+        case .liquid:
+            if #available(macOS 26, *) {
+                GlassBackgroundView(
+                    cornerRadius: cornerRadius,
+                    style: glassStyle,
+                    tintColor: glassTint
+                )
+            } else {
+                VisualEffectView(
+                    material: glassMaterial,
+                    blendingMode: .behindWindow,
+                    state: .active
+                )
+            }
+        case .pure:
+            Color(nsColor: .windowBackgroundColor)
+        }
+    }
+
+    @ViewBuilder
+    private var highlightOverlay: some View {
+        if style == .liquid {
+            ZStack {
+                Color.white.opacity(0.04)
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(isHighlighted ? 0.45 : 0.22),
+                        Color.white.opacity(isHighlighted ? 0.14 : 0.04),
+                        .clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .blendMode(.screen)
+            }
+        }
+    }
+
+    private var borderColor: Color {
+        switch style {
+        case .classic:
+            return Color.white.opacity(isHighlighted ? 0.35 : 0.18)
+        case .liquid:
+            return Color.white.opacity(isHighlighted ? 0.6 : 0.22)
+        case .pure:
+            return Color(nsColor: .separatorColor).opacity(isHighlighted ? 0.9 : 0.6)
+        }
+    }
+
+    private var borderWidth: CGFloat {
+        isHighlighted ? 1.2 : 1
+    }
+
+    private var glassMaterial: NSVisualEffectView.Material {
+        if #available(macOS 26, *) {
+            return .hudWindow
+        }
+        if #available(macOS 13, *) {
+            return .popover
+        }
+        return .hudWindow
+    }
+}
+
+@available(macOS 26, *)
+private struct GlassBackgroundView: NSViewRepresentable {
+    let cornerRadius: CGFloat
+    let style: AppearancePreferences.GlassStyle
+    let tintColor: NSColor?
+
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        view.cornerRadius = cornerRadius
+        view.style = style.nsStyle
+        view.tintColor = tintColor
+        return view
+    }
+
+    func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
+        nsView.cornerRadius = cornerRadius
+        nsView.style = style.nsStyle
+        nsView.tintColor = tintColor
+    }
+}
+
+private func colorFromRGBA(_ raw: String) -> NSColor? {
+    let parts = raw.split(separator: ",").compactMap { Double($0) }
+    guard parts.count == 4 else { return nil }
+    return NSColor(
+        calibratedRed: parts[0],
+        green: parts[1],
+        blue: parts[2],
+        alpha: parts[3]
+    )
+}
+
+@available(macOS 26, *)
+private extension AppearancePreferences.GlassStyle {
+    var nsStyle: NSGlassEffectView.Style {
+        switch self {
+        case .regular:
+            return .regular
+        case .clear:
+            return .clear
+        }
+    }
+}
+
+private struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let state: NSVisualEffectView.State
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = state
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.state = state
     }
 }
 
 private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
+    let searchText: String
+    @AppStorage(AppearancePreferences.materialStyleKey)
+    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    @AppStorage(AppearancePreferences.glassStyleKey)
+    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+
+    private var isLiquidClear: Bool {
+        let material = AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+        let glass = AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+        return material == .liquid && glass == .clear
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -154,8 +369,12 @@ private struct ResultRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
+                .fill(selectionFillColor)
         )
+        .overlay(alignment: .trailing) {
+            actionHint
+                .padding(.trailing, 10)
+        }
     }
 
     @ViewBuilder
@@ -194,6 +413,55 @@ private struct ResultRow: View {
             .fill(Color(nsColor: .tertiaryLabelColor))
             .frame(width: 28, height: 28)
             .opacity(0.4)
+    }
+
+    @ViewBuilder
+    private var actionHint: some View {
+        if !isSelected {
+            EmptyView()
+        } else if item.action == .none && !item.isPrefix {
+            EmptyView()
+        } else if item.isPrefix {
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let prefixText = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let labels = query == prefixText ? ["␣", "⏎"] : ["⏎"]
+            keyCaps(labels: labels, description: "进入")
+        } else if item.providerID == AppSearchProvider.providerID {
+            keyCaps(labels: ["⏎"], description: "打开")
+        } else if item.providerID == SnippetsProvider.providerID ||
+                    item.providerID == ClipboardProvider.providerID ||
+                    item.providerID == TranslateProvider.providerID {
+            keyCaps(labels: ["⏎"], description: "拷贝")
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func keyCaps(labels: [String], description: String) -> some View {
+        HStack(spacing: 6) {
+            let joined = labels.joined(separator: "/")
+            Text("\(joined) \(description)")
+                .font(.system(size: 11, weight: .semibold))
+                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+        }
+    }
+
+    private var selectionFillColor: Color {
+        if isSelected {
+            let opacity: Double = isLiquidClear ? 0.26 : 0.15
+            return Color.accentColor.opacity(opacity)
+        }
+        let opacity: Double = isLiquidClear ? 0.4 : 0.55
+        return Color(nsColor: .controlBackgroundColor).opacity(opacity)
     }
 }
 
@@ -240,7 +508,7 @@ private struct PreviewPane: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
                 )
             case .image(let data):
                 if let image = NSImage(data: data) {
@@ -297,8 +565,21 @@ private struct PreviewPane: View {
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
+        } else if item.providerID == TranslateProvider.providerID {
+            // 翻译结果预览
+            ScrollView {
+                Text(item.title)
+                    .font(.system(size: 15, weight: .regular))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(12)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
+            )
         } else {
-            Text("预览仅适用于剪贴板和 Snippets")
+            Text("预览仅适用于剪贴板、Snippets 和翻译")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             Spacer()

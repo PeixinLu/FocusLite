@@ -1,211 +1,234 @@
 import Foundation
 
-struct MatchResult: Sendable {
-    let score: Double
-    let debug: MatchDebug
-    let highlights: [Int]
+enum MatchBucket: Int, Sendable {
+    case exact = 10
+    case prefix = 9
+    case acronymOrInitials = 8
+    case token = 7
+    case substring = 6
+    case fuzzy = 5
 }
 
-struct MatchDebug: Sendable {
-    let normalizedQuery: String
-    let normalizedName: String
-    let types: [MatchType]
-    let scoreBreakdown: [ScorePart]
-    let positions: [Int]
-
-    struct ScorePart: Sendable {
-        let type: MatchType
-        let score: Double
-    }
-}
-
-extension MatchDebug: CustomStringConvertible {
-    var description: String {
-        let typeList = types.map { $0.rawValue }.joined(separator: ",")
-        let breakdownList = scoreBreakdown
-            .map { "\($0.type.rawValue)=\(String(format: "%.2f", $0.score))" }
-            .joined(separator: ",")
-        return "[MatchDebug] query=\(normalizedQuery) name=\(normalizedName) types=[\(typeList)] breakdown=[\(breakdownList)] positions=\(positions)"
-    }
-}
-
-enum MatchType: String, Sendable {
-    case exact
-    case prefix
-    case substring
-    case tokenAll
+enum MatchedField: String, Sendable {
+    case name
     case token
     case acronym
-    case pinyinFull
-    case pinyinInitials
-    case alias
+    case pinyin
+    case aliasStrong
+    case aliasWeak
+    case substring
     case fuzzy
-    case tokenBonus
+}
 
-    var priority: Int {
-        switch self {
-        case .exact: return 0
-        case .prefix: return 1
-        case .substring: return 2
-        case .tokenAll: return 3
-        case .token: return 4
-        case .alias: return 5
-        case .acronym: return 6
-        case .pinyinFull: return 7
-        case .pinyinInitials: return 8
-        case .fuzzy: return 9
-        case .tokenBonus: return 10
-        }
-    }
+struct MatchResult: Sendable {
+    let bucket: MatchBucket
+    let scoreInBucket: Double
+    let finalScore: Double
+    let matchedField: MatchedField
+    let debug: String?
+}
+
+struct QueryInfo: Sendable {
+    let raw: String
+    let normalized: String
+    let length: Int
+    let isLatinOnly: Bool
+    let hasCJK: Bool
+    let tokens: [String]
 }
 
 enum Matcher {
+    static func queryInfo(for query: String) -> QueryInfo {
+        QueryInfoBuilder.build(query)
+    }
+
     static func match(query: String, index: AppNameIndex) -> MatchResult? {
-        let normalizedQuery = MatchingNormalizer.normalize(query)
-        guard !normalizedQuery.isEmpty else { return nil }
-
-        let tokenQueries = MatchingNormalizer.tokens(from: query)
-            .map { MatchingNormalizer.normalize($0) }
-            .filter { !$0.isEmpty }
-
-        var best = evaluateToken(normalizedQuery, index: index)
-
-        var tokenMatches: [MatchCandidate] = []
-        var matchedTokenCount = 0
-        for token in tokenQueries {
-            if let candidate = evaluateToken(token, index: index) {
-                matchedTokenCount += 1
-                tokenMatches.append(candidate)
-            }
-        }
-
-        if best == nil && tokenMatches.isEmpty {
+        let info = QueryInfoBuilder.build(query)
+        guard !info.normalized.isEmpty else { return nil }
+        
+        // 过滤低质量查询（大量重复字符）
+        if QueryInfoBuilder.isLowQualityQuery(info.normalized) {
             return nil
         }
 
-        if tokenQueries.count > 1, matchedTokenCount == tokenQueries.count {
-            let tokenAll = MatchCandidate(
-                score: 0.88,
-                types: [.tokenAll],
-                breakdown: [.init(type: .tokenAll, score: 0.88)],
-                positions: []
-            )
-            best = pickBest(lhs: best, rhs: tokenAll)
-        }
+        var candidates: [Candidate] = []
 
-        if let strongestToken = tokenMatches.max(by: { $0.score < $1.score }) {
-            best = pickBest(lhs: best, rhs: strongestToken)
-        }
+        candidates.append(contentsOf: exactCandidates(info: info, index: index))
+        candidates.append(contentsOf: prefixCandidates(info: info, index: index))
+        candidates.append(contentsOf: acronymCandidates(info: info, index: index))
+        candidates.append(contentsOf: tokenCandidates(info: info, index: index))
+        candidates.append(contentsOf: substringCandidates(info: info, index: index))
+        candidates.append(contentsOf: fuzzyCandidates(info: info, index: index))
 
-        if tokenQueries.count > 1, matchedTokenCount > 1, var updated = best {
-            let bonus = min(0.08, 0.03 * Double(matchedTokenCount - 1))
-            if bonus > 0 {
-                updated.score = min(1.0, updated.score + bonus)
-                updated.types.append(.tokenBonus)
-                updated.breakdown.append(.init(type: .tokenBonus, score: bonus))
-                best = updated
-            }
-        }
-
-        guard let final = best else { return nil }
-
-        let debug = MatchDebug(
-            normalizedQuery: normalizedQuery,
-            normalizedName: index.normalized,
-            types: final.types,
-            scoreBreakdown: final.breakdown,
-            positions: final.positions
+        guard let best = pickBest(candidates) else { return nil }
+        let base = Double(best.bucket.rawValue)
+        let finalScore = base + best.scoreInBucket
+        return MatchResult(
+            bucket: best.bucket,
+            scoreInBucket: best.scoreInBucket,
+            finalScore: finalScore,
+            matchedField: best.field,
+            debug: best.debug
         )
-        return MatchResult(score: final.score, debug: debug, highlights: final.positions)
     }
 
-    private static func evaluateToken(_ query: String, index: AppNameIndex) -> MatchCandidate? {
-        var candidates: [MatchCandidate] = []
-
-        if index.normalized == query {
-            candidates.append(candidate(type: .exact, score: 1.0, positions: positionsForPrefix(query, in: index.normalized)))
-        } else if index.normalized.hasPrefix(query) {
-            candidates.append(candidate(type: .prefix, score: 0.95, positions: positionsForPrefix(query, in: index.normalized)))
-        } else if let substringPositions = positionsForSubstring(query, in: index.normalized) {
-            candidates.append(candidate(type: .substring, score: 0.90, positions: substringPositions))
-        }
-
-        if index.tokens.contains(query) {
-            candidates.append(candidate(type: .token, score: 0.88, positions: positionsForPrefix(query, in: query)))
-        } else if index.tokens.contains(where: { $0.hasPrefix(query) }) {
-            candidates.append(candidate(type: .token, score: 0.85, positions: positionsForPrefix(query, in: query)))
-        }
-
-        if !index.acronym.isEmpty {
-            if index.acronym == query {
-                candidates.append(candidate(type: .acronym, score: 0.86, positions: positionsForPrefix(query, in: index.acronym)))
-            } else if index.acronym.hasPrefix(query) {
-                candidates.append(candidate(type: .acronym, score: 0.84, positions: positionsForPrefix(query, in: index.acronym)))
+    static func shouldInclude(_ result: MatchResult, info: QueryInfo) -> Bool {
+        switch result.bucket {
+        case .exact, .prefix, .acronymOrInitials:
+            return result.scoreInBucket >= 0.6
+        case .token:
+            if info.length <= 3 {
+                return result.scoreInBucket >= 0.78
             }
-        }
-
-        if let pinyinFull = index.pinyinFull {
-            if pinyinFull == query {
-                candidates.append(candidate(type: .pinyinFull, score: 0.85, positions: positionsForPrefix(query, in: pinyinFull)))
-            } else if pinyinFull.hasPrefix(query) {
-                candidates.append(candidate(type: .pinyinFull, score: 0.82, positions: positionsForPrefix(query, in: pinyinFull)))
+            return result.scoreInBucket >= 0.7
+        case .substring:
+            if info.length <= 3 {
+                return result.scoreInBucket >= 0.75  // 降低阈值以支持短查询的部分匹配
             }
+            return result.scoreInBucket >= 0.7
+        case .fuzzy:
+            return result.scoreInBucket >= 0.85
         }
-
-        if let pinyinInitials = index.pinyinInitials {
-            if pinyinInitials == query {
-                candidates.append(candidate(type: .pinyinInitials, score: 0.83, positions: positionsForPrefix(query, in: pinyinInitials)))
-            } else if pinyinInitials.hasPrefix(query) {
-                candidates.append(candidate(type: .pinyinInitials, score: 0.80, positions: positionsForPrefix(query, in: pinyinInitials)))
-            }
-        }
-
-        if let aliasMatch = matchAlias(query, index: index) {
-            candidates.append(aliasMatch)
-        }
-
-        if query.count <= 4 {
-            for token in index.tokens where token.unicodeScalars.allSatisfy({ $0.isASCII }) {
-                if let positions = positionsForSubsequence(query, in: token) {
-                    candidates.append(candidate(type: .acronym, score: 0.84, positions: positions))
-                    break
-                }
-            }
-        }
-
-        if let fuzzy = fuzzyCandidate(query, candidateText: index.normalized) {
-            candidates.append(fuzzy)
-        }
-
-        return candidates.max(by: { scoreOrder(lhs: $0, rhs: $1) })
     }
 
-    private static func matchAlias(_ query: String, index: AppNameIndex) -> MatchCandidate? {
-        guard !index.aliases.isEmpty else { return nil }
-        let reserved = Set([index.pinyinFull, index.pinyinInitials].compactMap { $0 })
-
-        for alias in index.aliases {
-            if reserved.contains(alias) {
-                continue
-            }
-            if alias == query {
-                return candidate(type: .alias, score: 0.86, positions: positionsForPrefix(query, in: alias))
-            }
-            if alias.hasPrefix(query) {
-                return candidate(type: .alias, score: 0.84, positions: positionsForPrefix(query, in: alias))
-            }
+    private static func exactCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        var result: [Candidate] = []
+        if index.normalized == info.normalized {
+            result.append(Candidate(bucket: .exact, scoreInBucket: 1.0, field: .name, debug: debug("exact", info, index)))
         }
-
-        return nil
+        if index.aliasStrong.contains(info.normalized) {
+            result.append(Candidate(bucket: .exact, scoreInBucket: 1.0, field: .aliasStrong, debug: debug("exact-alias", info, index)))
+        }
+        return result
     }
 
-    private static func fuzzyCandidate(_ query: String, candidateText: String) -> MatchCandidate? {
-        guard let positions = positionsForSubsequence(query, in: candidateText) else { return nil }
-        let score = fuzzyScore(queryLength: query.count, candidateLength: candidateText.count, positions: positions)
-        if score < 0.60 {
-            return nil
+    private static func prefixCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        guard Gate.allowPrefix(info) else { return [] }
+        var result: [Candidate] = []
+
+        if index.normalized.hasPrefix(info.normalized) {
+            let score = prefixScore(query: info.normalized, candidate: index.normalized)
+            result.append(Candidate(bucket: .prefix, scoreInBucket: score, field: .name, debug: debug("prefix-name", info, index)))
         }
-        return candidate(type: .fuzzy, score: score, positions: positions)
+
+        if let token = index.tokens.first(where: { $0.hasPrefix(info.normalized) }) {
+            let score = prefixScore(query: info.normalized, candidate: token)
+            result.append(Candidate(bucket: .prefix, scoreInBucket: score, field: .token, debug: debug("prefix-token", info, index)))
+        }
+
+        if info.isLatinOnly, let pinyinFull = index.pinyinFull, pinyinFull.hasPrefix(info.normalized) {
+            let score = prefixScore(query: info.normalized, candidate: pinyinFull)
+            result.append(Candidate(bucket: .prefix, scoreInBucket: score, field: .pinyin, debug: debug("prefix-pinyin", info, index)))
+        }
+
+        if let alias = index.aliasStrong.first(where: { $0.hasPrefix(info.normalized) }) {
+            let score = min(1.0, prefixScore(query: info.normalized, candidate: alias) + 0.08)
+            result.append(Candidate(bucket: .prefix, scoreInBucket: score, field: .aliasStrong, debug: debug("prefix-alias", info, index)))
+        }
+
+        return result
+    }
+
+    private static func acronymCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        guard Gate.allowAcronym(info) else { return [] }
+        var result: [Candidate] = []
+
+        if !index.acronym.isEmpty, index.acronym.hasPrefix(info.normalized) {
+            let score = prefixScore(query: info.normalized, candidate: index.acronym)
+            result.append(Candidate(bucket: .acronymOrInitials, scoreInBucket: score, field: .acronym, debug: debug("acronym", info, index)))
+        }
+
+        if info.isLatinOnly, let pinyinInitials = index.pinyinInitials, pinyinInitials.hasPrefix(info.normalized) {
+            let score = prefixScore(query: info.normalized, candidate: pinyinInitials)
+            result.append(Candidate(bucket: .acronymOrInitials, scoreInBucket: score, field: .pinyin, debug: debug("pinyin-initials", info, index)))
+        }
+
+        if let alias = index.aliasStrong.first(where: { $0.hasPrefix(info.normalized) }) {
+            let score = min(1.0, prefixScore(query: info.normalized, candidate: alias) + 0.06)
+            result.append(Candidate(bucket: .acronymOrInitials, scoreInBucket: score, field: .aliasStrong, debug: debug("alias-strong", info, index)))
+        }
+
+        return result
+    }
+
+    private static func tokenCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        guard Gate.allowToken(info) else { return [] }
+        guard !info.tokens.isEmpty else { return [] }
+
+        var matchedTokens = 0
+        for token in info.tokens {
+            if index.tokens.contains(where: { $0.hasPrefix(token) }) {
+                matchedTokens += 1
+            }
+        }
+
+        if matchedTokens == info.tokens.count {
+            let score = min(1.0, 0.78 + 0.04 * Double(max(0, matchedTokens - 1)))
+            return [Candidate(bucket: .token, scoreInBucket: score, field: .token, debug: debug("token-all", info, index))]
+        }
+
+        if matchedTokens > 0 {
+            let score = min(0.85, 0.74 + 0.03 * Double(matchedTokens))
+            return [Candidate(bucket: .token, scoreInBucket: score, field: .token, debug: debug("token-partial", info, index))]
+        }
+
+        if let alias = index.aliasWeak.first(where: { $0.hasPrefix(info.normalized) }) {
+            let score = prefixScore(query: info.normalized, candidate: alias)
+            return [Candidate(bucket: .token, scoreInBucket: score, field: .aliasWeak, debug: debug("alias-weak", info, index))]
+        }
+
+        return []
+    }
+
+    private static func substringCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        guard Gate.allowSubstring(info) else { return [] }
+        var candidates: [Candidate] = []
+        
+        // Check main name
+        if let positions = positionsForSubstring(info.normalized, in: index.normalized) {
+            let startBonus = positions.first == 0 ? 0.08 : 0.0
+            let lengthRatio = Double(info.length) / Double(max(1, index.normalized.count))
+            let score = min(0.9, 0.7 + startBonus + 0.15 * lengthRatio)
+            candidates.append(Candidate(bucket: .substring, scoreInBucket: score, field: .substring, debug: debug("substring", info, index)))
+        }
+        
+        // Check strong aliases (extra field contains aliases like "设置" for "系统设置")
+        for alias in index.aliasStrong {
+            if alias.contains(info.normalized) {
+                let startBonus = alias.hasPrefix(info.normalized) ? 0.08 : 0.0
+                let lengthRatio = Double(info.length) / Double(max(1, alias.count))
+                // Slightly higher score for alias matches to prioritize them
+                let score = min(0.92, 0.72 + startBonus + 0.15 * lengthRatio)
+                candidates.append(Candidate(bucket: .substring, scoreInBucket: score, field: .aliasStrong, debug: debug("substring-alias", info, index)))
+                break // Take the first matching alias
+            }
+        }
+        
+        return candidates
+    }
+
+    private static func fuzzyCandidates(info: QueryInfo, index: AppNameIndex) -> [Candidate] {
+        guard Gate.allowFuzzy(info) else { return [] }
+        guard let positions = positionsForSubsequence(info.normalized, in: index.normalized) else { return [] }
+        let score = fuzzyScore(queryLength: info.length, candidateLength: index.normalized.count, positions: positions)
+        return [Candidate(bucket: .fuzzy, scoreInBucket: score, field: .fuzzy, debug: debug("fuzzy", info, index))]
+    }
+
+    private static func pickBest(_ candidates: [Candidate]) -> Candidate? {
+        candidates.max { lhs, rhs in
+            if lhs.bucket.rawValue != rhs.bucket.rawValue {
+                return lhs.bucket.rawValue < rhs.bucket.rawValue
+            }
+            if lhs.scoreInBucket != rhs.scoreInBucket {
+                return lhs.scoreInBucket < rhs.scoreInBucket
+            }
+            return lhs.field.rawValue < rhs.field.rawValue
+        }
+    }
+
+    private static func prefixScore(query: String, candidate: String) -> Double {
+        let ratio = Double(query.count) / Double(max(1, candidate.count))
+        return min(1.0, max(0.6, ratio + 0.2))
     }
 
     private static func fuzzyScore(queryLength: Int, candidateLength: Int, positions: [Int]) -> Double {
@@ -214,9 +237,9 @@ enum Matcher {
         let density = Double(queryLength) / Double(span)
         let consecutiveRatio = consecutiveRatioFor(positions)
         let lengthRatio = Double(queryLength) / Double(candidateLength)
-        let startBonus = first == 0 ? 0.08 : 0.0
+        let startBonus = first == 0 ? 0.06 : 0.0
         let raw = (0.55 * density) + (0.25 * consecutiveRatio) + (0.1 * lengthRatio) + startBonus
-        return min(0.84, max(0.60, raw))
+        return min(0.92, max(0.6, raw))
     }
 
     private static func consecutiveRatioFor(_ positions: [Int]) -> Double {
@@ -226,10 +249,6 @@ enum Matcher {
             consecutive += 1
         }
         return Double(consecutive) / Double(positions.count - 1)
-    }
-
-    private static func positionsForPrefix(_ query: String, in candidate: String) -> [Int] {
-        Array(0..<query.count)
     }
 
     private static func positionsForSubstring(_ query: String, in candidate: String) -> [Int]? {
@@ -254,33 +273,89 @@ enum Matcher {
         return positions
     }
 
-    private static func candidate(type: MatchType, score: Double, positions: [Int]) -> MatchCandidate {
-        MatchCandidate(
-            score: score,
-            types: [type],
-            breakdown: [.init(type: type, score: score)],
-            positions: positions
-        )
-    }
-
-    private static func scoreOrder(lhs: MatchCandidate, rhs: MatchCandidate) -> Bool {
-        if lhs.score != rhs.score {
-            return lhs.score < rhs.score
-        }
-        let lhsPriority = lhs.types.first?.priority ?? Int.max
-        let rhsPriority = rhs.types.first?.priority ?? Int.max
-        return lhsPriority > rhsPriority
-    }
-
-    private static func pickBest(lhs: MatchCandidate?, rhs: MatchCandidate) -> MatchCandidate {
-        guard let lhs = lhs else { return rhs }
-        return scoreOrder(lhs: lhs, rhs: rhs) ? rhs : lhs
+    private static func debug(_ tag: String, _ info: QueryInfo, _ index: AppNameIndex) -> String? {
+        #if DEBUG
+        return "[\(tag)] q=\(info.normalized) name=\(index.normalized)"
+        #else
+        return nil
+        #endif
     }
 }
 
-private struct MatchCandidate {
-    var score: Double
-    var types: [MatchType]
-    var breakdown: [MatchDebug.ScorePart]
-    var positions: [Int]
+private struct Candidate {
+    let bucket: MatchBucket
+    let scoreInBucket: Double
+    let field: MatchedField
+    let debug: String?
+}
+
+private enum Gate {
+    static func allowPrefix(_ info: QueryInfo) -> Bool {
+        info.length >= 1
+    }
+
+    static func allowAcronym(_ info: QueryInfo) -> Bool {
+        info.length >= 1
+    }
+
+    static func allowToken(_ info: QueryInfo) -> Bool {
+        info.length >= 2
+    }
+
+    static func allowSubstring(_ info: QueryInfo) -> Bool {
+        return info.length >= 2
+    }
+
+    static func allowFuzzy(_ info: QueryInfo) -> Bool {
+        guard info.length >= 5 else { return false }
+        return info.isLatinOnly
+    }
+}
+
+enum QueryInfoBuilder {
+    static func build(_ query: String) -> QueryInfo {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = MatchingNormalizer.normalize(trimmed)
+        let tokens = MatchingNormalizer.tokens(from: trimmed)
+            .map { MatchingNormalizer.normalize($0) }
+            .filter { !$0.isEmpty }
+        let scalars = normalized.unicodeScalars
+        let isLatinOnly = !normalized.isEmpty && scalars.allSatisfy { $0.isASCII && ($0.properties.isAlphabetic || $0.properties.numericType != nil) }
+        let hasCJK = scalars.contains { MatchingNormalizer.isCJKUnifiedIdeograph($0) }
+        return QueryInfo(
+            raw: trimmed,
+            normalized: normalized,
+            length: normalized.count,
+            isLatinOnly: isLatinOnly,
+            hasCJK: hasCJK,
+            tokens: tokens
+        )
+    }
+    
+    /// 检测查询是否为低质量（过多重复字符）
+    static func isLowQualityQuery(_ query: String) -> Bool {
+        guard query.count >= 5 else { return false }
+        
+        // 统计每个字符出现的次数
+        var charCounts: [Character: Int] = [:]
+        for char in query {
+            charCounts[char, default: 0] += 1
+        }
+        
+        // 如果任何单个字符占比超过60%，认为是低质量查询
+        let maxCount = charCounts.values.max() ?? 0
+        let repetitionRatio = Double(maxCount) / Double(query.count)
+        if repetitionRatio > 0.6 {
+            return true
+        }
+        
+        // 如果唯一字符数太少（少于总长度的30%），认为是低质量
+        let uniqueChars = charCounts.keys.count
+        let uniqueRatio = Double(uniqueChars) / Double(query.count)
+        if uniqueRatio < 0.3 {
+            return true
+        }
+        
+        return false
+    }
 }
