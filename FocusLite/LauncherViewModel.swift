@@ -13,6 +13,7 @@ final class LauncherViewModel: ObservableObject {
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
+    private var translationObserver: NSObjectProtocol?
 
     var onExit: (() -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
@@ -21,6 +22,19 @@ final class LauncherViewModel: ObservableObject {
 
     init(searchEngine: SearchEngine) {
         self.searchEngine = searchEngine
+        translationObserver = NotificationCenter.default.addObserver(
+            forName: .translationResultsUpdated,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleTranslationUpdate(notification)
+        }
+    }
+
+    deinit {
+        if let translationObserver {
+            NotificationCenter.default.removeObserver(translationObserver)
+        }
     }
 
     func handleExit() {
@@ -269,6 +283,12 @@ final class LauncherViewModel: ObservableObject {
                 }
             }
         case .prefixed(let providerID):
+            if providerID == TranslateProvider.providerID {
+                let trimmed = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    setResults(translateItems(from: []))
+                }
+            }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
                 let items = await searchEngine.search(
@@ -308,4 +328,80 @@ final class LauncherViewModel: ObservableObject {
     }
 
     private var isUpdatingText = false
+
+    private func translateItems(from results: [TranslationResult]) -> [ResultItem] {
+        let enabled = TranslatePreferences.enabledServices
+        let configured = enabled.compactMap { rawValue -> TranslateServiceID? in
+            guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
+            return TranslatePreferences.isConfigured(serviceID: id) ? id : nil
+        }
+        guard !configured.isEmpty else {
+            return [ResultItem(
+                title: "正在翻译…",
+                subtitle: "未配置翻译服务",
+                icon: .system("arrow.triangle.2.circlepath"),
+                score: 0.1,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )]
+        }
+
+        let resultMap = Dictionary(uniqueKeysWithValues: results.map { ($0.serviceID, $0) })
+        return configured.enumerated().map { index, id in
+            if let result = resultMap[id] {
+                let action: ResultAction = TranslatePreferences.autoPasteAfterSelect
+                    ? .pasteText(result.translatedText)
+                    : .copyText(result.translatedText)
+                return ResultItem(
+                    title: result.translatedText,
+                    subtitle: "\(result.serviceName) · \(result.sourceLanguage) → \(result.targetLanguage)",
+                    icon: .system("globe"),
+                    score: 0.9 - Double(index) * 0.05,
+                    action: action,
+                    providerID: TranslateProvider.providerID,
+                    category: .standard
+                )
+            }
+            return ResultItem(
+                title: "正在翻译…",
+                subtitle: serviceDisplayName(for: id),
+                icon: .system("arrow.triangle.2.circlepath"),
+                score: 0.2 - Double(index) * 0.01,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )
+        }
+    }
+
+    private func handleTranslationUpdate(_ notification: Notification) {
+        guard case .prefixed(let providerID) = searchState.scope,
+              providerID == TranslateProvider.providerID else {
+            return
+        }
+        let currentQuery = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let info = notification.userInfo,
+              let query = info[TranslationCoordinator.queryKey] as? String,
+              let results = info[TranslationCoordinator.resultsKey] as? [TranslationResult] else {
+            return
+        }
+        guard !query.isEmpty, query == currentQuery else { return }
+        setResults(translateItems(from: results))
+    }
+
+    private func serviceDisplayName(for id: TranslateServiceID) -> String {
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
+        }
+    }
 }

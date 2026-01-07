@@ -413,6 +413,8 @@ private struct ResultRow: View {
     private var actionHint: some View {
         if !isSelected {
             EmptyView()
+        } else if item.action == .none && !item.isPrefix {
+            EmptyView()
         } else if item.isPrefix {
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let prefixText = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

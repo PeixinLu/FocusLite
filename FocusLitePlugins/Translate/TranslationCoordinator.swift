@@ -54,6 +54,9 @@ actor TranslationCoordinator {
             return []
         }
 
+        let order = TranslatePreferences.enabledServices
+        let orderMap = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+
         return await withTaskGroup(of: TranslationResult?.self) { group in
             for service in services {
                 group.addTask {
@@ -65,18 +68,20 @@ actor TranslationCoordinator {
             for await result in group {
                 if let result {
                     results.append(result)
+                    let sorted = sortResults(results, orderMap: orderMap)
+                    await MainActor.run {
+                        NotificationCenter.default.post(
+                            name: .translationResultsUpdated,
+                            object: nil,
+                            userInfo: [
+                                TranslationCoordinator.queryKey: text,
+                                TranslationCoordinator.resultsKey: sorted
+                            ]
+                        )
+                    }
                 }
             }
-            let order = TranslatePreferences.enabledServices
-            let orderMap = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
-            return results.sorted { lhs, rhs in
-                let left = orderMap[lhs.serviceID.rawValue] ?? Int.max
-                let right = orderMap[rhs.serviceID.rawValue] ?? Int.max
-                if left != right {
-                    return left < right
-                }
-                return lhs.serviceName.localizedCaseInsensitiveCompare(rhs.serviceName) == .orderedAscending
-            }
+            return sortResults(results, orderMap: orderMap)
         }
     }
 
@@ -98,6 +103,29 @@ actor TranslationCoordinator {
             }
         }
     }
+
+    private func sortResults(
+        _ results: [TranslationResult],
+        orderMap: [String: Int]
+    ) -> [TranslationResult] {
+        results.sorted { lhs, rhs in
+            let left = orderMap[lhs.serviceID.rawValue] ?? Int.max
+            let right = orderMap[rhs.serviceID.rawValue] ?? Int.max
+            if left != right {
+                return left < right
+            }
+            return lhs.serviceName.localizedCaseInsensitiveCompare(rhs.serviceName) == .orderedAscending
+        }
+    }
+}
+
+extension TranslationCoordinator {
+    static let queryKey = "query"
+    static let resultsKey = "results"
+}
+
+extension Notification.Name {
+    static let translationResultsUpdated = Notification.Name("translationResultsUpdated")
 }
 
 private struct TranslationDirection {
