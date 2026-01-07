@@ -1,6 +1,7 @@
 import Cocoa
 import SwiftUI
 
+@MainActor
 final class LauncherWindowController: NSObject, NSWindowDelegate {
     private let viewModel: LauncherViewModel
     private var window: NSWindow?
@@ -22,9 +23,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         
         createWindowIfNeeded()
         if resetSearch {
-            Task { @MainActor in
-                viewModel.resetSearch()
-            }
+            viewModel.resetSearch()
         }
         capturePreviousApp()
         centerWindow()
