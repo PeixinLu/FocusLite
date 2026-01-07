@@ -247,7 +247,7 @@ final class LauncherViewModel: ObservableObject {
                 let items = await searchEngine.search(
                     query: trimmed,
                     isScoped: false,
-                    providerIDs: [AppSearchProvider.providerID]
+                    providerIDs: [AppSearchProvider.providerID, CalcProvider.providerID]
                 )
                 if Task.isCancelled {
                     return

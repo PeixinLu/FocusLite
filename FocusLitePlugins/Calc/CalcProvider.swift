@@ -1,7 +1,8 @@
 import Foundation
 
 struct CalcProvider: ResultProvider {
-    let id = "calc"
+    static let providerID = "calc"
+    let id = CalcProvider.providerID
     let displayName = "Calculator"
 
     private let parser = ExpressionParser()
