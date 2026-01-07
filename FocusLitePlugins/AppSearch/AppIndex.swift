@@ -64,7 +64,8 @@ actor AppIndex {
                 aliasStore: aliasStore,
                 pinyinProvider: pinyinProvider
             )
-            let mergedApps = AppIndex.merge([spotlightApps, scannedApps])
+            let finderApps = AppIndex.finderApplications(aliasStore: aliasStore, pinyinProvider: pinyinProvider)
+            let mergedApps = AppIndex.merge([spotlightApps, scannedApps, finderApps])
             await self.replaceApps(mergedApps)
             AppIndex.saveCache(mergedApps, to: cacheURL)
 
@@ -96,7 +97,8 @@ actor AppIndex {
             aliasStore: aliasStore,
             pinyinProvider: pinyinProvider
         )
-        let mergedApps = AppIndex.merge([spotlightApps, scannedApps])
+        let finderApps = AppIndex.finderApplications(aliasStore: aliasStore, pinyinProvider: pinyinProvider)
+        let mergedApps = AppIndex.merge([spotlightApps, scannedApps, finderApps])
         apps = mergedApps
         AppIndex.saveCache(mergedApps, to: cacheURL)
     }
@@ -243,6 +245,19 @@ actor AppIndex {
         }
     }
 
+    private static func finderApplications(
+        aliasStore: AliasStore,
+        pinyinProvider: PinyinProvider
+    ) -> [AppEntry] {
+        let path = "/System/Library/CoreServices/Finder.app"
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: path) else { return [] }
+        if let entry = AppEntry.make(from: url, aliasStore: aliasStore, pinyinProvider: pinyinProvider) {
+            return [entry]
+        }
+        return []
+    }
+
     private static func spotlightApplicationURLs() -> [URL] {
         let queryString = "kMDItemContentType == 'com.apple.application-bundle'"
         guard let query = MDQueryCreate(kCFAllocatorDefault, queryString as CFString, nil, nil) else {
@@ -343,7 +358,7 @@ extension AppIndex.AppEntry {
         }
 
         if let packageType = bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String,
-           packageType != "APPL" {
+           packageType != "APPL" && packageType != "FNDR" {
             return true
         }
 
@@ -380,6 +395,9 @@ extension AppIndex.AppEntry {
     }
 
     private static func isLaunchpadApp(_ url: URL) -> Bool {
+        if url.path == "/System/Library/CoreServices/Finder.app" {
+            return true
+        }
         for root in launchpadRoots() {
             if isUnder(url, root: root) {
                 return true
