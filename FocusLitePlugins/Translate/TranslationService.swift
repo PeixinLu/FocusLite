@@ -50,10 +50,15 @@ enum LanguageDetector {
         recognizer.processString(trimmed)
         let language = recognizer.dominantLanguage
 
+        // Only trust NLLanguageRecognizer if it detects Chinese or English
         if let language {
-            return DetectedLanguage(code: language.rawValue, isMixed: isMixed)
+            let code = language.rawValue.lowercased()
+            if code.hasPrefix("zh") || code.hasPrefix("en") {
+                return DetectedLanguage(code: language.rawValue, isMixed: isMixed)
+            }
         }
 
+        // Fallback to character-based detection for short texts or when NL detection is unreliable
         if cjkCount > latinCount {
             return DetectedLanguage(code: "zh-Hans", isMixed: isMixed)
         }
