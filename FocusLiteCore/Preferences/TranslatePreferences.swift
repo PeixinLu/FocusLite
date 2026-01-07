@@ -70,7 +70,13 @@ enum TranslatePreferences {
                 let cleaned = values.filter { TranslateServiceID(rawValue: $0) != nil }
                 return cleaned
             }
-            return []
+            return [
+                TranslateServiceID.deepseekAPI.rawValue,
+                TranslateServiceID.youdaoAPI.rawValue,
+                TranslateServiceID.baiduAPI.rawValue,
+                TranslateServiceID.googleAPI.rawValue,
+                TranslateServiceID.bingAPI.rawValue
+            ]
         }
         set {
             let cleaned = newValue.filter { !$0.isEmpty }

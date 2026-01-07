@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TranslateServiceTestStatus: Hashable {
     var isTesting: Bool
@@ -98,6 +99,7 @@ final class TranslateSettingsViewModel: ObservableObject {
 struct TranslateSettingsView: View {
     @StateObject var viewModel: TranslateSettingsViewModel
     let onSaved: (() -> Void)?
+    @State private var draggingService: String?
 
     init(viewModel: TranslateSettingsViewModel, onSaved: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -123,6 +125,64 @@ struct TranslateSettingsView: View {
                 }
             }
 
+            SettingsSection("排序") {
+                if viewModel.enabledServices.isEmpty {
+                    Text("启用服务后可拖拽排序")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            ForEach(viewModel.enabledServices, id: \.self) { rawValue in
+                                HStack(spacing: 10) {
+                                    Image(systemName: "line.3.horizontal")
+                                        .foregroundColor(.secondary)
+                                    Text(displayName(for: rawValue))
+                                        .font(.system(size: 13, weight: .medium))
+                                    if rawValue == TranslateServiceID.deepseekAPI.rawValue {
+                                        Text("推荐")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundColor(.accentColor)
+                                            .padding(.vertical, 2)
+                                            .padding(.horizontal, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(Color.accentColor.opacity(0.12))
+                                            )
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                                )
+                                .onDrag {
+                                    draggingService = rawValue
+                                    return NSItemProvider(object: rawValue as NSString)
+                                }
+                                .onDrop(
+                                    of: [UTType.text],
+                                    delegate: ServiceOrderDropDelegate(
+                                        item: rawValue,
+                                        items: $viewModel.enabledServices,
+                                        draggingItem: $draggingService,
+                                        onReordered: applyAndNotify
+                                    )
+                                )
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .frame(height: min(CGFloat(viewModel.enabledServices.count) * 36 + 12, 220))
+                }
+            }
+
             SettingsSection("混合文本") {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("是否翻译中英混合输入文本")
@@ -141,9 +201,39 @@ struct TranslateSettingsView: View {
             }
 
             serviceSection(
+                title: "DeepSeek 翻译（开放平台）· 推荐",
+                note: "需要 DeepSeek API Key",
+                id: .deepseekAPI,
+                apiKeyURL: "https://platform.deepseek.com/api_keys"
+            ) {
+                SettingsFieldRow(title: "API Key") {
+                    SecureField("密钥", text: $viewModel.deepseekAPIKey)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekAPIKey) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "模型") {
+                    TextField("deepseek-chat", text: $viewModel.deepseekModel)
+                        .frame(width: 220)
+                        .onChange(of: viewModel.deepseekModel) { _ in
+                            applyAndNotify()
+                        }
+                }
+                SettingsFieldRow(title: "接口地址") {
+                    TextField("https://api.deepseek.com/chat/completions", text: $viewModel.deepseekEndpoint)
+                        .frame(width: 240)
+                        .onChange(of: viewModel.deepseekEndpoint) { _ in
+                            applyAndNotify()
+                        }
+                }
+            }
+
+            serviceSection(
                 title: "有道翻译（官方 API）",
                 note: "需要有道智云应用密钥",
-                id: .youdaoAPI
+                id: .youdaoAPI,
+                apiKeyURL: "https://ai.youdao.com/console/#/"
             ) {
                 SettingsFieldRow(title: "App Key") {
                     TextField("应用 ID", text: $viewModel.youdaoAppKey)
@@ -164,7 +254,8 @@ struct TranslateSettingsView: View {
             serviceSection(
                 title: "百度翻译（官方 API）",
                 note: "需要百度翻译开放平台密钥",
-                id: .baiduAPI
+                id: .baiduAPI,
+                apiKeyURL: "https://fanyi-api.baidu.com/manage/developer"
             ) {
                 SettingsFieldRow(title: "App ID") {
                     TextField("应用 ID", text: $viewModel.baiduAppID)
@@ -223,34 +314,6 @@ struct TranslateSettingsView: View {
                         }
                 }
             }
-
-            serviceSection(
-                title: "DeepSeek 翻译（开放平台）",
-                note: "需要 DeepSeek API Key",
-                id: .deepseekAPI
-            ) {
-                SettingsFieldRow(title: "API Key") {
-                    SecureField("密钥", text: $viewModel.deepseekAPIKey)
-                        .frame(width: 220)
-                        .onChange(of: viewModel.deepseekAPIKey) { _ in
-                            applyAndNotify()
-                        }
-                }
-                SettingsFieldRow(title: "模型") {
-                    TextField("deepseek-chat", text: $viewModel.deepseekModel)
-                        .frame(width: 220)
-                        .onChange(of: viewModel.deepseekModel) { _ in
-                            applyAndNotify()
-                        }
-                }
-                SettingsFieldRow(title: "接口地址") {
-                    TextField("https://api.deepseek.com/chat/completions", text: $viewModel.deepseekEndpoint)
-                        .frame(width: 240)
-                        .onChange(of: viewModel.deepseekEndpoint) { _ in
-                            applyAndNotify()
-                        }
-                }
-            }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
         .padding(.top, SettingsLayout.topPadding)
@@ -262,6 +325,7 @@ struct TranslateSettingsView: View {
         title: String,
         note: String,
         id: TranslateServiceID,
+        apiKeyURL: String? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         SettingsSection(note: note) {
@@ -269,6 +333,10 @@ struct TranslateSettingsView: View {
                 Toggle(title, isOn: serviceBinding(id))
                     .toggleStyle(.switch)
                 Spacer()
+                if let apiKeyURL, let url = URL(string: apiKeyURL) {
+                    Link("申请 API Key", destination: url)
+                        .font(.system(size: 12, weight: .semibold))
+                }
                 Button("测试") {
                     viewModel.testService(id)
                     onSaved?()
@@ -306,5 +374,49 @@ struct TranslateSettingsView: View {
     private func applyAndNotify() {
         viewModel.applyChanges()
         onSaved?()
+    }
+
+    private func displayName(for rawValue: String) -> String {
+        guard let id = TranslateServiceID(rawValue: rawValue) else { return rawValue }
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
+        }
+    }
+}
+
+private struct ServiceOrderDropDelegate: DropDelegate {
+    let item: String
+    @Binding var items: [String]
+    @Binding var draggingItem: String?
+    let onReordered: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging = draggingItem, dragging != item else { return }
+        guard let fromIndex = items.firstIndex(of: dragging),
+              let toIndex = items.firstIndex(of: item) else { return }
+        if items[toIndex] == dragging { return }
+
+        withAnimation(.easeInOut(duration: 0.12)) {
+            items.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingItem = nil
+        onReordered()
+        return true
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
     }
 }

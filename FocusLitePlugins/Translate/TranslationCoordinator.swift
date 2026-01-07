@@ -67,7 +67,16 @@ actor TranslationCoordinator {
                     results.append(result)
                 }
             }
-            return results
+            let order = TranslatePreferences.enabledServices
+            let orderMap = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+            return results.sorted { lhs, rhs in
+                let left = orderMap[lhs.serviceID.rawValue] ?? Int.max
+                let right = orderMap[rhs.serviceID.rawValue] ?? Int.max
+                if left != right {
+                    return left < right
+                }
+                return lhs.serviceName.localizedCaseInsensitiveCompare(rhs.serviceName) == .orderedAscending
+            }
         }
     }
 
