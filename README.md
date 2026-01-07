@@ -1,125 +1,305 @@
+![FocusLite](FocusLite/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png)
+
 # FocusLite
 
-A macOS-only Spotlight-style launcher built with Swift 5.9+, SwiftUI, and AppKit.
+一款轻量级的类聚焦搜索体验的效率启动器。
 
-## Requirements
-- macOS 13+
-- Xcode 15+ (Swift 5.9)
+## 主要界面
 
-## Run
-1. Open `FocusLite.xcodeproj` in Xcode.
-2. Select the `FocusLite` scheme.
-3. Run (Cmd+R).
+![FocusLite](Assets/主界面.png)
 
-## 自动更新（Sparkle 2 + GitHub）
-- 应用内：状态栏菜单新增 `Check for Updates…`，设置面板新增“更新”页（显示版本号、手动检查、自动检查开关，失败会弹窗提示）。
-- Feed：`SUFeedURL` 指向 `https://peixinlu.github.io/focuslight/appcast.xml`（由 CI 发布到 GitHub Pages），`SUPublicEDKey` 已配置。
-- CI：`.github/workflows/release.yml` 在 `v*` tag 时运行，使用 `Sparkle 2.8.1` 工具链，禁用签名构建 Release、打包 `FocusLite.zip`（顶层直接是 `.app`），生成 `appcast.xml`（含 `sparkle:edSignature`），发布 GitHub Release，并部署 appcast 到 Pages（无需手建 `gh-pages` 分支）。
-- 版本策略：tag `vX.Y.Z` 会注入为 `MARKETING_VERSION`，构建号使用 `GITHUB_RUN_NUMBER` 写入 `CFBundleVersion`，确保可递增比较。
-- 示例：`docs/appcast.example.xml` 展示生成结果结构；正式 feed 由 CI 覆盖。
+## ✨ 核心特性
 
-### 我需要手工做的事
-- GitHub Secrets：添加 `SPARKLE_ED25519_PRIVATE_KEY`（对应 `SUPublicEDKey` 的私钥，PEM 内容）。不要提交到仓库。
-- GitHub Pages：第一次运行 workflow 会自动创建/更新 Pages 发布，无需手工建分支；如需自定义域名可在仓库设置中调整。
-- Tag：在推送 `vX.Y.Z` 前确认版本号递增；如需变更公钥，在 `FocusLite/Info.plist` 更新 `SUPublicEDKey` 并重新生成私钥。
+### 🚀 应用启动
+- **智能搜索**：支持应用名称、拼音首字母、模糊匹配
+- **快速启动**：输入即搜，回车即开
+- **Spotlight 替代**：更轻量、更快速的应用启动体验
 
-### 端到端验证
-1. 下载并运行旧版本（上一条 Release）。
-2. 在 main 分支合并改动后打 tag（如 `v0.1.2`）并 push。
-3. 等待 GitHub Actions 生成 Release 资产和 Pages `appcast.xml`。
-4. 旧版应用里点击菜单或设置页的 `Check for Updates…`，应弹出 Sparkle 面板并下载新版本。
-5. 更新完成后重新打开设置页，版本号应与新 tag 匹配。
+![](Assets/app启动器.png)
 
-### 常见问题排查
-- Feed 404 或旧内容：检查 Actions 是否成功，`actions/deploy-pages` 是否运行；确保 `SUFeedURL` 使用 `https://<owner>.github.io/focuslight/appcast.xml`。
-- 签名缺失/校验失败：确认 Secrets 中存在正确的 `SPARKLE_ED25519_PRIVATE_KEY`，与 `SUPublicEDKey` 成对；如更换密钥，老版本需要新的公钥更新才能信任新包。
-- Zip 结构错误：确保通过 workflow 生成的 `FocusLite.zip`，解压后顶层直接是 `FocusLite.app`，不要再包一层目录。
-- 版本号不递增：tag 必须递增；`CFBundleVersion` 由 `GITHUB_RUN_NUMBER` 写入，重复 tag 会导致比较失败。
-- 网络/Feed 不可用：Sparkle 会弹出错误提示且不会崩溃；若完全无 UI，请确认应用能访问外网并未被防火墙阻断。
+### 🧮 计算器
+- **即时计算**：输入数学表达式立即得到结果
+- **无需前缀**：直接输入 `2+2`、`100*0.15` 等即可计算
+- **支持复杂运算**：括号、小数、百分比等
 
-## Expected behavior
-- A centered, borderless launcher window appears with rounded corners and shadow.
-- The window stays floating above other apps and can join all spaces.
-- Typing shows results in the list (apps, calculator, snippets, clipboard, translate).
-- Prefix entries (for example `cc` or `sn`) appear as action-like results in global search.
-- Press Esc to hide the window.
-- Cmd+Space toggles the window when the hotkey is available.
-- A menu bar icon (bolt) can toggle the window and quit the app.
-- Click the pencil icon to manage snippets.
-- Clipboard Settings are available from the menu bar.
-- Clipboard hotkey (default `option+v`) opens clipboard mode.
-- Clipboard/Snippets show a two-column preview (left results, right preview).
-- Translate prefix `tr` enters translation mode and returns multiple services.
+![](Assets/简单运算.png)
 
-## Global hotkey notes
-- Cmd+Space is reserved by Spotlight by default. To use it, disable Spotlight's shortcut in:
-  System Settings > Keyboard > Keyboard Shortcuts > Spotlight.
-- If you keep Spotlight enabled, use the menu bar icon instead or change the hotkey in:
-  `FocusLite/AppDelegate.swift` (edit keyCode/modifiers).
-- This hotkey method (Carbon RegisterEventHotKey) does not require Accessibility or Input Monitoring.
+### 📋 剪贴板历史
+- **智能记录**：自动保存复制历史，支持文本、图片、文件
+- **快速呼出**：`Option+V` 快捷键唤起剪贴板面板
+- **可视化预览**：右侧实时预览剪贴板内容
+- **灵活配置**：可设置保存时长（3小时到1周）、忽略应用、最大条目数
+- **智能搜索**：支持全文搜索历史记录
 
-## Permissions
-- FocusLite only requests permissions it needs for enabled features.
-- Accessibility is required for auto paste.
-- Input Monitoring and Screen Recording are not required.
+![](Assets/剪贴板历史.png)
 
-### Auto paste for snippets
-- To auto paste snippet content into the previous app, FocusLite needs Accessibility permission.
-- When you press Enter on a snippet for the first time, macOS will prompt for this permission.
-- If permission is denied, FocusLite still copies the snippet to the clipboard.
+### 📝 代码片段
+- **快速插入**：`;关键词` 触发代码片段（如 `;addr` 插入地址）
+- **自动粘贴**：可配置自动粘贴到前台应用
+- **可视化管理**：通过独立窗口新增、编辑、删除片段
+- **灵活分类**：自定义触发前缀和关键词
 
-### Clipboard monitoring (macOS)
-- Reading the system pasteboard does not require Accessibility or Input Monitoring permission.
-- macOS does not provide clipboard change callbacks; FocusLite polls `NSPasteboard.changeCount` on a low interval.
-- Source app is best-effort: we record the current frontmost app, which may be inaccurate for background copies.
-- Some apps use private pasteboards or clear content quickly; those copies may not be captured.
-- Clipboard history is persisted to `~/Library/Application Support/FocusLite/clipboard_history.json`.
+![](Assets/文本片段.png)
 
-### How to enable permissions (when prompted)
-- Accessibility: System Settings > Privacy & Security > Accessibility
-- Input Monitoring: System Settings > Privacy & Security > Input Monitoring (not required)
-- Screen Recording: System Settings > Privacy & Security > Screen Recording (not required)
-- After enabling, quit and relaunch FocusLite if the system does not apply access immediately.
+### 🌐 多服务翻译
+- **多引擎支持**：有道、百度、Google、微软、DeepSeek
+- **智能识别**：自动检测中英文，双向翻译
+- **实时结果**：多个翻译服务同时返回结果
+- **一键操作**：回车复制或自动粘贴翻译结果
+- **触发方式**：输入 `tr` 后接待翻译文本
 
-## FAQ / Common issues
-- Cmd+Space does nothing: Spotlight is still bound to Cmd+Space. Disable it in
-  System Settings > Keyboard > Keyboard Shortcuts > Spotlight, or change the hotkey in
-  `FocusLite/AppDelegate.swift`.
-- Window shows but cannot type: click inside the window once, or relaunch the app after
-  granting permissions (future milestones). If it persists, file an issue with macOS version and logs.
-- Hotkey registration fails: use the menu bar icon to toggle the window.
-- System translation fails with missing language packs: install the required language packs in macOS
-  system settings or disable System in Translate Settings.
+![](Assets/翻译.png)
 
-## Known limitations (Milestone 6)
-- Translation services require user-provided API keys for official providers.
-- System translation depends on OS language packs and may fail if not downloaded.
-- Preview pane only shows for clipboard/snippets; other providers stay single-column.
-- Hotkey is fixed in code (no in-app customization).
+### ⚡ 全局快捷键
+- **Cmd+Space**：全局唤起/隐藏启动器（需禁用系统 Spotlight）或者改成 `⌥ + 空格`
+- **Option+V**：快速打开剪贴板历史
+- **Esc**：隐藏启动器窗口
+- **菜单栏图标**：点击快速切换或退出应用
 
-## Snippets
-- Stored at `~/Library/Application Support/FocusLite/snippets.json`.
-- Trigger with `;keyword` (for example, `;addr`).
-- Manage snippets via the pencil icon in the launcher (opens a separate window).
-- Snippets search prefix is configurable in Snippets Manager.
+## 💻 快速开始
 
-## Clipboard
-- Stored on disk (no Keychain access).
-- Default history size: 200 entries.
-- Ignored apps and max entries can be configured in Clipboard Settings.
-- Clipboard search prefix defaults to `c` (type `c ` then your query).
-- Clipboard hotkey defaults to `option+v` and is configurable in Clipboard Settings.
-- Files and images are supported, with preview in the right pane.
-- Retention can be configured to 3h, 12h, 1d, 3d, or 1w.
+### 系统要求
+- macOS 13 及以上版本
+- Xcode 15+ （Swift 5.9）
 
-## Translate
-- Trigger with `tr ` or select the translate prefix in search.
-- Configure services in the menu bar: "翻译设置...".
-- Each enabled service returns a result; Enter copies the translation.
+### 首次使用
+1. **设置快捷键**：如需使用 Cmd+Space，请先在「系统设置 > 键盘 > 键盘快捷键 > Spotlight」中禁用系统 Spotlight
+2. **授予权限**：如需使用自动粘贴功能，需要在首次使用时授予辅助功能权限
+3. **配置翻译**：如需使用翻译功能，请在菜单栏「翻译设置」中配置 API 密钥
 
-## Tests
-- Run unit tests from Xcode (Cmd+U).
-- Or via CLI: `xcodebuild test -scheme FocusLite`.
+---
 
-## Development workflow
-- Use one branch and one PR per milestone to simplify review and rollback.
+## 📚 使用指南
+
+### 🔍 应用搜索
+
+**基本搜索**
+- 直接输入应用名称：`Safari`、`微信`
+- 支持拼音：`wx` 可搜索到微信
+- 支持首字母：`vsc` 可搜索到 Visual Studio Code
+- 模糊匹配：`pho` 可搜索到 Photoshop
+
+**操作**
+- ↑↓ 键选择应用
+- 回车键启动选中的应用
+- Esc 关闭启动器
+
+---
+
+### 🧮 计算器
+
+**支持的运算**
+- 基本运算：`2+2`、`10-3`、`5*6`、`100/4`
+- 括号运算：`(2+3)*4`
+- 小数运算：`3.14*2`
+- 百分比：`100*15%`
+
+**操作**
+- 直接输入表达式，自动计算
+- 回车复制结果到剪贴板
+
+---
+
+### 📋 剪贴板管理
+
+**快速使用**
+1. 按 `Option+V` 唤起剪贴板历史
+2. 输入关键词搜索历史记录
+3. 或使用 `c ` 前缀在主界面搜索：`c hello`
+4. 回车复制选中内容
+
+**高级功能**
+- **内容预览**：右侧面板实时预览文本、图片、文件
+- **多类型支持**：文本、图片、文件路径
+- **智能过滤**：可配置忽略特定应用
+- **定时清理**：设置保存时长（3小时/12小时/1天/3天/1周）
+
+**设置选项**
+- 在菜单栏点击「剪贴板设置」进入配置
+- 可调整：保存数量、快捷键、忽略应用、保存时长
+- 数据存储位置：`~/Library/Application Support/FocusLite/clipboard_history.json`
+
+---
+
+### 📝 代码片段
+
+**快速使用**
+1. 输入 `;` 后跟关键词，如 `;email` 、`;addr`
+2. 选择匹配的片段
+3. 回车自动粘贴到前台应用（或复制到剪贴板）
+
+**管理片段**
+1. 点击启动器窗口右上角的铅笔图标
+2. 在管理窗口中新增、编辑、删除片段
+3. 设置关键词和片段内容
+
+**应用场景**
+- 常用邮箱地址
+- 常用代码模板
+- 快捷短语
+- 联系信息
+
+**配置**
+- 数据存储：`~/Library/Application Support/FocusLite/snippets.json`
+- 可自定义触发前缀（默认 `;`）
+
+---
+
+### 🌐 翻译功能
+
+**使用方法**
+1. 输入 `tr` 后跟空格，再输入待翻译文本
+2. 例如：`tr hello`、`tr 你好`
+3. 等待多个翻译服务返回结果
+4. 回车复制或自动粘贴翻译结果
+
+**支持的翻译服务**
+- 有道 API
+- 百度 API
+- Google Cloud Translation API
+- 微软翻译 API
+- DeepSeek API
+
+**配置方法**
+1. 点击菜单栏图标，选择「翻译设置...」
+2. 启用需要的翻译服务
+3. 输入相应的 API 密钥和配置
+4. 测试连接确认配置正确
+
+**智能特性**
+- 自动检测语言：中文→英文，英文→中文
+- 多服务并发：同时请求多个翻译服务
+- 结果排序：按配置的服务顺序显示
+
+---
+
+## ⚙️ 设置与配置
+
+### 快捷键设置
+
+**主快捷键 (Cmd+Space)**
+- 默认使用 Cmd+Space 唤起启动器
+- 如果不生效，需要先禁用系统 Spotlight：
+  - 打开「系统设置 > 键盘 > 键盘快捷键 > Spotlight」
+  - 取消勾选 Spotlight 的快捷键
+- 也可通过菜单栏图标点击唤起
+
+**剪贴板快捷键**
+- 默认：`Option+V`
+- 可在剪贴板设置中自定义
+
+### 权限管理
+
+**辅助功能权限 (Accessibility)**
+- 用途：实现代码片段自动粘贴功能
+- 何时需要：首次使用自动粘贴时系统会弹窗提示
+- 如何启用：「系统设置 > 隐私与安全 > 辅助功能」中添加 FocusLite
+- 如拒绝：仅复制到剪贴板，不影响其他功能
+
+**不需要的权限**
+- 输入监控 (Input Monitoring)：✘️ 不需要
+- 屏幕录制 (Screen Recording)：✘️ 不需要
+- 剪贴板读取：✅ 无需授权（macOS 原生支持）
+
+### 数据存储
+
+FocusLite 将数据存储在用户目录下：
+```
+~/Library/Application Support/FocusLite/
+├── clipboard_history.json  # 剪贴板历史
+└── snippets.json           # 代码片段
+```
+
+---
+
+## ❓ 常见问题
+
+### 快捷键问题
+
+**Q：Cmd+Space 没有反应？**
+A：系统 Spotlight 仍然占用该快捷键。请在「系统设置 > 键盘 > 键盘快捷键 > Spotlight」中禁用，或使用菜单栏图标唤起。
+
+**Q：快捷键注册失败？**
+A：使用菜单栏图标切换窗口，或检查是否有其他应用占用该快捷键。
+
+### 输入问题
+
+**Q：窗口显示但无法输入？**
+A：
+1. 在窗口内点击一次获取焦点
+2. 或者重启应用
+3. 如问题持续，请提交 issue 并附上 macOS 版本信息
+
+### 翻译问题
+
+**Q：翻译功能不工作？**
+A：
+1. 检查是否配置了 API 密钥
+2. 在翻译设置中点击“测试连接”
+3. 确认网络连接正常
+4. 查看 API 配额是否耗尽
+
+### 剪贴板问题
+
+**Q：剪贴板历史没有记录？**
+A：
+1. 检查剪贴板功能是否开启
+2. 查看当前应用是否在忽略列表中
+3. 某些应用使用私有剪贴板，可能无法捕获
+
+**Q：图片或文件无法预览？**
+A：确认文件仍然存在且未被移动。剪贴板仅存储文件路径，不复制文件内容。
+
+### 权限问题
+
+**Q：自动粘贴不工作？**
+A：
+1. 检查是否授予辅助功能权限
+2. 在「系统设置 > 隐私与安全 > 辅助功能」中添加 FocusLite
+3. 授权后重启应用
+
+---
+
+## 🛠️ 开发者指南
+
+### 技术栈
+- **语言**：Swift 5.9+
+- **UI 框架**：SwiftUI + AppKit
+- **构建工具**：Xcode 15+
+- **自动更新**：Sparkle 2
+- **CI/CD**：GitHub Actions
+
+### 项目结构
+```
+FocusLite/
+├── FocusLite/              # 主应用
+│   ├── LauncherView.swift  # 启动器界面
+│   ├── SettingsView.swift  # 设置面板
+│   └── ...                 
+├── FocusLiteCore/         # 核心逻辑
+│   ├── Search/            # 搜索框架
+│   └── Preferences/       # 偏好设置
+├── FocusLitePlugins/      # 功能插件
+│   ├── AppSearch/         # 应用搜索
+│   ├── Calc/              # 计算器
+│   ├── Clipboard/         # 剪贴板
+│   ├── Snippets/          # 代码片段
+│   └── Translate/         # 翻译
+└── FocusLiteTests/        # 单元测试
+```
+
+## 📝 许可证
+
+此项目仅供学习和交流使用。
+
+---
+
+## 👏 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📞 交流反馈
+
+qq群：1070327833
