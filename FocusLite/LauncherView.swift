@@ -323,6 +323,16 @@ private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
     let searchText: String
+    @AppStorage(AppearancePreferences.materialStyleKey)
+    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    @AppStorage(AppearancePreferences.glassStyleKey)
+    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+
+    private var isLiquidClear: Bool {
+        let material = AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+        let glass = AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+        return material == .liquid && glass == .clear
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -359,11 +369,7 @@ private struct ResultRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    isSelected
-                        ? Color.accentColor.opacity(0.15)
-                        : Color(nsColor: .controlBackgroundColor).opacity(0.55)
-                )
+                .fill(selectionFillColor)
         )
         .overlay(alignment: .trailing) {
             actionHint
@@ -440,13 +446,22 @@ private struct ResultRow: View {
                 .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         }
+    }
+
+    private var selectionFillColor: Color {
+        if isSelected {
+            let opacity: Double = isLiquidClear ? 0.26 : 0.15
+            return Color.accentColor.opacity(opacity)
+        }
+        let opacity: Double = isLiquidClear ? 0.4 : 0.55
+        return Color(nsColor: .controlBackgroundColor).opacity(opacity)
     }
 }
 
