@@ -4,6 +4,25 @@ import SwiftUI
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @FocusState private var isSearchFocused: Bool
+    @State private var isHovered = false
+    @AppStorage(AppearancePreferences.materialStyleKey)
+    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    @AppStorage(AppearancePreferences.glassStyleKey)
+    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    @AppStorage(AppearancePreferences.glassTintKey)
+    private var glassTintRaw = ""
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+    }
+
+    private var glassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+    }
+
+    private var glassTint: NSColor? {
+        colorFromRGBA(glassTintRaw)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,13 +99,19 @@ struct LauncherView: View {
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(nsColor: .windowBackgroundColor))
+            LiquidGlassBackground(
+                cornerRadius: 16,
+                isHighlighted: isHovered || isSearchFocused,
+                style: materialStyle,
+                glassStyle: glassStyle,
+                glassTint: glassTint
+            )
         )
         .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
         .onAppear {
             isSearchFocused = true
         }
+        .onHover { isHovered = $0 }
         .onChange(of: viewModel.focusToken) { _ in
             isSearchFocused = true
         }
@@ -137,6 +162,163 @@ struct LauncherView: View {
     }
 }
 
+private struct LiquidGlassBackground: View {
+    let cornerRadius: CGFloat
+    let isHighlighted: Bool
+    let style: AppearancePreferences.MaterialStyle
+    let glassStyle: AppearancePreferences.GlassStyle
+    let glassTint: NSColor?
+
+    var body: some View {
+        ZStack {
+            backgroundBase
+            highlightOverlay
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(borderColor, lineWidth: borderWidth)
+        )
+        .animation(.easeInOut(duration: 0.18), value: isHighlighted)
+    }
+
+    @ViewBuilder
+    private var backgroundBase: some View {
+        switch style {
+        case .classic:
+            VisualEffectView(
+                material: .popover,
+                blendingMode: .behindWindow,
+                state: .active
+            )
+        case .liquid:
+            if #available(macOS 26, *) {
+                GlassBackgroundView(
+                    cornerRadius: cornerRadius,
+                    style: glassStyle,
+                    tintColor: glassTint
+                )
+            } else {
+                VisualEffectView(
+                    material: glassMaterial,
+                    blendingMode: .behindWindow,
+                    state: .active
+                )
+            }
+        case .pure:
+            Color(nsColor: .windowBackgroundColor)
+        }
+    }
+
+    @ViewBuilder
+    private var highlightOverlay: some View {
+        if style == .liquid {
+            ZStack {
+                Color.white.opacity(0.04)
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(isHighlighted ? 0.45 : 0.22),
+                        Color.white.opacity(isHighlighted ? 0.14 : 0.04),
+                        .clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .blendMode(.screen)
+            }
+        }
+    }
+
+    private var borderColor: Color {
+        switch style {
+        case .classic:
+            return Color.white.opacity(isHighlighted ? 0.35 : 0.18)
+        case .liquid:
+            return Color.white.opacity(isHighlighted ? 0.6 : 0.22)
+        case .pure:
+            return Color(nsColor: .separatorColor).opacity(isHighlighted ? 0.9 : 0.6)
+        }
+    }
+
+    private var borderWidth: CGFloat {
+        isHighlighted ? 1.2 : 1
+    }
+
+    private var glassMaterial: NSVisualEffectView.Material {
+        if #available(macOS 26, *) {
+            return .hudWindow
+        }
+        if #available(macOS 13, *) {
+            return .popover
+        }
+        return .hudWindow
+    }
+}
+
+@available(macOS 26, *)
+private struct GlassBackgroundView: NSViewRepresentable {
+    let cornerRadius: CGFloat
+    let style: AppearancePreferences.GlassStyle
+    let tintColor: NSColor?
+
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        view.cornerRadius = cornerRadius
+        view.style = style.nsStyle
+        view.tintColor = tintColor
+        return view
+    }
+
+    func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
+        nsView.cornerRadius = cornerRadius
+        nsView.style = style.nsStyle
+        nsView.tintColor = tintColor
+    }
+}
+
+private func colorFromRGBA(_ raw: String) -> NSColor? {
+    let parts = raw.split(separator: ",").compactMap { Double($0) }
+    guard parts.count == 4 else { return nil }
+    return NSColor(
+        calibratedRed: parts[0],
+        green: parts[1],
+        blue: parts[2],
+        alpha: parts[3]
+    )
+}
+
+@available(macOS 26, *)
+private extension AppearancePreferences.GlassStyle {
+    var nsStyle: NSGlassEffectView.Style {
+        switch self {
+        case .regular:
+            return .regular
+        case .clear:
+            return .clear
+        }
+    }
+}
+
+private struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    let state: NSVisualEffectView.State
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = state
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+        nsView.state = state
+    }
+}
+
 private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
@@ -177,7 +359,11 @@ private struct ResultRow: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
+                .fill(
+                    isSelected
+                        ? Color.accentColor.opacity(0.15)
+                        : Color(nsColor: .controlBackgroundColor).opacity(0.55)
+                )
         )
         .overlay(alignment: .trailing) {
             actionHint
@@ -305,7 +491,7 @@ private struct PreviewPane: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
                 )
             case .image(let data):
                 if let image = NSImage(data: data) {
@@ -373,7 +559,7 @@ private struct PreviewPane: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
             )
         } else {
             Text("预览仅适用于剪贴板、Snippets 和翻译")
