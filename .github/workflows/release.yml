@@ -31,7 +31,16 @@ jobs:
       - name: Select Xcode version
         run: |
           set -euo pipefail
-          XCODE_APP=$(ls /Applications | grep -E '^Xcode.*\\.app$' | sort -V | tail -1)
+          if [ -d "/Applications/Xcode.app" ]; then
+            XCODE_APP="Xcode.app"
+          else
+            XCODE_APP=$(ls /Applications | grep -E '^Xcode.*\\.app$' | sort -V | tail -1 || true)
+          fi
+          if [ -z "${XCODE_APP:-}" ]; then
+            echo "No Xcode.app found in /Applications" >&2
+            ls -la /Applications >&2
+            exit 1
+          fi
           echo "Using Xcode app: $XCODE_APP"
           sudo xcode-select -s "/Applications/$XCODE_APP/Contents/Developer"
 
