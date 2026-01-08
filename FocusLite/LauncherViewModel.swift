@@ -3,6 +3,11 @@ import Foundation
 
 @MainActor
 final class LauncherViewModel: ObservableObject {
+    enum ExitBehavior {
+        case restoreOrigin
+        case none
+    }
+
     @Published var searchText: String = ""
     @Published var searchState: SearchState = .initial()
     @Published var results: [ResultItem] = []
@@ -15,7 +20,7 @@ final class LauncherViewModel: ObservableObject {
     private var toastTask: Task<Void, Never>?
     private var translationObserver: NSObjectProtocol?
 
-    var onExit: (() -> Void)?
+    var onExit: ((ExitBehavior) -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
     var onPrepareSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
@@ -38,7 +43,7 @@ final class LauncherViewModel: ObservableObject {
     }
 
     func handleExit() {
-        onExit?()
+        onExit?(.restoreOrigin)
     }
 
     func requestFocus() {
@@ -109,7 +114,7 @@ final class LauncherViewModel: ObservableObject {
             showToast("已复制")
         case .openURL(let url):
             // 先退出避免焦点切换冲突
-            onExit?()
+            onExit?(.none)
             // 延迟打开以确保窗口先隐藏
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NSWorkspace.shared.open(url)
@@ -123,7 +128,7 @@ final class LauncherViewModel: ObservableObject {
             showToast("已复制，开启辅助功能权限可自动粘贴")
         case .runApp(let bundleID):
             // 先退出避免焦点切换冲突
-            onExit?()
+            onExit?(.none)
             // 延迟启动以确保窗口先隐藏
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NSWorkspace.shared.launchApplication(
@@ -144,7 +149,7 @@ final class LauncherViewModel: ObservableObject {
             break
         }
 
-        onExit?()
+        onExit?(.restoreOrigin)
     }
 
     func openSnippetsManager() {

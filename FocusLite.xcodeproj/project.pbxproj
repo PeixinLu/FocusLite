@@ -69,7 +69,6 @@
 		1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */; };
 		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
-		1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */; };
 		1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */; };
 		1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */; };
 		1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */; };
@@ -159,7 +158,6 @@
 		1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProxy.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000430 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSearchPreferences.swift; sourceTree = "<group>"; };
@@ -239,7 +237,6 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
-				1A2B3C4D5E6F000000000431 /* SettingsWindowController.swift */,
 				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
 				1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */,
 				81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */,
@@ -522,7 +519,6 @@
 				1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
-				1A2B3C4D5E6F000000000340 /* SettingsWindowController.swift in Sources */,
 				81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,

@@ -39,15 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
         launcherViewModel = viewModel
-        viewModel.onExit = { [weak self] in
-            self?.windowController?.hide()
+        viewModel.onExit = { [weak self] behavior in
+            self?.windowController?.hide(restoreBehavior: behavior)
         }
         viewModel.onOpenSettings = { [weak self] tab in
             self?.showSettings(tab: tab)
         }
         viewModel.onPrepareSettings = { [weak self] tab in
             self?.settingsViewModel.selectedTab = tab
-            self?.windowController?.prepareForSettingsOpen()
         }
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
@@ -103,7 +102,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor private func showSettings(tab: SettingsTab) {
         settingsViewModel.selectedTab = tab
-        windowController?.prepareForSettingsOpen()
         NSApp.activate(ignoringOtherApps: true)
         let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
