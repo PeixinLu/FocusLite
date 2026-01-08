@@ -12,6 +12,24 @@ struct LauncherView: View {
     private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
     @AppStorage(AppearancePreferences.glassTintKey)
     private var glassTintRaw = ""
+    
+    // Liquid Glass 微调参数
+    @AppStorage(AppearancePreferences.liquidGlassHighlightIntensityKey)
+    private var highlightIntensity = 0.45
+    @AppStorage(AppearancePreferences.liquidGlassBlurRadiusKey)
+    private var blurRadius = 30.0
+    @AppStorage(AppearancePreferences.liquidGlassRefractionStrengthKey)
+    private var refractionStrength = 0.6
+    @AppStorage(AppearancePreferences.liquidGlassBorderOpacityKey)
+    private var borderOpacity = 0.6
+    @AppStorage(AppearancePreferences.liquidGlassGradientStartOpacityKey)
+    private var gradientStartOpacity = 0.45
+    @AppStorage(AppearancePreferences.liquidGlassGradientEndOpacityKey)
+    private var gradientEndOpacity = 0.14
+    @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
+    private var animationDuration = 0.18
+    @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
+    private var cornerRadius = 16.0
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
         AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
@@ -101,11 +119,18 @@ struct LauncherView: View {
         }
         .background(
             LiquidGlassBackground(
-                cornerRadius: 16,
+                cornerRadius: cornerRadius,
                 isHighlighted: isHovered || isSearchFocused,
                 style: materialStyle,
                 glassStyle: glassStyle,
-                glassTint: glassTint
+                glassTint: glassTint,
+                highlightIntensity: highlightIntensity,
+                blurRadius: blurRadius,
+                refractionStrength: refractionStrength,
+                borderOpacity: borderOpacity,
+                gradientStartOpacity: gradientStartOpacity,
+                gradientEndOpacity: gradientEndOpacity,
+                animationDuration: animationDuration
             )
         )
         .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
@@ -169,6 +194,13 @@ private struct LiquidGlassBackground: View {
     let style: AppearancePreferences.MaterialStyle
     let glassStyle: AppearancePreferences.GlassStyle
     let glassTint: NSColor?
+    let highlightIntensity: Double
+    let blurRadius: Double
+    let refractionStrength: Double
+    let borderOpacity: Double
+    let gradientStartOpacity: Double
+    let gradientEndOpacity: Double
+    let animationDuration: Double
 
     var body: some View {
         ZStack {
@@ -176,11 +208,8 @@ private struct LiquidGlassBackground: View {
             highlightOverlay
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(borderColor, lineWidth: borderWidth)
-        )
-        .animation(.easeInOut(duration: 0.18), value: isHighlighted)
+        // 边框已移除，可以在设置中重新启用
+        .animation(.easeInOut(duration: animationDuration), value: isHighlighted)
     }
 
     @ViewBuilder
@@ -218,8 +247,8 @@ private struct LiquidGlassBackground: View {
                 Color.white.opacity(0.04)
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(isHighlighted ? 0.45 : 0.22),
-                        Color.white.opacity(isHighlighted ? 0.14 : 0.04),
+                        Color.white.opacity(isHighlighted ? gradientStartOpacity : 0.22),
+                        Color.white.opacity(isHighlighted ? gradientEndOpacity : 0.04),
                         .clear
                     ],
                     startPoint: .topLeading,
@@ -235,7 +264,7 @@ private struct LiquidGlassBackground: View {
         case .classic:
             return Color.white.opacity(isHighlighted ? 0.35 : 0.18)
         case .liquid:
-            return Color.white.opacity(isHighlighted ? 0.6 : 0.22)
+            return Color.white.opacity(isHighlighted ? borderOpacity : 0.22)
         case .pure:
             return Color(nsColor: .separatorColor).opacity(isHighlighted ? 0.9 : 0.6)
         }
@@ -328,11 +357,31 @@ private struct ResultRow: View {
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
     @AppStorage(AppearancePreferences.glassStyleKey)
     private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    @AppStorage(AppearancePreferences.glassTintKey)
+    private var glassTintRaw = ""
+    
+    // Liquid Glass 微调参数（候选项也使用）
+    @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
+    private var cornerRadius = 16.0
+    @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
+    private var animationDuration = 0.18
 
     private var isLiquidClear: Bool {
         let material = AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
         let glass = AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
         return material == .liquid && glass == .clear
+    }
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+    }
+
+    private var glassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+    }
+
+    private var glassTint: NSColor? {
+        colorFromRGBA(glassTintRaw)
     }
 
     var body: some View {
@@ -368,10 +417,19 @@ private struct ResultRow: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(selectionFillColor)
-        )
+        .background {
+            if isSelected && materialStyle == .liquid {
+                LiquidGlassRowBackground(
+                    cornerRadius: 10,
+                    glassStyle: glassStyle,
+                    glassTint: selectedGlassTint
+                )
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(selectionFillColor)
+            }
+        }
+        .animation(.easeInOut(duration: animationDuration), value: isSelected)
         .overlay(alignment: .trailing) {
             actionHint
                 .padding(.trailing, 10)
@@ -463,6 +521,41 @@ private struct ResultRow: View {
         }
         let opacity: Double = isLiquidClear ? 0.4 : 0.55
         return Color(nsColor: .controlBackgroundColor).opacity(opacity)
+    }
+
+    private var selectedGlassTint: NSColor? {
+        let base = NSColor(Color.accentColor)
+        let baseAlpha: CGFloat = isLiquidClear ? 0.18 : 0.24
+        return base.withAlphaComponent(baseAlpha)
+    }
+}
+
+private struct LiquidGlassRowBackground: View {
+    let cornerRadius: CGFloat
+    let glassStyle: AppearancePreferences.GlassStyle
+    let glassTint: NSColor?
+
+    var body: some View {
+        ZStack {
+            if #available(macOS 26, *) {
+                GlassBackgroundView(
+                    cornerRadius: cornerRadius,
+                    style: glassStyle,
+                    tintColor: glassTint
+                )
+            } else {
+                VisualEffectView(
+                    material: .popover,
+                    blendingMode: .behindWindow,
+                    state: .active
+                )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+        )
     }
 }
 
