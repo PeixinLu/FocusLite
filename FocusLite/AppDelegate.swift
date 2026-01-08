@@ -22,9 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             translateViewModel: translateSettingsViewModel
         )
     }()
-    private lazy var settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
-    private var statusItem: NSStatusItem?
-    private var clipboardPauseItem: NSMenuItem?
     private let launcherHotKeyID: UInt32 = 1
     private let clipboardHotKeyID: UInt32 = 2
 
@@ -58,12 +55,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowController = LauncherWindowController(viewModel: viewModel)
         
-        // 设置回调：唤起搜索框时关闭设置页
-        windowController?.onCloseSettings = { [weak self] in
-            self?.settingsWindowController.close()
-        }
-        
-        setupStatusItem()
         registerLauncherHotKey()
         registerClipboardHotKey()
         windowController?.show()
@@ -105,13 +96,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showSettings(tab: .general)
     }
 
+    @MainActor
+    func openSettingsFromMenu() {
+        showSettings(tab: .general)
+    }
+
     @MainActor private func showSettings(tab: SettingsTab) {
         settingsViewModel.selectedTab = tab
         windowController?.prepareForSettingsOpen()
+        NSApp.activate(ignoringOtherApps: true)
         let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         if !openedBySystem {
-            settingsWindowController.show(tab: tab)
+            Log.info("Settings scene did not open via system action.")
         }
     }
 
@@ -125,7 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleUserDefaultsChange() {
-        clipboardPauseItem?.state = ClipboardPreferences.isPaused ? .on : .off
         registerLauncherHotKey()
         registerClipboardHotKey()
     }
@@ -143,27 +139,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerClipboardHotKey()
     }
 
-    private func setupStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = item.button {
-            button.image = NSImage(systemSymbolName: "bolt.circle", accessibilityDescription: "FocusLite")
-        }
+    @MainActor
+    func toggleLauncherFromMenu() {
+        windowController?.toggle()
+    }
 
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "显示/隐藏 FocusLite", action: #selector(toggleWindow), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "设置…", action: #selector(showSettingsWindow), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""))
-
-        let clipboardPause = NSMenuItem(title: "暂停剪贴板记录", action: #selector(toggleClipboardRecording), keyEquivalent: "")
-        clipboardPause.state = ClipboardPreferences.isPaused ? .on : .off
-        menu.addItem(clipboardPause)
-        clipboardPauseItem = clipboardPause
-
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出 FocusLite", action: #selector(quitApp), keyEquivalent: "q"))
-        menu.items.forEach { $0.target = self }
-        item.menu = menu
-        statusItem = item
+    @MainActor
+    func prepareSettingsTab(_ tab: SettingsTab) {
+        settingsViewModel.selectedTab = tab
     }
 
     private func registerLauncherHotKey() {

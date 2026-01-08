@@ -185,6 +185,13 @@ struct SettingsView: View {
             }
         }
         .frame(width: SettingsLayout.windowWidth, height: SettingsLayout.windowHeight)
+        .onAppear {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        .onDisappear {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     private var sidebar: some View {
