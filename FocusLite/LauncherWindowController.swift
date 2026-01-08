@@ -125,6 +125,9 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
                 }
                 return nil
             case 51: // delete / backspace
+                if let editor = self.window?.firstResponder as? NSTextView, editor.hasMarkedText() {
+                    return event
+                }
                 let handled = self.viewModel.handleBackspaceKey()
                 return handled ? nil : event
             case 53: // esc

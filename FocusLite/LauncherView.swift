@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Carbon.HIToolbox
 
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
