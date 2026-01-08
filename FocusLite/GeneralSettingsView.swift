@@ -57,6 +57,7 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
+
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)

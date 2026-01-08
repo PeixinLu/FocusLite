@@ -175,6 +175,8 @@ final class SettingsViewModel: ObservableObject {
 
 struct SettingsView: View {
     @StateObject var viewModel: SettingsViewModel
+    @State private var escMonitor: Any?
+    @State private var settingsWindow: NSWindow?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -188,9 +190,14 @@ struct SettingsView: View {
         .onAppear {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.async {
+                settingsWindow = NSApp.keyWindow
+            }
+            startEscMonitorIfNeeded()
         }
         .onDisappear {
             NSApp.setActivationPolicy(.accessory)
+            stopEscMonitor()
         }
     }
 
@@ -282,5 +289,24 @@ struct SettingsView: View {
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         }
+    }
+
+    private func startEscMonitorIfNeeded() {
+        guard escMonitor == nil else { return }
+        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 {
+                settingsWindow?.performClose(nil)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func stopEscMonitor() {
+        if let monitor = escMonitor {
+            NSEvent.removeMonitor(monitor)
+            escMonitor = nil
+        }
+        settingsWindow = nil
     }
 }

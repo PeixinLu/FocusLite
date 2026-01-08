@@ -77,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .hotKeyRecordingDidEnd,
             object: nil
         )
+
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -102,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor private func showSettings(tab: SettingsTab) {
         settingsViewModel.selectedTab = tab
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
@@ -194,4 +196,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Clipboard hotkey registration failed (\(ClipboardPreferences.hotKeyText)).")
         }
     }
+
 }

@@ -28,7 +28,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         captureFocusOrigin()
         wasInterrupted = false
         centerWindow()
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate(ignoringOtherApps: false)
         window?.makeKeyAndOrderFront(nil)
         startKeyMonitor()
         Task { @MainActor in
