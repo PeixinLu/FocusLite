@@ -30,6 +30,7 @@ struct LauncherView: View {
     private var animationDuration = 0.18
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = 16.0
+    private let rowCornerRadius: CGFloat = 10.0
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
         AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
@@ -82,13 +83,22 @@ struct LauncherView: View {
                                         .padding(.top, 40)
                                 } else {
                                     ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                        ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                                        ResultRow(
+                                            item: item,
+                                            isSelected: viewModel.selectedIndex == index,
+                                            searchText: viewModel.searchText,
+                                            showsLiquidSelection: showsLiquidSelection
+                                        )
                                             .id(item.id)
                                             .onTapGesture {
                                                 viewModel.selectIndex(index)
+                                                viewModel.submitPrimaryAction()
                                             }
                                     }
                                 }
+                            }
+                            .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                                selectionBackgroundLayer(for: anchor)
                             }
                             .padding(12)
                         }
@@ -117,13 +127,22 @@ struct LauncherView: View {
                                     .padding(.top, 40)
                             } else {
                             ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
-                                    .id(item.id)
-                                    .onTapGesture {
-                                        viewModel.selectIndex(index)
-                                    }
+                                ResultRow(
+                                    item: item,
+                                    isSelected: viewModel.selectedIndex == index,
+                                    searchText: viewModel.searchText,
+                                    showsLiquidSelection: showsLiquidSelection
+                                )
+                                .id(item.id)
+                                .onTapGesture {
+                                    viewModel.selectIndex(index)
+                                    viewModel.submitPrimaryAction()
+                                }
                             }
                         }
+                        }
+                        .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                            selectionBackgroundLayer(for: anchor)
                         }
                         .padding(12)
                     }
@@ -180,6 +199,34 @@ struct LauncherView: View {
                providerID == SnippetsProvider.providerID || 
                providerID == TranslateProvider.providerID
     }
+
+    private var showsLiquidSelection: Bool {
+        materialStyle == .liquid
+    }
+
+    private var selectedGlassTint: NSColor? {
+        let base = NSColor(Color.accentColor)
+        let baseAlpha: CGFloat = glassStyle == .clear ? 0.18 : 0.24
+        return base.withAlphaComponent(baseAlpha)
+    }
+
+    @ViewBuilder
+    private func selectionBackgroundLayer(for anchor: Anchor<CGRect>?) -> some View {
+        if showsLiquidSelection, let anchor {
+            GeometryReader { proxy in
+                let rect = proxy[anchor]
+                LiquidGlassRowBackground(
+                    cornerRadius: rowCornerRadius,
+                    glassStyle: glassStyle,
+                    glassTint: selectedGlassTint
+                )
+                .frame(width: rect.width, height: rect.height)
+                .offset(x: rect.minX, y: rect.minY)
+                .animation(.easeInOut(duration: animationDuration), value: rect)
+            }
+        }
+    }
+
 
     @ViewBuilder
     private var settingsButton: some View {
@@ -369,10 +416,20 @@ private struct VisualEffectView: NSViewRepresentable {
     }
 }
 
+private struct SelectedRowBoundsPreferenceKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
 private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
     let searchText: String
+    let showsLiquidSelection: Bool
+    @State private var isHovered = false
     @AppStorage(AppearancePreferences.materialStyleKey)
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
     @AppStorage(AppearancePreferences.glassStyleKey)
@@ -438,22 +495,23 @@ private struct ResultRow: View {
         }
         .padding(12)
         .background {
-            if isSelected && materialStyle == .liquid {
-                LiquidGlassRowBackground(
-                    cornerRadius: 10,
-                    glassStyle: glassStyle,
-                    glassTint: selectedGlassTint
-                )
-            } else {
+            ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(selectionFillColor)
+                if isHovered && !isSelected {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(hoverFillColor)
+                }
             }
         }
-        .animation(.easeInOut(duration: animationDuration), value: isSelected)
         .overlay(alignment: .trailing) {
             actionHint
                 .padding(.trailing, 10)
         }
+        .anchorPreference(key: SelectedRowBoundsPreferenceKey.self, value: .bounds) { anchor in
+            isSelected && showsLiquidSelection ? anchor : nil
+        }
+        .onHover { isHovered = $0 }
     }
 
     @ViewBuilder
@@ -535,6 +593,9 @@ private struct ResultRow: View {
     }
 
     private var selectionFillColor: Color {
+        if showsLiquidSelection {
+            return .clear
+        }
         if isSelected {
             let opacity: Double = isLiquidClear ? 0.26 : 0.15
             return Color.accentColor.opacity(opacity)
@@ -543,11 +604,11 @@ private struct ResultRow: View {
         return Color(nsColor: .controlBackgroundColor).opacity(opacity)
     }
 
-    private var selectedGlassTint: NSColor? {
-        let base = NSColor(Color.accentColor)
-        let baseAlpha: CGFloat = isLiquidClear ? 0.18 : 0.24
-        return base.withAlphaComponent(baseAlpha)
+    private var hoverFillColor: Color {
+        let opacity: Double = isLiquidClear ? 0.08 : 0.06
+        return Color.accentColor.opacity(opacity)
     }
+
 }
 
 private struct LiquidGlassRowBackground: View {
