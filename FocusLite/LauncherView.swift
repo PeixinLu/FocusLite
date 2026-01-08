@@ -74,23 +74,33 @@ struct LauncherView: View {
 
             if showsPreviewPane {
                 HStack(spacing: 0) {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            if viewModel.results.isEmpty {
-                                EmptyStateView()
-                                    .padding(.top, 40)
-                            } else {
-                                ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
-                                        .onTapGesture {
-                                            viewModel.selectIndex(index)
-                                        }
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                if viewModel.results.isEmpty {
+                                    EmptyStateView()
+                                        .padding(.top, 40)
+                                } else {
+                                    ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                        ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                                            .id(item.id)
+                                            .onTapGesture {
+                                                viewModel.selectIndex(index)
+                                            }
+                                    }
                                 }
                             }
+                            .padding(12)
                         }
-                        .padding(12)
+                        .frame(width: 340)
+                        .onChange(of: viewModel.selectedIndex) { index in
+                            guard let index,
+                                  viewModel.results.indices.contains(index) else { return }
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                proxy.scrollTo(viewModel.results[index].id, anchor: .center)
+                            }
+                        }
                     }
-                    .frame(width: 340)
 
                     Divider()
 
@@ -99,21 +109,31 @@ struct LauncherView: View {
                         .padding(12)
                 }
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        if viewModel.results.isEmpty {
-                            EmptyStateView()
-                                .padding(.top, 40)
-                        } else {
-                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
-                                .onTapGesture {
-                                    viewModel.selectIndex(index)
-                                }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            if viewModel.results.isEmpty {
+                                EmptyStateView()
+                                    .padding(.top, 40)
+                            } else {
+                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                                    .id(item.id)
+                                    .onTapGesture {
+                                        viewModel.selectIndex(index)
+                                    }
+                            }
+                        }
+                        }
+                        .padding(12)
+                    }
+                    .onChange(of: viewModel.selectedIndex) { index in
+                        guard let index,
+                              viewModel.results.indices.contains(index) else { return }
+                        withAnimation(.easeInOut(duration: 0.12)) {
+                            proxy.scrollTo(viewModel.results[index].id, anchor: .center)
                         }
                     }
-                    }
-                    .padding(12)
                 }
             }
         }
