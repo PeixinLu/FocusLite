@@ -34,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SnippetsProvider(),
             ClipboardProvider(),
             TranslateProvider(),
-            AppSearchProvider()
+            AppSearchProvider(),
+            LiquidTuningProvider()
         ]
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
@@ -99,6 +100,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func openSettingsFromMenu() {
         showSettings(tab: .general)
+    }
+
+    @MainActor
+    func openLiquidTuning() {
+        guard let viewModel = launcherViewModel else { return }
+        windowController?.show(resetSearch: true)
+        NSApp.activate(ignoringOtherApps: true)
+        viewModel.activateCustomPrefix(LiquidTuningProvider.prefixEntry)
+        viewModel.requestFocus()
     }
 
     @MainActor private func showSettings(tab: SettingsTab) {

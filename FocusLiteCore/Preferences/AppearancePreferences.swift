@@ -4,6 +4,7 @@ enum AppearancePreferences {
     static let materialStyleKey = "appearance.materialStyle"
     static let glassStyleKey = "appearance.glassStyle"
     static let glassTintKey = "appearance.glassTint"
+    static let liquidGlassExtraBlurMaterialKey = "appearance.liquidGlass.extraBlurMaterial"
     
     // Liquid Glass 精细调节参数
     static let liquidGlassHighlightIntensityKey = "appearance.liquidGlass.highlightIntensity"
@@ -26,6 +27,17 @@ enum AppearancePreferences {
     enum GlassStyle: String, CaseIterable, Identifiable {
         case regular
         case clear
+
+        var id: String { rawValue }
+    }
+
+    enum ExtraBlurMaterial: String, CaseIterable, Identifiable {
+        case system
+        case ultraThin
+        case thin
+        case regular
+        case thick
+        case ultraThick
 
         var id: String { rawValue }
     }
@@ -146,6 +158,16 @@ enum AppearancePreferences {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: liquidGlassCornerRadiusKey)
+        }
+    }
+
+    static var liquidGlassExtraBlurMaterial: ExtraBlurMaterial {
+        get {
+            let raw = UserDefaults.standard.string(forKey: liquidGlassExtraBlurMaterialKey)
+            return ExtraBlurMaterial(rawValue: raw ?? "") ?? .system
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: liquidGlassExtraBlurMaterialKey)
         }
     }
 }

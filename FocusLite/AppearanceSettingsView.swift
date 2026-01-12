@@ -8,16 +8,12 @@ struct AppearanceSettingsView: View {
     private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
     @AppStorage(AppearancePreferences.glassTintKey)
     private var glassTintRaw = ""
+    @AppStorage(AppearancePreferences.liquidGlassExtraBlurMaterialKey)
+    private var extraBlurMaterialRaw = AppearancePreferences.ExtraBlurMaterial.system.rawValue
     
     // Liquid Glass 微调参数
-    @AppStorage(AppearancePreferences.liquidGlassHighlightIntensityKey)
-    private var highlightIntensity = 0.45
     @AppStorage(AppearancePreferences.liquidGlassBlurRadiusKey)
     private var blurRadius = 30.0
-    @AppStorage(AppearancePreferences.liquidGlassRefractionStrengthKey)
-    private var refractionStrength = 0.6
-    @AppStorage(AppearancePreferences.liquidGlassBorderOpacityKey)
-    private var borderOpacity = 0.6
     @AppStorage(AppearancePreferences.liquidGlassGradientStartOpacityKey)
     private var gradientStartOpacity = 0.45
     @AppStorage(AppearancePreferences.liquidGlassGradientEndOpacityKey)
@@ -95,12 +91,23 @@ struct AppearanceSettingsView: View {
                         
                         // 圆角半径
                         LabeledSlider(
-                            title: "圆角半径",
+                            title: "搜索框圆角大小",
                             value: $cornerRadius,
                             range: 8...24,
                             step: 1,
                             unit: "pt"
                         )
+
+                        Divider()
+
+                        Button {
+                            if let delegate = NSApp.delegate as? AppDelegate {
+                                delegate.openLiquidTuning()
+                            }
+                        } label: {
+                            Label("调试液态玻璃…", systemImage: "paintbrush")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
                 
@@ -140,37 +147,21 @@ struct AppearanceSettingsView: View {
                                     )
                                     
                                     LabeledSlider(
-                                        title: "边框透明度",
-                                        value: $borderOpacity,
-                                        range: 0.0...1.0,
-                                        step: 0.01,
-                                        unit: ""
-                                    )
-                                }
-                                
-                                Divider()
-                                
-                                // 模糊与折射
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("模糊与折射")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                    
-                                    LabeledSlider(
-                                        title: "模糊半径",
+                                        title: "额外模糊强度",
                                         value: $blurRadius,
-                                        range: 0...60,
+                                        range: 0...100,
                                         step: 1,
-                                        unit: "pt"
+                                        unit: "%"
                                     )
-                                    
-                                    LabeledSlider(
-                                        title: "折射强度",
-                                        value: $refractionStrength,
-                                        range: 0.0...1.0,
-                                        step: 0.01,
-                                        unit: ""
-                                    )
+                                    Picker("模糊材质", selection: $extraBlurMaterialRaw) {
+                                        Text("系统").tag(AppearancePreferences.ExtraBlurMaterial.system.rawValue)
+                                        Text("超薄").tag(AppearancePreferences.ExtraBlurMaterial.ultraThin.rawValue)
+                                        Text("薄").tag(AppearancePreferences.ExtraBlurMaterial.thin.rawValue)
+                                        Text("常规").tag(AppearancePreferences.ExtraBlurMaterial.regular.rawValue)
+                                        Text("厚").tag(AppearancePreferences.ExtraBlurMaterial.thick.rawValue)
+                                        Text("超厚").tag(AppearancePreferences.ExtraBlurMaterial.ultraThick.rawValue)
+                                    }
+                                    .pickerStyle(.segmented)
                                 }
                                 
                                 Divider()
@@ -182,7 +173,7 @@ struct AppearanceSettingsView: View {
                                         .foregroundColor(.secondary)
                                     
                                     LabeledSlider(
-                                        title: "过渡动画时长",
+                                        title: "候选项过渡动画时长",
                                         value: $animationDuration,
                                         range: 0.05...0.5,
                                         step: 0.01,
@@ -247,9 +238,8 @@ struct AppearanceSettingsView: View {
     private func resetToDefaults() {
         gradientStartOpacity = 0.45
         gradientEndOpacity = 0.14
-        borderOpacity = 0.6
         blurRadius = 30.0
-        refractionStrength = 0.6
+        extraBlurMaterialRaw = AppearancePreferences.ExtraBlurMaterial.system.rawValue
         animationDuration = 0.18
         cornerRadius = 16.0
     }

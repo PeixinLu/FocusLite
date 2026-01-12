@@ -108,6 +108,11 @@ final class LauncherViewModel: ObservableObject {
             return
         }
 
+        if item.providerID == LiquidTuningProvider.providerID {
+            // 调试模式不触发复制或退出
+            return
+        }
+
         switch item.action {
         case .copyText(let text):
             copyToPasteboard(text)
@@ -166,6 +171,18 @@ final class LauncherViewModel: ObservableObject {
 
     func activateClipboardSearch() {
         activatePrefix(providerID: ClipboardProvider.providerID)
+    }
+
+    func activateCustomPrefix(_ entry: PrefixEntry, carryQuery: String? = nil) {
+        let update: SearchStateReducer.UpdateResult
+        if let carryQuery, !carryQuery.isEmpty {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry, carryQuery: carryQuery)
+        } else {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        }
+        applyUpdate(update)
+        focusToken = UUID()
+        performSearch()
     }
 
     func moveSelection(delta: Int) {

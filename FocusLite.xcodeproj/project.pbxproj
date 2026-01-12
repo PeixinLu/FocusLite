@@ -75,6 +75,7 @@
 		1A2B3C4D5E6F000000000552 /* AppearancePreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000551 /* AppearancePreferences.swift */; };
 		1A2B3C4D5E6F000000000562 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */; };
 		1A2B3C4D5E6F000000000571 /* AppIndexWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */; };
+		1A2B3C4D5E6F000000000574 /* LiquidTuningProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000575 /* LiquidTuningProvider.swift */; };
 		81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */; };
 		9605C7C92F02D299002AD45A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 9605C7C82F02D299002AD45A /* LaunchAtLogin */; };
 		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
@@ -164,6 +165,7 @@
 		1A2B3C4D5E6F000000000551 /* AppearancePreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexWatcher.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F000000000575 /* LiquidTuningProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidTuningProvider.swift; sourceTree = "<group>"; };
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -239,6 +241,7 @@
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
 				1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */,
+				1A2B3C4D5E6F000000000575 /* LiquidTuningProvider.swift */,
 				81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */,
 				1A2B3C4D5E6F000000000421 /* TranslateSettingsView.swift */,
 				1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */,
@@ -568,6 +571,7 @@
 				1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */,
 				1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */,
 				1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */,
+				1A2B3C4D5E6F000000000574 /* LiquidTuningProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000562 /* AppearanceSettingsView.swift in Sources */,
 				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
 			);

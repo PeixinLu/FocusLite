@@ -13,7 +13,8 @@ enum PrefixRegistry {
         [
             clipboardEntry(),
             snippetsEntry(),
-            translateEntry()
+            translateEntry(),
+            liquidEntry()
         ].compactMap { $0 }
     }
 
@@ -50,6 +51,16 @@ enum PrefixRegistry {
             title: prefix,
             subtitle: "翻译文本",
             icon: .system("globe")
+        )
+    }
+
+    private static func liquidEntry() -> PrefixEntry? {
+        PrefixEntry(
+            id: LiquidTuningProvider.prefixEntry.id.lowercased(),
+            providerID: LiquidTuningProvider.prefixEntry.providerID,
+            title: LiquidTuningProvider.prefixEntry.title,
+            subtitle: LiquidTuningProvider.prefixEntry.subtitle,
+            icon: LiquidTuningProvider.prefixEntry.icon
         )
     }
 }
