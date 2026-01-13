@@ -35,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ClipboardProvider(),
             TranslateProvider(),
             AppSearchProvider(),
-            LiquidTuningProvider()
+            StyleProvider()
         ]
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
@@ -103,11 +103,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    func openLiquidTuning() {
+    func openStylePrefix() {
         guard let viewModel = launcherViewModel else { return }
         windowController?.show(resetSearch: true)
         NSApp.activate(ignoringOtherApps: true)
-        viewModel.activateCustomPrefix(LiquidTuningProvider.prefixEntry)
+        viewModel.activateCustomPrefix(StyleProvider.prefixEntry)
         viewModel.requestFocus()
     }
 

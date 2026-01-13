@@ -113,7 +113,7 @@ final class LauncherViewModel: ObservableObject {
             return
         }
 
-        if item.providerID == LiquidTuningProvider.providerID {
+        if item.providerID == StyleProvider.providerID {
             // 调试模式不触发复制或退出
             shouldAnimateSelection = false
             return
@@ -188,8 +188,8 @@ final class LauncherViewModel: ObservableObject {
                 return .clipboard
             case SnippetsProvider.providerID:
                 return .snippets
-            case LiquidTuningProvider.providerID:
-                return .appearance
+            case StyleProvider.providerID:
+                return .general
             default:
                 return .apps
             }

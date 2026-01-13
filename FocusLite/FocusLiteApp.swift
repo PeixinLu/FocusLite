@@ -24,6 +24,10 @@ struct FocusLiteApp: App {
                 appDelegate.toggleLauncherFromMenu()
             }
             Divider()
+            Button("外观") {
+                appDelegate.openStylePrefix()
+            }
+            Divider()
             if #available(macOS 14, *) {
                 SettingsLink {
                     Text("偏好设置")

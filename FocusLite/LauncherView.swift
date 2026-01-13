@@ -27,7 +27,9 @@ struct LauncherView: View {
     private var animationDuration = 0.18
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = 16.0
-    private let rowCornerRadius: CGFloat = 10.0
+    private var rowCornerRadius: CGFloat {
+        max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
+    }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
         AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
@@ -240,7 +242,7 @@ struct LauncherView: View {
         return providerID == ClipboardProvider.providerID || 
                providerID == SnippetsProvider.providerID || 
                providerID == TranslateProvider.providerID ||
-               providerID == LiquidTuningProvider.providerID
+               providerID == StyleProvider.providerID
     }
 
     private var showsLiquidSelection: Bool {
@@ -249,7 +251,7 @@ struct LauncherView: View {
 
     private var isLiquidTuningMode: Bool {
         if case .prefixed(let providerID) = viewModel.searchState.scope {
-            return providerID == LiquidTuningProvider.providerID
+            return providerID == StyleProvider.providerID
         }
         return false
     }
@@ -461,6 +463,10 @@ private struct ResultRow: View {
         AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? .regular
     }
 
+    private var rowCornerRadiusValue: CGFloat {
+        max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             iconView
@@ -496,10 +502,10 @@ private struct ResultRow: View {
         .padding(12)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: rowCornerRadiusValue)
                     .fill(selectionFillColor)
                 if isHovered && !isSelected {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: rowCornerRadiusValue)
                         .fill(hoverFillColor)
                 }
             }
@@ -601,6 +607,9 @@ private struct ResultRow: View {
             let opacity: Double = isLiquidClear ? 0.26 : 0.15
             return Color.accentColor.opacity(opacity)
         }
+        if materialStyle == .classic {
+            return Color(nsColor: .controlBackgroundColor).opacity(0.25)
+        }
         let opacity: Double = isLiquidClear ? 0.4 : 0.55
         return Color(nsColor: .controlBackgroundColor).opacity(opacity)
     }
@@ -646,6 +655,7 @@ private struct LiquidTuningPreview: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    @State private var materialStyleRaw = AppearancePreferences.materialStyle.rawValue
     @State private var glassStyleRaw = AppearancePreferences.glassStyle.rawValue
     @State private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
     @State private var regularTintModeRaw = AppearancePreferences.glassTintModeRegular.rawValue
@@ -656,15 +666,7 @@ private struct LiquidTuningPreview: View {
     @State private var animationDuration = AppearancePreferences.liquidGlassAnimationDuration
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(group.title)
-                .font(.system(size: 16, weight: .semibold))
-            Text(group.subtitle)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-
-            Divider()
-
+        VStack(alignment: .leading, spacing: 12) {
             groupContent
             Spacer()
         }
@@ -689,6 +691,10 @@ private struct LiquidTuningPreview: View {
 
     private var rowGlassStyle: AppearancePreferences.GlassStyle {
         AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? .regular
+    }
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
     }
 
     private var activeTintMode: AppearancePreferences.TintMode {
@@ -752,6 +758,26 @@ private struct LiquidTuningPreview: View {
 
     private var searchControls: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Picker("材质", selection: Binding(
+                get: { materialStyleRaw },
+                set: { newValue in
+                    materialStyleRaw = newValue
+                    if let style = AppearancePreferences.MaterialStyle(rawValue: newValue) {
+                        AppearancePreferences.materialStyle = style
+                    }
+                    if materialStyle != .liquid {
+                        AppearancePreferences.setGlassTintMode(.off, for: .regular)
+                        AppearancePreferences.setGlassTintMode(.systemDefault, for: .clear)
+                    }
+                }
+            )) {
+                Text("经典").tag(AppearancePreferences.MaterialStyle.classic.rawValue)
+                Text("液态玻璃").tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                Text("纯净").tag(AppearancePreferences.MaterialStyle.pure.rawValue)
+            }
+            .pickerStyle(.segmented)
+
+            if materialStyle == .liquid {
             Picker("液态玻璃风格", selection: Binding(
                 get: { glassStyleRaw },
                 set: { newValue in
@@ -839,6 +865,11 @@ private struct LiquidTuningPreview: View {
                         .foregroundColor(.secondary)
                 }
             }
+            } else {
+                Text("液态玻璃配置仅在材质为“液态玻璃”时可用。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
 
             TuningSlider(
                 title: "搜索框圆角大小",
@@ -855,19 +886,27 @@ private struct LiquidTuningPreview: View {
     }
 
     private var rowsControls: some View {
-        Picker("液态玻璃风格", selection: Binding(
-            get: { rowGlassStyleRaw },
-            set: { newValue in
-                rowGlassStyleRaw = newValue
-                if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
-                    AppearancePreferences.rowGlassStyle = style
+        Group {
+            if materialStyle == .liquid {
+                Picker("液态玻璃风格", selection: Binding(
+                    get: { rowGlassStyleRaw },
+                    set: { newValue in
+                        rowGlassStyleRaw = newValue
+                        if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
+                            AppearancePreferences.rowGlassStyle = style
+                        }
+                    }
+                )) {
+                    Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                    Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
                 }
+                .pickerStyle(.segmented)
+            } else {
+                Text("候选项液态玻璃样式仅在材质为“液态玻璃”时可用。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
-        )) {
-            Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-            Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
         }
-        .pickerStyle(.segmented)
     }
 
     private var animationControls: some View {
@@ -1094,7 +1133,7 @@ private struct PreviewPane: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
             )
-        } else if item.providerID == LiquidTuningProvider.providerID {
+        } else if item.providerID == StyleProvider.providerID {
             LiquidTuningPreview(group: LiquidTuningGroup.fromTitle(item.title))
         } else {
             Text("预览仅适用于剪贴板、Snippets、翻译和液态玻璃调试")

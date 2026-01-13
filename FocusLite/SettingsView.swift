@@ -6,7 +6,6 @@ enum SettingsTab: String, CaseIterable {
     case clipboard
     case snippets
     case translate
-    case appearance
     case apps
 
     var iconName: String {
@@ -21,8 +20,6 @@ enum SettingsTab: String, CaseIterable {
             return "text.append"
         case .translate:
             return "character.bubble"
-        case .appearance:
-            return "paintbrush.pointed"
         case .apps:
             return "square.grid.2x2"
         }
@@ -40,8 +37,6 @@ enum SettingsTab: String, CaseIterable {
             return "维护文本片段与快捷填充"
         case .translate:
             return "配置翻译服务与前缀"
-        case .appearance:
-            return "调整搜索面板材质"
         case .apps:
             return "管理应用索引与搜索"
         }
@@ -73,8 +68,6 @@ extension SettingsTab {
             return "文本片段"
         case .translate:
             return "翻译"
-        case .appearance:
-            return "外观"
         case .apps:
             return "应用"
         }
@@ -284,8 +277,6 @@ struct SettingsView: View {
             SnippetsManagerView(viewModel: viewModel.snippetsViewModel, onSaved: viewModel.markSaved)
         case .translate:
             TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
-        case .appearance:
-            AppearanceSettingsView()
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         }

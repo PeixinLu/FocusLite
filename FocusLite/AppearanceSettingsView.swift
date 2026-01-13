@@ -217,17 +217,6 @@ struct AppearanceSettingsView: View {
                         step: 0.01,
                         unit: "s"
                     )
-
-                    Divider()
-
-                    Button {
-                        if let delegate = NSApp.delegate as? AppDelegate {
-                            delegate.openLiquidTuning()
-                        }
-                    } label: {
-                        Label("调试液态玻璃…", systemImage: "paintbrush")
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
             }
 

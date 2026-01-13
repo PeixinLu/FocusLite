@@ -56,11 +56,11 @@ enum PrefixRegistry {
 
     private static func liquidEntry() -> PrefixEntry? {
         PrefixEntry(
-            id: LiquidTuningProvider.prefixEntry.id.lowercased(),
-            providerID: LiquidTuningProvider.prefixEntry.providerID,
-            title: LiquidTuningProvider.prefixEntry.title,
-            subtitle: LiquidTuningProvider.prefixEntry.subtitle,
-            icon: LiquidTuningProvider.prefixEntry.icon
+            id: StyleProvider.prefixEntry.id.lowercased(),
+            providerID: StyleProvider.prefixEntry.providerID,
+            title: StyleProvider.prefixEntry.title,
+            subtitle: StyleProvider.prefixEntry.subtitle,
+            icon: StyleProvider.prefixEntry.icon
         )
     }
 }

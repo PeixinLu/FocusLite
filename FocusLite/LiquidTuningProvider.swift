@@ -1,18 +1,18 @@
 import AppKit
 import Foundation
 
-struct LiquidTuningProvider: ResultProvider {
-    static let providerID = "liquid.tuning"
+struct StyleProvider: ResultProvider {
+    static let providerID = "style.tuning"
     static let prefixEntry = PrefixEntry(
-        id: "liquid",
-        providerID: LiquidTuningProvider.providerID,
-        title: "Liquid",
-        subtitle: "调节液态玻璃效果",
-        icon: .system("paintbrush")
+        id: "style",
+        providerID: StyleProvider.providerID,
+        title: "Style",
+        subtitle: "配置 FocusLite 外观",
+        icon: .system("paintbrush.pointed")
     )
 
     var id: String { Self.providerID }
-    var displayName: String { "Liquid Tuning" }
+    var displayName: String { "Style" }
 
     func results(for query: String, isScoped: Bool) async -> [ResultItem] {
         guard isScoped else { return [] }
