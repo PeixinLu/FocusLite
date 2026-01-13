@@ -148,9 +148,11 @@ struct LauncherView: View {
                         .onChange(of: viewModel.selectedIndex) { index in
                             guard let index,
                                   viewModel.results.indices.contains(index) else { return }
-                            withAnimation(.easeInOut(duration: 0.12)) {
+                            let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                            withAnimation(.easeInOut(duration: duration)) {
                                 proxy.scrollTo(viewModel.results[index].id, anchor: .center)
                             }
+                            viewModel.shouldAnimateSelection = false
                         }
                     }
 
@@ -193,9 +195,11 @@ struct LauncherView: View {
                     .onChange(of: viewModel.selectedIndex) { index in
                         guard let index,
                               viewModel.results.indices.contains(index) else { return }
-                        withAnimation(.easeInOut(duration: 0.12)) {
+                        let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                        withAnimation(.easeInOut(duration: duration)) {
                             proxy.scrollTo(viewModel.results[index].id, anchor: .center)
                         }
+                        viewModel.shouldAnimateSelection = false
                     }
                 }
             }
@@ -266,7 +270,7 @@ struct LauncherView: View {
                 )
                 .frame(width: rect.width, height: rect.height)
                 .offset(x: rect.minX, y: rect.minY)
-                .animation(.easeInOut(duration: animationDuration), value: rect)
+                .animation(viewModel.shouldAnimateSelection ? .easeInOut(duration: animationDuration) : .none, value: rect)
             }
         }
     }

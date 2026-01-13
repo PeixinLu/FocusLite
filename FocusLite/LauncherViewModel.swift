@@ -13,6 +13,7 @@ final class LauncherViewModel: ObservableObject {
     @Published var results: [ResultItem] = []
     @Published var focusToken = UUID()
     @Published var selectedIndex: Int?
+    @Published var shouldAnimateSelection = false
     @Published var toastMessage: String?
 
     private let searchEngine: SearchEngine
@@ -56,6 +57,7 @@ final class LauncherViewModel: ObservableObject {
         searchText = ""
         results = []
         selectedIndex = nil
+        shouldAnimateSelection = false
     }
 
     func updateInput(_ text: String) {
@@ -66,6 +68,7 @@ final class LauncherViewModel: ObservableObject {
         searchText = update.textFieldValue
         isUpdatingText = false
         performSearch()
+        shouldAnimateSelection = false
     }
 
     func handleBackspaceKey() -> Bool {
@@ -75,6 +78,7 @@ final class LauncherViewModel: ObservableObject {
         if handled {
             performSearch()
         }
+        shouldAnimateSelection = false
         return handled
     }
 
@@ -83,6 +87,7 @@ final class LauncherViewModel: ObservableObject {
         if update.state.scope != searchState.scope {
             applyUpdate(update)
             performSearch()
+            shouldAnimateSelection = false
             return
         }
         handleExit()
@@ -110,6 +115,7 @@ final class LauncherViewModel: ObservableObject {
 
         if item.providerID == LiquidTuningProvider.providerID {
             // 调试模式不触发复制或退出
+            shouldAnimateSelection = false
             return
         }
 
@@ -155,6 +161,7 @@ final class LauncherViewModel: ObservableObject {
         }
 
         onExit?(.restoreOrigin)
+        shouldAnimateSelection = false
     }
 
     func openSnippetsManager() {
@@ -214,11 +221,13 @@ final class LauncherViewModel: ObservableObject {
         let current = selectedIndex ?? 0
         let next = max(0, min(current + delta, results.count - 1))
         selectedIndex = next
+        shouldAnimateSelection = true
     }
 
     func selectIndex(_ index: Int) {
         guard results.indices.contains(index) else { return }
         selectedIndex = index
+        shouldAnimateSelection = false
     }
 
     var highlightedItem: ResultItem? {
