@@ -6,8 +6,8 @@ enum SettingsTab: String, CaseIterable {
     case clipboard
     case snippets
     case translate
-    case appearance
     case apps
+    case permissions
 
     var iconName: String {
         switch self {
@@ -21,10 +21,10 @@ enum SettingsTab: String, CaseIterable {
             return "text.append"
         case .translate:
             return "character.bubble"
-        case .appearance:
-            return "paintbrush.pointed"
         case .apps:
             return "square.grid.2x2"
+        case .permissions:
+            return "lock.shield"
         }
     }
 
@@ -40,10 +40,10 @@ enum SettingsTab: String, CaseIterable {
             return "维护文本片段与快捷填充"
         case .translate:
             return "配置翻译服务与前缀"
-        case .appearance:
-            return "调整搜索面板材质"
         case .apps:
             return "管理应用索引与搜索"
+        case .permissions:
+            return "查看系统权限状态"
         }
     }
 }
@@ -73,10 +73,10 @@ extension SettingsTab {
             return "文本片段"
         case .translate:
             return "翻译"
-        case .appearance:
-            return "外观"
         case .apps:
             return "应用"
+        case .permissions:
+            return "权限"
         }
     }
 }
@@ -175,6 +175,8 @@ final class SettingsViewModel: ObservableObject {
 
 struct SettingsView: View {
     @StateObject var viewModel: SettingsViewModel
+    @State private var escMonitor: Any?
+    @State private var settingsWindow: NSWindow?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -185,6 +187,20 @@ struct SettingsView: View {
             }
         }
         .frame(width: SettingsLayout.windowWidth, height: SettingsLayout.windowHeight)
+        .background(KeyboardTabSwitcher(selectedTab: $viewModel.selectedTab))
+        .onAppear {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.async {
+                settingsWindow = NSApp.keyWindow
+                settingsWindow?.collectionBehavior.insert(.moveToActiveSpace)
+            }
+            startEscMonitorIfNeeded()
+        }
+        .onDisappear {
+            NSApp.setActivationPolicy(.accessory)
+            stopEscMonitor()
+        }
     }
 
     private var sidebar: some View {
@@ -225,12 +241,18 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            ScrollView {
+            if viewModel.selectedTab == .apps {
+                // 应用设置页面不使用 ScrollView，让表格自己处理滚动
                 contentView
-                    .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
-                    .padding(.vertical, SettingsLayout.topPadding + 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    contentView
+                        .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+                        .padding(.vertical, SettingsLayout.topPadding + 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -246,8 +268,13 @@ struct SettingsView: View {
             }
             Spacer()
             if viewModel.selectedTab == .updates {
-                Button("Check for Updates…") {
+                Button("检查更新…") {
                     viewModel.appUpdater.checkForUpdates()
+                }
+            } else if viewModel.selectedTab == .permissions {
+                // 刷新权限
+                Button("刷新") {
+                    NotificationCenter.default.post(name: .permissionsShouldRefresh, object: nil)
                 }
             }
         }
@@ -270,10 +297,76 @@ struct SettingsView: View {
             SnippetsManagerView(viewModel: viewModel.snippetsViewModel, onSaved: viewModel.markSaved)
         case .translate:
             TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
-        case .appearance:
-            AppearanceSettingsView()
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .permissions:
+            PermissionSettingsView()
         }
+    }
+
+    private func startEscMonitorIfNeeded() {
+        guard escMonitor == nil else { return }
+        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard settingsWindow?.isKeyWindow == true else { return event }
+            if event.keyCode == 53 {
+                settingsWindow?.performClose(nil)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func stopEscMonitor() {
+        if let monitor = escMonitor {
+            NSEvent.removeMonitor(monitor)
+            escMonitor = nil
+        }
+        settingsWindow = nil
+    }
+}
+
+private struct KeyboardTabSwitcher: NSViewRepresentable {
+    @Binding var selectedTab: SettingsTab
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard let window = view.window, window.isKeyWindow else { return event }
+            switch event.keyCode {
+            case 125: // down arrow
+                select(offset: 1)
+                return nil
+            case 126: // up arrow
+                select(offset: -1)
+                return nil
+            default:
+                return event
+            }
+        }
+        context.coordinator.monitor = monitor
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        if let monitor = coordinator.monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    private func select(offset: Int) {
+        let tabs = SettingsTab.allCases
+        guard let currentIndex = tabs.firstIndex(of: selectedTab) else { return }
+        let next = max(0, min(currentIndex + offset, tabs.count - 1))
+        selectedTab = tabs[next]
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var monitor: Any?
     }
 }

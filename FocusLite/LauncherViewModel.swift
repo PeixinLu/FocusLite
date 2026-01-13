@@ -3,11 +3,17 @@ import Foundation
 
 @MainActor
 final class LauncherViewModel: ObservableObject {
+    enum ExitBehavior {
+        case restoreOrigin
+        case none
+    }
+
     @Published var searchText: String = ""
     @Published var searchState: SearchState = .initial()
     @Published var results: [ResultItem] = []
     @Published var focusToken = UUID()
     @Published var selectedIndex: Int?
+    @Published var shouldAnimateSelection = false
     @Published var toastMessage: String?
 
     private let searchEngine: SearchEngine
@@ -15,7 +21,7 @@ final class LauncherViewModel: ObservableObject {
     private var toastTask: Task<Void, Never>?
     private var translationObserver: NSObjectProtocol?
 
-    var onExit: (() -> Void)?
+    var onExit: ((ExitBehavior) -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
     var onPrepareSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
@@ -38,7 +44,7 @@ final class LauncherViewModel: ObservableObject {
     }
 
     func handleExit() {
-        onExit?()
+        onExit?(.restoreOrigin)
     }
 
     func requestFocus() {
@@ -51,6 +57,7 @@ final class LauncherViewModel: ObservableObject {
         searchText = ""
         results = []
         selectedIndex = nil
+        shouldAnimateSelection = false
     }
 
     func updateInput(_ text: String) {
@@ -61,6 +68,7 @@ final class LauncherViewModel: ObservableObject {
         searchText = update.textFieldValue
         isUpdatingText = false
         performSearch()
+        shouldAnimateSelection = false
     }
 
     func handleBackspaceKey() -> Bool {
@@ -70,6 +78,7 @@ final class LauncherViewModel: ObservableObject {
         if handled {
             performSearch()
         }
+        shouldAnimateSelection = false
         return handled
     }
 
@@ -78,8 +87,10 @@ final class LauncherViewModel: ObservableObject {
         if update.state.scope != searchState.scope {
             applyUpdate(update)
             performSearch()
+            shouldAnimateSelection = false
             return
         }
+        shouldAnimateSelection = false
         handleExit()
     }
 
@@ -103,13 +114,19 @@ final class LauncherViewModel: ObservableObject {
             return
         }
 
+        if item.providerID == StyleProvider.providerID {
+            // 调试模式不触发复制或退出
+            shouldAnimateSelection = false
+            return
+        }
+
         switch item.action {
         case .copyText(let text):
             copyToPasteboard(text)
             showToast("已复制")
         case .openURL(let url):
             // 先退出避免焦点切换冲突
-            onExit?()
+            onExit?(.none)
             // 延迟打开以确保窗口先隐藏
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NSWorkspace.shared.open(url)
@@ -123,7 +140,7 @@ final class LauncherViewModel: ObservableObject {
             showToast("已复制，开启辅助功能权限可自动粘贴")
         case .runApp(let bundleID):
             // 先退出避免焦点切换冲突
-            onExit?()
+            onExit?(.none)
             // 延迟启动以确保窗口先隐藏
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NSWorkspace.shared.launchApplication(
@@ -144,7 +161,8 @@ final class LauncherViewModel: ObservableObject {
             break
         }
 
-        onExit?()
+        onExit?(.restoreOrigin)
+        shouldAnimateSelection = false
     }
 
     func openSnippetsManager() {
@@ -159,8 +177,40 @@ final class LauncherViewModel: ObservableObject {
         onOpenSettings?(tab)
     }
 
+    func preferredSettingsTab() -> SettingsTab {
+        switch searchState.scope {
+        case .global:
+            return .apps
+        case .prefixed(let providerID):
+            switch providerID {
+            case TranslateProvider.providerID:
+                return .translate
+            case ClipboardProvider.providerID:
+                return .clipboard
+            case SnippetsProvider.providerID:
+                return .snippets
+            case StyleProvider.providerID:
+                return .general
+            default:
+                return .apps
+            }
+        }
+    }
+
     func activateClipboardSearch() {
         activatePrefix(providerID: ClipboardProvider.providerID)
+    }
+
+    func activateCustomPrefix(_ entry: PrefixEntry, carryQuery: String? = nil) {
+        let update: SearchStateReducer.UpdateResult
+        if let carryQuery, !carryQuery.isEmpty {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry, carryQuery: carryQuery)
+        } else {
+            update = SearchStateReducer.selectPrefix(state: searchState, prefix: entry)
+        }
+        applyUpdate(update)
+        focusToken = UUID()
+        performSearch()
     }
 
     func moveSelection(delta: Int) {
@@ -172,11 +222,13 @@ final class LauncherViewModel: ObservableObject {
         let current = selectedIndex ?? 0
         let next = max(0, min(current + delta, results.count - 1))
         selectedIndex = next
+        shouldAnimateSelection = true
     }
 
     func selectIndex(_ index: Int) {
         guard results.indices.contains(index) else { return }
         selectedIndex = index
+        shouldAnimateSelection = false
     }
 
     var highlightedItem: ResultItem? {

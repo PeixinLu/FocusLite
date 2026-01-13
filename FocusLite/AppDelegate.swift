@@ -22,11 +22,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             translateViewModel: translateSettingsViewModel
         )
     }()
-    private lazy var settingsWindowController = SettingsWindowController(viewModel: settingsViewModel)
-    private var statusItem: NSStatusItem?
-    private var clipboardPauseItem: NSMenuItem?
     private let launcherHotKeyID: UInt32 = 1
     private let clipboardHotKeyID: UInt32 = 2
+    private let snippetsHotKeyID: UInt32 = 3
+    private let translateHotKeyID: UInt32 = 4
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 设置为 accessory 模式，不显示 Dock 图标，只显示菜单栏图标
@@ -37,20 +36,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SnippetsProvider(),
             ClipboardProvider(),
             TranslateProvider(),
-            AppSearchProvider()
+            AppSearchProvider(),
+            StyleProvider()
         ]
         let searchEngine = SearchEngine(providers: providers)
         let viewModel = LauncherViewModel(searchEngine: searchEngine)
         launcherViewModel = viewModel
-        viewModel.onExit = { [weak self] in
-            self?.windowController?.hide()
+        viewModel.onExit = { [weak self] behavior in
+            self?.windowController?.hide(restoreBehavior: behavior)
         }
         viewModel.onOpenSettings = { [weak self] tab in
             self?.showSettings(tab: tab)
         }
         viewModel.onPrepareSettings = { [weak self] tab in
             self?.settingsViewModel.selectedTab = tab
-            self?.windowController?.prepareForSettingsOpen()
         }
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
@@ -58,14 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         windowController = LauncherWindowController(viewModel: viewModel)
         
-        // 设置回调：唤起搜索框时关闭设置页
-        windowController?.onCloseSettings = { [weak self] in
-            self?.settingsWindowController.close()
-        }
-        
-        setupStatusItem()
         registerLauncherHotKey()
         registerClipboardHotKey()
+        registerSnippetsHotKey()
+        registerTranslateHotKey()
         windowController?.show()
         clipboardMonitor.start()
         NotificationCenter.default.addObserver(
@@ -87,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .hotKeyRecordingDidEnd,
             object: nil
         )
+
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -105,13 +101,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showSettings(tab: .general)
     }
 
+    @MainActor
+    func openSettingsFromMenu() {
+        showSettings(tab: .general)
+    }
+
+    @MainActor
+    func openStylePrefix() {
+        guard let viewModel = launcherViewModel else { return }
+        windowController?.show(resetSearch: true)
+        NSApp.activate(ignoringOtherApps: true)
+        viewModel.activateCustomPrefix(StyleProvider.prefixEntry)
+        viewModel.requestFocus()
+    }
+
     @MainActor private func showSettings(tab: SettingsTab) {
         settingsViewModel.selectedTab = tab
-        windowController?.prepareForSettingsOpen()
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
         let openedBySystem = NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             || NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         if !openedBySystem {
-            settingsWindowController.show(tab: tab)
+            Log.info("Settings scene did not open via system action.")
         }
     }
 
@@ -125,9 +136,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleUserDefaultsChange() {
-        clipboardPauseItem?.state = ClipboardPreferences.isPaused ? .on : .off
         registerLauncherHotKey()
         registerClipboardHotKey()
+        registerSnippetsHotKey()
+        registerTranslateHotKey()
     }
 
     @objc private func quitApp() {
@@ -143,33 +155,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerClipboardHotKey()
     }
 
-    private func setupStatusItem() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = item.button {
-            button.image = NSImage(systemSymbolName: "bolt.circle", accessibilityDescription: "FocusLite")
-        }
+    @MainActor
+    func toggleLauncherFromMenu() {
+        windowController?.toggle()
+    }
 
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "显示/隐藏 FocusLite", action: #selector(toggleWindow), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "设置…", action: #selector(showSettingsWindow), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""))
-
-        let clipboardPause = NSMenuItem(title: "暂停剪贴板记录", action: #selector(toggleClipboardRecording), keyEquivalent: "")
-        clipboardPause.state = ClipboardPreferences.isPaused ? .on : .off
-        menu.addItem(clipboardPause)
-        clipboardPauseItem = clipboardPause
-
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出 FocusLite", action: #selector(quitApp), keyEquivalent: "q"))
-        menu.items.forEach { $0.target = self }
-        item.menu = menu
-        statusItem = item
+    @MainActor
+    func prepareSettingsTab(_ tab: SettingsTab) {
+        settingsViewModel.selectedTab = tab
     }
 
     private func registerLauncherHotKey() {
         guard let descriptor = HotKeyDescriptor.parse(GeneralPreferences.launcherHotKeyText) else {
             hotKeyManager.unregister(identifier: launcherHotKeyID)
-            Log.info("Launcher hotkey is invalid. Use format like command+space.")
+            Log.info("Launcher hotkey is invalid. Use format like option+space.")
             return
         }
 
@@ -211,6 +210,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if !registered {
             Log.info("Clipboard hotkey registration failed (\(ClipboardPreferences.hotKeyText)).")
+        }
+    }
+
+    private func registerSnippetsHotKey() {
+        guard let descriptor = HotKeyDescriptor.parse(SnippetsPreferences.hotKeyText) else {
+            hotKeyManager.unregister(identifier: snippetsHotKeyID)
+            return
+        }
+
+        let registered = hotKeyManager.register(
+            keyCode: descriptor.keyCode,
+            modifiers: descriptor.modifiers,
+            identifier: snippetsHotKeyID
+        ) { [weak self] in
+            DispatchQueue.main.async {
+                guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == SnippetsProvider.providerID }) else { return }
+                self?.launcherViewModel?.resetSearch()
+                self?.launcherViewModel?.activateCustomPrefix(entry)
+                self?.windowController?.show(resetSearch: false)
+            }
+        }
+
+        if !registered {
+            Log.info("Snippets hotkey registration failed (\(SnippetsPreferences.hotKeyText)).")
+        }
+    }
+
+    private func registerTranslateHotKey() {
+        guard let descriptor = HotKeyDescriptor.parse(TranslatePreferences.hotKeyText) else {
+            hotKeyManager.unregister(identifier: translateHotKeyID)
+            return
+        }
+
+        let registered = hotKeyManager.register(
+            keyCode: descriptor.keyCode,
+            modifiers: descriptor.modifiers,
+            identifier: translateHotKeyID
+        ) { [weak self] in
+            DispatchQueue.main.async {
+                guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == TranslateProvider.providerID }) else { return }
+                self?.launcherViewModel?.resetSearch()
+                self?.launcherViewModel?.activateCustomPrefix(entry)
+                self?.windowController?.show(resetSearch: false)
+            }
+        }
+
+        if !registered {
+            Log.info("Translate hotkey registration failed (\(TranslatePreferences.hotKeyText)).")
         }
     }
 }

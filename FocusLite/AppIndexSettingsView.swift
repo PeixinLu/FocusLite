@@ -20,13 +20,9 @@ final class AppIndexSettingsViewModel: ObservableObject {
     }
     
     var filteredApps: [AppIndex.AppEntry] {
-        guard !searchText.isEmpty else { return apps }
-        let query = searchText.lowercased()
-        return apps.filter { app in
-            app.name.lowercased().contains(query) ||
-            app.path.lowercased().contains(query) ||
-            (app.bundleID?.lowercased().contains(query) ?? false)
-        }
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return apps }
+        return apps.filter { matchesSearch(entry: $0, query: trimmed) }
     }
 
     func load() {
@@ -64,6 +60,27 @@ final class AppIndexSettingsViewModel: ObservableObject {
         }
         pendingSave = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: workItem)
+    }
+
+    private func matchesSearch(entry: AppIndex.AppEntry, query: String) -> Bool {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+
+        let info = Matcher.queryInfo(for: trimmed)
+        if let match = Matcher.match(query: trimmed, index: entry.nameIndex),
+           Matcher.shouldInclude(match, info: info) {
+            return true
+        }
+
+        // 保留路径 / Bundle ID 简单包含匹配，避免与旧逻辑差距过大
+        let lowered = trimmed.lowercased()
+        if entry.path.lowercased().contains(lowered) {
+            return true
+        }
+        if let bundleID = entry.bundleID?.lowercased(), bundleID.contains(lowered) {
+            return true
+        }
+        return false
     }
 
     private func saveAlias(bundleID: String, text: String) {
@@ -121,7 +138,7 @@ struct AppIndexSettingsView: View {
     @StateObject var viewModel: AppIndexSettingsViewModel
 
     var body: some View {
-        VStack(spacing: SettingsLayout.sectionSpacing) {
+        VStack(alignment: .leading, spacing: 0) {
             // 搜索框
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -145,54 +162,57 @@ struct AppIndexSettingsView: View {
                 }
                 .buttonStyle(.bordered)
             }
-            .padding(.bottom, 8)
+            .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+            .padding(.top, SettingsLayout.topPadding + 8)
+            .padding(.bottom, 12)
 
-            SettingsSection {
-                Table(viewModel.filteredApps) {
-                    TableColumn("App 名称") { entry in
-                        HStack(spacing: 8) {
-                            Image(nsImage: viewModel.icon(for: entry.path))
-                                .resizable()
-                                .frame(width: 18, height: 18)
-                            Text(entry.name)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
-                    TableColumn("路径") { entry in
-                        Button {
-                            let url = URL(fileURLWithPath: entry.path)
-                            NSWorkspace.shared.activateFileViewerSelecting([url])
-                        } label: {
-                            Text(entry.path)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .buttonStyle(.plain)
-                        .help(entry.path)
-                    }
-                    TableColumn("排除") { entry in
-                        let binding = Binding<Bool>(
-                            get: { viewModel.isExcluded(entry) },
-                            set: { viewModel.setExcluded(entry, isExcluded: $0) }
-                        )
-                        Toggle("", isOn: binding)
-                            .toggleStyle(.checkbox)
-                            .labelsHidden()
-                    }
-                    TableColumn("别名") { entry in
-                        aliasEditor(for: entry)
+            // 表格区域，充满剩余高度
+            Table(viewModel.filteredApps) {
+                TableColumn("App 名称") { entry in
+                    HStack(spacing: 8) {
+                        Image(nsImage: viewModel.icon(for: entry.path))
+                            .resizable()
+                            .frame(width: 18, height: 18)
+                        Text(entry.name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .help(entry.name)
                     }
                 }
-                .frame(minHeight: 320, maxHeight: .infinity, alignment: .top)
+                .width(ideal: 100)
+                TableColumn("路径") { entry in
+                    Button {
+                        let url = URL(fileURLWithPath: entry.path)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } label: {
+                        Text(entry.path)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .buttonStyle(.plain)
+                    .help(entry.path)
+                }
+                .width(ideal: 180)
+                TableColumn("排除") { entry in
+                    let binding = Binding<Bool>(
+                        get: { viewModel.isExcluded(entry) },
+                        set: { viewModel.setExcluded(entry, isExcluded: $0) }
+                    )
+                    Toggle("", isOn: binding)
+                        .toggleStyle(.checkbox)
+                        .labelsHidden()
+                }
+                .width(ideal: 30)
+                TableColumn("别名") { entry in
+                    aliasEditor(for: entry)
+                }
+                .width(ideal: 100)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+            .padding(.bottom, SettingsLayout.bottomPadding + 8)
         }
-        .padding(.horizontal, SettingsLayout.horizontalPadding)
-        .padding(.top, SettingsLayout.topPadding)
-        .padding(.bottom, SettingsLayout.bottomPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             viewModel.load()
         }
@@ -207,6 +227,8 @@ struct AppIndexSettingsView: View {
             )
             TextField("别名（逗号分隔）", text: binding)
                 .textFieldStyle(.roundedBorder)
+//                .frame(minWidth: 180, idealWidth: 200, maxWidth: .infinity, alignment: .leading)
+//                .help(binding.wrappedValue)
         } else {
             Text("无 bundleID")
                 .foregroundColor(.secondary)

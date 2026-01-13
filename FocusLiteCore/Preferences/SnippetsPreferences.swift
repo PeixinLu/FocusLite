@@ -3,10 +3,11 @@ import Foundation
 enum SnippetsPreferences {
     private static let prefixKey = "snippets.searchPrefix"
     private static let autoPasteKey = "snippets.autoPasteAfterSelect"
+    private static let hotKeyTextKey = "snippets.hotKeyText"
 
     static var searchPrefix: String {
         get {
-            UserDefaults.standard.string(forKey: prefixKey) ?? "sn"
+            UserDefaults.standard.string(forKey: prefixKey) ?? "Sn"
         }
         set {
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -17,12 +18,20 @@ enum SnippetsPreferences {
     static var autoPasteAfterSelect: Bool {
         get {
             if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
-                return true
+                return false
             }
             return UserDefaults.standard.bool(forKey: autoPasteKey)
         }
         set {
             UserDefaults.standard.set(newValue, forKey: autoPasteKey)
+        }
+    }
+
+    static var hotKeyText: String {
+        get { UserDefaults.standard.string(forKey: hotKeyTextKey) ?? "" }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            UserDefaults.standard.set(trimmed, forKey: hotKeyTextKey)
         }
     }
 }

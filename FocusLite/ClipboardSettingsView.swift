@@ -10,6 +10,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
     @Published var searchPrefixText: String
     @Published var retentionHours: Int
     @Published var autoPasteEnabled: Bool
+    @Published var accessibilityTrusted: Bool
 
     init() {
         isRecordingEnabled = !ClipboardPreferences.isPaused
@@ -19,6 +20,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
         searchPrefixText = ClipboardPreferences.searchPrefix
         retentionHours = ClipboardPreferences.historyRetentionHours
         autoPasteEnabled = ClipboardPreferences.autoPasteAfterSelect
+        accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
     }
 
     func applyChanges() {
@@ -41,6 +43,7 @@ struct ClipboardSettingsView: View {
     @StateObject var viewModel: ClipboardSettingsViewModel
     let onSaved: (() -> Void)?
     @State private var manualBundleID = ""
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: ClipboardSettingsViewModel, onSaved: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -49,7 +52,10 @@ struct ClipboardSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("记录") {
+            SettingsSection(
+                "记录",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 SettingsFieldRow(title: "启用记录") {
                     Toggle("", isOn: $viewModel.isRecordingEnabled)
                         .labelsHidden()
@@ -63,8 +69,13 @@ struct ClipboardSettingsView: View {
                     Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
                         .toggleStyle(.switch)
                         .onChange(of: viewModel.autoPasteEnabled) { _ in
-                            applyAndNotify()
+                            ensureAccessibilityIfNeeded()
                         }
+                    if viewModel.autoPasteEnabled && !viewModel.accessibilityTrusted {
+                        Text("请检查 FocusLite 的辅助功能权限")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
                 }
 
                 SettingsFieldRow(title: "快捷键") {
@@ -77,7 +88,8 @@ struct ClipboardSettingsView: View {
                 }
 
                 SettingsFieldRow(title: "搜索前缀") {
-                    TextField("如 c", text: $viewModel.searchPrefixText)
+                    TextField("如 V", text: $viewModel.searchPrefixText)
+                        .textFieldStyle(.roundedBorder)
                         .frame(width: 120)
                         .onChange(of: viewModel.searchPrefixText) { _ in
                             applyAndNotify()
@@ -152,11 +164,41 @@ struct ClipboardSettingsView: View {
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .permissionsShouldRefresh)) { _ in
+            refreshPermissionStatus()
+        }
+        .onChange(of: scenePhase) { _ in
+            refreshPermissionStatus()
+        }
     }
 
     private func applyAndNotify() {
         viewModel.applyChanges()
         onSaved?()
+    }
+
+    private func ensureAccessibilityIfNeeded() {
+        if viewModel.autoPasteEnabled && !AccessibilityPermission.isTrusted(prompt: false) {
+            let granted = AccessibilityPermission.requestIfNeeded()
+            if !granted {
+                viewModel.autoPasteEnabled = false
+            }
+            viewModel.accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
+        }
+        applyAndNotify()
+    }
+
+    private func refreshPermissionStatus() {
+        let trusted = AccessibilityPermission.isTrusted(prompt: false)
+        if trusted != viewModel.accessibilityTrusted {
+            viewModel.accessibilityTrusted = trusted
+        }
     }
 
     private var ignoredBundleIDs: [String] {
@@ -239,11 +281,21 @@ struct HotKeyRecorderField: View {
                 }
             }
             .buttonStyle(.bordered)
+            Button("清除") {
+                clearBinding()
+            }
+            .buttonStyle(.bordered)
         }
     }
 
     private func handleCaptured(_ combo: String) {
         guard isRecording else { return }
+        if combo.isEmpty {
+            text = ""
+            stopRecording(revert: false)
+            onRecorded?()
+            return
+        }
         guard let descriptor = HotKeyDescriptor.parse(combo) else { return }
         if let conflict = conflictDescriptor(for: descriptor) {
             stopRecording(revert: true, conflictMessage: "与现有快捷键「\(conflict)」冲突，请选择其他组合。")
@@ -275,8 +327,17 @@ struct HotKeyRecorderField: View {
         }
     }
 
+    private func clearBinding() {
+        previousText = text
+        text = ""
+        captureSession.stop()
+        isRecording = false
+        NotificationCenter.default.post(name: .hotKeyRecordingDidEnd, object: nil)
+        onRecorded?()
+    }
+
     private func conflictDescriptor(for descriptor: HotKeyDescriptor) -> String? {
-        for item in conflictHotKeys {
+        for item in conflictHotKeys where !item.isEmpty {
             guard let other = HotKeyDescriptor.parse(item) else { continue }
             if other == descriptor {
                 return item
@@ -365,6 +426,12 @@ private struct KeyRecorderTextField: NSViewRepresentable {
             if event.keyCode == kVK_Escape {
                 isRecording = false
                 onCancel()
+                return
+            }
+
+            if event.keyCode == kVK_Delete || event.keyCode == kVK_ForwardDelete {
+                isRecording = false
+                onCaptured("")
                 return
             }
 

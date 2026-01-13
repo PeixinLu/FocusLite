@@ -12,6 +12,8 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var enabledServices: [String]
     @Published var translatePrefixText: String
     @Published var autoPasteEnabled: Bool
+    @Published var hotKeyText: String
+    @Published var accessibilityTrusted: Bool
 
     @Published var youdaoAppKey: String
     @Published var youdaoSecret: String
@@ -36,6 +38,8 @@ final class TranslateSettingsViewModel: ObservableObject {
         enabledServices = TranslatePreferences.enabledServices
         translatePrefixText = TranslatePreferences.searchPrefix
         autoPasteEnabled = TranslatePreferences.autoPasteAfterSelect
+        hotKeyText = TranslatePreferences.hotKeyText
+        accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
         youdaoAppKey = TranslatePreferences.youdaoAppKeyValue
         youdaoSecret = TranslatePreferences.youdaoSecretValue
         baiduAppID = TranslatePreferences.baiduAppIDValue
@@ -54,6 +58,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.enabledServices = enabledServices
         TranslatePreferences.searchPrefix = translatePrefixText
         TranslatePreferences.autoPasteAfterSelect = autoPasteEnabled
+        TranslatePreferences.hotKeyText = hotKeyText
         TranslatePreferences.youdaoAppKeyValue = youdaoAppKey
         TranslatePreferences.youdaoSecretValue = youdaoSecret
         TranslatePreferences.baiduAppIDValue = baiduAppID
@@ -75,6 +80,17 @@ final class TranslateSettingsViewModel: ObservableObject {
         } else {
             enabledServices.removeAll { $0 == id }
         }
+    }
+
+    func ensureAccessibilityForAutoPaste() -> Bool {
+        if autoPasteEnabled && !AccessibilityPermission.isTrusted(prompt: false) {
+            let granted = AccessibilityPermission.requestIfNeeded()
+            if !granted {
+                autoPasteEnabled = false
+                return false
+            }
+        }
+        return true
     }
 
     @MainActor
@@ -100,6 +116,7 @@ struct TranslateSettingsView: View {
     @StateObject var viewModel: TranslateSettingsViewModel
     let onSaved: (() -> Void)?
     @State private var draggingService: String?
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: TranslateSettingsViewModel, onSaved: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -108,20 +125,37 @@ struct TranslateSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("翻译前缀") {
+            SettingsSection(
+                "翻译前缀",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 SettingsFieldRow(title: "前缀") {
-                    TextField("如 tr", text: $viewModel.translatePrefixText)
+                    TextField("如 Ts", text: $viewModel.translatePrefixText)
+                        .textFieldStyle(.roundedBorder)
                         .frame(width: 120)
                         .onChange(of: viewModel.translatePrefixText) { _ in
                             applyAndNotify()
                         }
                 }
+                SettingsFieldRow(title: "快捷键") {
+                    HotKeyRecorderField(
+                        text: $viewModel.hotKeyText,
+                        conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, SnippetsPreferences.hotKeyText]
+                    ) {
+                        applyAndNotify()
+                    }
+                }
                 SettingsFieldRow(title: "自动粘贴") {
                     Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
                         .toggleStyle(.switch)
                         .onChange(of: viewModel.autoPasteEnabled) { _ in
-                            applyAndNotify()
+                            ensureAccessibilityIfNeeded()
                         }
+                    if viewModel.autoPasteEnabled && !viewModel.accessibilityTrusted {
+                        Text("请检查 FocusLite 的辅助功能权限")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
                 }
             }
 
@@ -319,6 +353,18 @@ struct TranslateSettingsView: View {
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .permissionsShouldRefresh)) { _ in
+            refreshPermissionStatus()
+        }
+        .onChange(of: scenePhase) { _ in
+            refreshPermissionStatus()
+        }
     }
 
     private func serviceSection<Content: View>(
@@ -374,6 +420,23 @@ struct TranslateSettingsView: View {
     private func applyAndNotify() {
         viewModel.applyChanges()
         onSaved?()
+    }
+
+    private func ensureAccessibilityIfNeeded() {
+        let granted = viewModel.ensureAccessibilityForAutoPaste()
+        if granted {
+            applyAndNotify()
+        } else {
+            // still apply to persist toggled-off state
+            applyAndNotify()
+        }
+    }
+
+    private func refreshPermissionStatus() {
+        let trusted = AccessibilityPermission.isTrusted(prompt: false)
+        if trusted != viewModel.accessibilityTrusted {
+            viewModel.accessibilityTrusted = trusted
+        }
     }
 
     private func displayName(for rawValue: String) -> String {

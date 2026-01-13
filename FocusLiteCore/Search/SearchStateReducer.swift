@@ -7,6 +7,15 @@ enum SearchStateReducer {
     }
 
     static func handleInputChange(state: SearchState, newText: String) -> UpdateResult {
+        if newText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if case .global = state.scope {
+                return exitScope(state: state)
+            }
+            var nextState = state
+            nextState.query = ""
+            return UpdateResult(state: nextState, textFieldValue: "")
+        }
+
         var nextState = state
 
         if case .global = state.scope, let matched = matchPrefix(in: newText) {

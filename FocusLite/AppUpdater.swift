@@ -5,6 +5,7 @@ import Sparkle
 @MainActor
 final class AppUpdater: NSObject, ObservableObject {
     static let shared = AppUpdater()
+    private static let automaticChecksKey = "SUEnableAutomaticChecks"
 
     private lazy var updaterController: SPUStandardUpdaterController = {
         SPUStandardUpdaterController(
@@ -19,11 +20,13 @@ final class AppUpdater: NSObject, ObservableObject {
     private override init() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
-        versionDescription = "Version \(version) (\(build))"
+        versionDescription = "版本 \(version)（\(build)）"
+        UserDefaults.standard.register(defaults: [Self.automaticChecksKey: false])
         automaticallyChecksForUpdates = false
 
         super.init()
         automaticallyChecksForUpdates = updaterController.updater.automaticallyChecksForUpdates
+        updaterController.updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
     }
 
     func checkForUpdates() {
@@ -33,7 +36,7 @@ final class AppUpdater: NSObject, ObservableObject {
     func setAutomaticallyChecksForUpdates(_ isOn: Bool) {
         automaticallyChecksForUpdates = isOn
         updaterController.updater.automaticallyChecksForUpdates = isOn
-        UserDefaults.standard.set(isOn, forKey: "SUEnableAutomaticChecks")
+        UserDefaults.standard.set(isOn, forKey: Self.automaticChecksKey)
     }
 }
 

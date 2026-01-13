@@ -1,11 +1,22 @@
 import ApplicationServices
+import Cocoa
 import Foundation
 
-enum AccessibilityPermission {
+struct AccessibilityPermission {
     static func isTrusted(prompt: Bool) -> Bool {
-        let options: [String: Any] = [
-            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt
-        ]
-        return AXIsProcessTrustedWithOptions(options as CFDictionary)
+        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: prompt] as CFDictionary
+        return AXIsProcessTrustedWithOptions(options)
     }
+
+    /// 请求并返回最新的授权状态，优先弹出系统对话框
+    static func requestIfNeeded() -> Bool {
+        if AXIsProcessTrusted() {
+            return true
+        }
+        return isTrusted(prompt: true)
+    }
+}
+
+extension Notification.Name {
+    static let permissionsShouldRefresh = Notification.Name("permissionsShouldRefresh")
 }

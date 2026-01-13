@@ -8,6 +8,8 @@ final class SnippetsManagerViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var searchPrefixText: String
     @Published var autoPasteEnabled: Bool
+    @Published var hotKeyText: String
+    @Published var accessibilityTrusted: Bool
 
     private let store: SnippetStore
 
@@ -15,6 +17,8 @@ final class SnippetsManagerViewModel: ObservableObject {
         self.store = store
         self.searchPrefixText = SnippetsPreferences.searchPrefix
         self.autoPasteEnabled = SnippetsPreferences.autoPasteAfterSelect
+        self.hotKeyText = SnippetsPreferences.hotKeyText
+        self.accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
     }
 
     func load() {
@@ -85,6 +89,21 @@ final class SnippetsManagerViewModel: ObservableObject {
     func saveAutoPaste() {
         SnippetsPreferences.autoPasteAfterSelect = autoPasteEnabled
     }
+
+    func saveHotKey() {
+        SnippetsPreferences.hotKeyText = hotKeyText
+    }
+
+    func ensureAccessibilityForAutoPaste() -> Bool {
+        if autoPasteEnabled && !AccessibilityPermission.isTrusted(prompt: false) {
+            let granted = AccessibilityPermission.requestIfNeeded()
+            if !granted {
+                autoPasteEnabled = false
+                return false
+            }
+        }
+        return true
+    }
 }
 
 struct SnippetDraft: Identifiable {
@@ -148,6 +167,7 @@ struct SnippetDraft: Identifiable {
 struct SnippetsManagerView: View {
     @StateObject var viewModel: SnippetsManagerViewModel
     let onSaved: (() -> Void)?
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: SnippetsManagerViewModel, onSaved: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -156,17 +176,26 @@ struct SnippetsManagerView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("搜索前缀") {
+            SettingsSection(
+                "搜索前缀",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 prefixSettings
             }
 
             SettingsSection("行为") {
-                Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
-                    .toggleStyle(.switch)
-                    .onChange(of: viewModel.autoPasteEnabled) { _ in
-                        viewModel.saveAutoPaste()
-                        onSaved?()
+                SettingsFieldRow(title: "自动粘贴") {
+                    Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoPasteEnabled) { _ in
+                            ensureAccessibilityIfNeeded()
+                        }
+                    if viewModel.autoPasteEnabled && !viewModel.accessibilityTrusted {
+                        Text("请检查 FocusLite 的辅助功能权限")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
                     }
+                }
             }
 
             SettingsSection {
@@ -209,6 +238,7 @@ struct SnippetsManagerView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             viewModel.load()
+            refreshPermissionStatus()
         }
         .sheet(item: $viewModel.editorDraft) { draft in
             SnippetEditorView(
@@ -216,6 +246,15 @@ struct SnippetsManagerView: View {
                 onSave: { viewModel.save(draft: $0) },
                 onCancel: { viewModel.dismissEditor() }
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .permissionsShouldRefresh)) { _ in
+            refreshPermissionStatus()
+        }
+        .onChange(of: scenePhase) { _ in
+            refreshPermissionStatus()
         }
     }
 
@@ -229,22 +268,48 @@ struct SnippetsManagerView: View {
     }
 
     private var prefixSettings: some View {
-        HStack(spacing: 8) {
-            Text("搜索前缀")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-            TextField("如 sn", text: $viewModel.searchPrefixText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 120)
-                .onSubmit {
-                    viewModel.saveSearchPrefix()
+        VStack(spacing: 12) {
+            SettingsFieldRow(title: "搜索前缀") {
+                TextField("如 Sn", text: $viewModel.searchPrefixText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                    .onSubmit {
+                        viewModel.saveSearchPrefix()
+                        onSaved?()
+                    }
+                    .onChange(of: viewModel.searchPrefixText) { _ in
+                        viewModel.saveSearchPrefix()
+                        onSaved?()
+                    }
+            }
+
+            SettingsFieldRow(title: "快捷键") {
+                HotKeyRecorderField(
+                    text: $viewModel.hotKeyText,
+                    conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, TranslatePreferences.hotKeyText]
+                ) {
+                    viewModel.saveHotKey()
                     onSaved?()
                 }
-                .onChange(of: viewModel.searchPrefixText) { _ in
-                    viewModel.saveSearchPrefix()
-                    onSaved?()
-                }
-            Spacer()
+            }
+        }
+    }
+
+    private func ensureAccessibilityIfNeeded() {
+        let granted = viewModel.ensureAccessibilityForAutoPaste()
+        if granted {
+            viewModel.saveAutoPaste()
+            onSaved?()
+        } else {
+            viewModel.saveAutoPaste()
+            onSaved?()
+        }
+    }
+
+    private func refreshPermissionStatus() {
+        let trusted = AccessibilityPermission.isTrusted(prompt: false)
+        if trusted != viewModel.accessibilityTrusted {
+            viewModel.accessibilityTrusted = trusted
         }
     }
 

@@ -1,27 +1,84 @@
 import AppKit
 import SwiftUI
+import Carbon.HIToolbox
 
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @FocusState private var isSearchFocused: Bool
     @State private var isHovered = false
     @AppStorage(AppearancePreferences.materialStyleKey)
-    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    private var materialStyleRaw = AppearancePreferences.defaultMaterialStyle.rawValue
     @AppStorage(AppearancePreferences.glassStyleKey)
-    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
-    @AppStorage(AppearancePreferences.glassTintKey)
-    private var glassTintRaw = ""
+    private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
+    @AppStorage(AppearancePreferences.rowGlassStyleKey)
+    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    @AppStorage(AppearancePreferences.glassTintModeRegularKey)
+    private var regularTintModeRaw = AppearancePreferences.defaultTintMode(for: .regular).rawValue
+    @AppStorage(AppearancePreferences.glassTintModeClearKey)
+    private var clearTintModeRaw = AppearancePreferences.defaultTintMode(for: .clear).rawValue
+    @AppStorage(AppearancePreferences.glassTintRegularKey)
+    private var regularTintRaw = AppearancePreferences.glassTintRegular
+    @AppStorage(AppearancePreferences.glassTintClearKey)
+    private var clearTintRaw = AppearancePreferences.glassTintClear
+    
+    // Liquid Glass 微调参数
+    @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
+    private var animationDuration = AppearancePreferences.defaultAnimationDuration
+    @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
+    private var cornerRadius = AppearancePreferences.defaultCornerRadius
+    private var rowCornerRadius: CGFloat {
+        max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
+    }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
-        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? AppearancePreferences.defaultMaterialStyle
     }
 
     private var glassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
+    }
+
+    private var rowGlassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
+    }
+
+    private var regularTintMode: AppearancePreferences.TintMode {
+        AppearancePreferences.TintMode(rawValue: regularTintModeRaw)
+        ?? AppearancePreferences.defaultTintMode(for: .regular)
+    }
+
+    private var clearTintMode: AppearancePreferences.TintMode {
+        AppearancePreferences.TintMode(rawValue: clearTintModeRaw)
+        ?? AppearancePreferences.defaultTintMode(for: .clear)
+    }
+
+    private var defaultTintColor: NSColor {
+        let base = colorScheme == .dark ? NSColor.black : NSColor.white
+        return base.withAlphaComponent(0.618)
+    }
+
+    private func resolvedTint(for style: AppearancePreferences.GlassStyle) -> NSColor? {
+        let mode = style == .regular ? regularTintMode : clearTintMode
+        let tintRaw = style == .regular ? regularTintRaw : clearTintRaw
+        switch mode {
+        case .off:
+            return nil
+        case .custom:
+            return colorFromRGBA(tintRaw) ?? defaultTintColor
+        case .systemDefault:
+            return defaultTintColor
+        }
     }
 
     private var glassTint: NSColor? {
-        colorFromRGBA(glassTintRaw)
+        resolvedTint(for: glassStyle)
+    }
+
+    private var rowAccentTint: NSColor {
+        let base = NSColor(Color.accentColor)
+        let alpha: CGFloat = rowGlassStyle == .clear ? 0.28 : 0.24
+        return base.withAlphaComponent(alpha)
     }
 
     var body: some View {
@@ -32,7 +89,12 @@ struct LauncherView: View {
                     .foregroundColor(.secondary)
 
                 if let prefix = viewModel.searchState.activePrefix {
-                    TagView(title: prefix.title, subtitle: prefix.subtitle)
+                    TagView(
+                        title: prefix.title,
+                        subtitle: prefix.subtitle,
+                        useLiquidStyle: materialStyle == .liquid,
+                        tint: Color.accentColor
+                    )
                 }
 
                 TextField("Search", text: $viewModel.searchText)
@@ -55,23 +117,46 @@ struct LauncherView: View {
 
             if showsPreviewPane {
                 HStack(spacing: 0) {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            if viewModel.results.isEmpty {
-                                EmptyStateView()
-                                    .padding(.top, 40)
-                            } else {
-                                ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                    ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
-                                        .onTapGesture {
-                                            viewModel.selectIndex(index)
-                                        }
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                if viewModel.results.isEmpty {
+                                    EmptyStateView()
+                                        .padding(.top, 40)
+                                } else {
+                                    ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                        ResultRow(
+                                            item: item,
+                                            isSelected: viewModel.selectedIndex == index,
+                                            searchText: viewModel.searchText,
+                                            showsLiquidSelection: showsLiquidSelection
+                                        )
+                                            .id(item.id)
+                                            .onTapGesture {
+                                                viewModel.selectIndex(index)
+                                                if !isLiquidTuningMode {
+                                                    viewModel.submitPrimaryAction()
+                                                }
+                                            }
+                                    }
                                 }
                             }
+                            .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                                selectionBackgroundLayer(for: anchor)
+                            }
+                            .padding(12)
                         }
-                        .padding(12)
+                        .frame(width: 340)
+                        .onChange(of: viewModel.selectedIndex) { index in
+                            guard let index,
+                                  viewModel.results.indices.contains(index) else { return }
+                            let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                            withAnimation(.easeInOut(duration: duration)) {
+                                proxy.scrollTo(viewModel.results[index].id, anchor: .center)
+                            }
+                            viewModel.shouldAnimateSelection = false
+                        }
                     }
-                    .frame(width: 340)
 
                     Divider()
 
@@ -80,31 +165,55 @@ struct LauncherView: View {
                         .padding(12)
                 }
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        if viewModel.results.isEmpty {
-                            EmptyStateView()
-                                .padding(.top, 40)
-                        } else {
-                        ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                            ResultRow(item: item, isSelected: viewModel.selectedIndex == index, searchText: viewModel.searchText)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            if viewModel.results.isEmpty {
+                                EmptyStateView()
+                                    .padding(.top, 40)
+                            } else {
+                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                ResultRow(
+                                    item: item,
+                                    isSelected: viewModel.selectedIndex == index,
+                                    searchText: viewModel.searchText,
+                                    showsLiquidSelection: showsLiquidSelection
+                                )
+                                .id(item.id)
                                 .onTapGesture {
                                     viewModel.selectIndex(index)
+                                    if !isLiquidTuningMode {
+                                        viewModel.submitPrimaryAction()
+                                    }
                                 }
+                            }
                         }
+                        }
+                        .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                            selectionBackgroundLayer(for: anchor)
+                        }
+                        .padding(12)
                     }
+                    .onChange(of: viewModel.selectedIndex) { index in
+                        guard let index,
+                              viewModel.results.indices.contains(index) else { return }
+                        let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                        withAnimation(.easeInOut(duration: duration)) {
+                            proxy.scrollTo(viewModel.results[index].id, anchor: .center)
+                        }
+                        viewModel.shouldAnimateSelection = false
                     }
-                    .padding(12)
                 }
             }
         }
         .background(
             LiquidGlassBackground(
-                cornerRadius: 16,
+                cornerRadius: cornerRadius,
                 isHighlighted: isHovered || isSearchFocused,
                 style: materialStyle,
                 glassStyle: glassStyle,
-                glassTint: glassTint
+                glassTint: glassTint,
+                animationDuration: animationDuration
             )
         )
         .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
@@ -132,8 +241,42 @@ struct LauncherView: View {
         guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
         return providerID == ClipboardProvider.providerID || 
                providerID == SnippetsProvider.providerID || 
-               providerID == TranslateProvider.providerID
+               providerID == TranslateProvider.providerID ||
+               providerID == StyleProvider.providerID
     }
+
+    private var showsLiquidSelection: Bool {
+        materialStyle == .liquid
+    }
+
+    private var isLiquidTuningMode: Bool {
+        if case .prefixed(let providerID) = viewModel.searchState.scope {
+            return providerID == StyleProvider.providerID
+        }
+        return false
+    }
+
+    private var selectedGlassTint: NSColor? {
+        rowAccentTint
+    }
+
+    @ViewBuilder
+    private func selectionBackgroundLayer(for anchor: Anchor<CGRect>?) -> some View {
+        if showsLiquidSelection, let anchor {
+            GeometryReader { proxy in
+                let rect = proxy[anchor]
+                LiquidGlassRowBackground(
+                    cornerRadius: rowCornerRadius,
+                    glassStyle: rowGlassStyle,
+                    glassTint: selectedGlassTint
+                )
+                .frame(width: rect.width, height: rect.height)
+                .offset(x: rect.minX, y: rect.minY)
+                .animation(viewModel.shouldAnimateSelection ? .easeInOut(duration: animationDuration) : .none, value: rect)
+            }
+        }
+    }
+
 
     @ViewBuilder
     private var settingsButton: some View {
@@ -145,12 +288,12 @@ struct LauncherView: View {
             .buttonStyle(.plain)
             .keyboardShortcut(",", modifiers: .command)
             .simultaneousGesture(TapGesture().onEnded {
-                viewModel.prepareSettings(tab: .clipboard)
+                viewModel.prepareSettings(tab: viewModel.preferredSettingsTab())
             })
             .help("设置")
         } else {
             Button {
-                viewModel.openSettings(tab: .clipboard)
+                viewModel.openSettings(tab: viewModel.preferredSettingsTab())
             } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 14, weight: .semibold))
@@ -168,18 +311,15 @@ private struct LiquidGlassBackground: View {
     let style: AppearancePreferences.MaterialStyle
     let glassStyle: AppearancePreferences.GlassStyle
     let glassTint: NSColor?
+    let animationDuration: Double
 
     var body: some View {
         ZStack {
             backgroundBase
-            highlightOverlay
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(borderColor, lineWidth: borderWidth)
-        )
-        .animation(.easeInOut(duration: 0.18), value: isHighlighted)
+        // 边框已移除，可以在设置中重新启用
+        .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style == .liquid)
     }
 
     @ViewBuilder
@@ -210,48 +350,14 @@ private struct LiquidGlassBackground: View {
         }
     }
 
-    @ViewBuilder
-    private var highlightOverlay: some View {
-        if style == .liquid {
-            ZStack {
-                Color.white.opacity(0.04)
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(isHighlighted ? 0.45 : 0.22),
-                        Color.white.opacity(isHighlighted ? 0.14 : 0.04),
-                        .clear
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .blendMode(.screen)
-            }
-        }
-    }
-
-    private var borderColor: Color {
-        switch style {
-        case .classic:
-            return Color.white.opacity(isHighlighted ? 0.35 : 0.18)
-        case .liquid:
-            return Color.white.opacity(isHighlighted ? 0.6 : 0.22)
-        case .pure:
-            return Color(nsColor: .separatorColor).opacity(isHighlighted ? 0.9 : 0.6)
-        }
-    }
-
-    private var borderWidth: CGFloat {
-        isHighlighted ? 1.2 : 1
-    }
-
     private var glassMaterial: NSVisualEffectView.Material {
         if #available(macOS 26, *) {
             return .hudWindow
         }
         if #available(macOS 13, *) {
-            return .popover
+            return glassStyle == .clear ? .hudWindow : .popover
         }
-        return .hudWindow
+        return glassStyle == .clear ? .hudWindow : .hudWindow
     }
 }
 
@@ -319,19 +425,46 @@ private struct VisualEffectView: NSViewRepresentable {
     }
 }
 
+private struct SelectedRowBoundsPreferenceKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
 private struct ResultRow: View {
     let item: ResultItem
     let isSelected: Bool
     let searchText: String
+    let showsLiquidSelection: Bool
+    @State private var isHovered = false
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(AppearancePreferences.materialStyleKey)
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
-    @AppStorage(AppearancePreferences.glassStyleKey)
-    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    @AppStorage(AppearancePreferences.rowGlassStyleKey)
+    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    
+    // Liquid Glass 微调参数（候选项也使用）
+    @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
+    private var cornerRadius = 16.0
+    @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
+    private var animationDuration = 0.18
 
     private var isLiquidClear: Bool {
-        let material = AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
-        let glass = AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
-        return material == .liquid && glass == .clear
+        materialStyle == .liquid && rowGlassStyle == .clear
+    }
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+    }
+
+    private var rowGlassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? .regular
+    }
+
+    private var rowCornerRadiusValue: CGFloat {
+        max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
     }
 
     var body: some View {
@@ -367,14 +500,25 @@ private struct ResultRow: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(selectionFillColor)
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: rowCornerRadiusValue)
+                    .fill(selectionFillColor)
+                if isHovered && !isSelected {
+                    RoundedRectangle(cornerRadius: rowCornerRadiusValue)
+                        .fill(hoverFillColor)
+                }
+            }
+        }
         .overlay(alignment: .trailing) {
             actionHint
                 .padding(.trailing, 10)
         }
+        .contentShape(Rectangle())
+        .anchorPreference(key: SelectedRowBoundsPreferenceKey.self, value: .bounds) { anchor in
+            isSelected && showsLiquidSelection ? anchor : nil
+        }
+        .onHover { isHovered = $0 }
     }
 
     @ViewBuilder
@@ -456,12 +600,423 @@ private struct ResultRow: View {
     }
 
     private var selectionFillColor: Color {
+        if showsLiquidSelection {
+            return .clear
+        }
         if isSelected {
             let opacity: Double = isLiquidClear ? 0.26 : 0.15
             return Color.accentColor.opacity(opacity)
         }
+        if materialStyle == .classic {
+            return Color(nsColor: .controlBackgroundColor).opacity(0.25)
+        }
         let opacity: Double = isLiquidClear ? 0.4 : 0.55
         return Color(nsColor: .controlBackgroundColor).opacity(opacity)
+    }
+
+    private var hoverFillColor: Color {
+        let opacity: Double = isLiquidClear ? 0.08 : 0.06
+        return Color.accentColor.opacity(opacity)
+    }
+
+}
+
+private struct LiquidGlassRowBackground: View {
+    let cornerRadius: CGFloat
+    let glassStyle: AppearancePreferences.GlassStyle
+    let glassTint: NSColor?
+
+    var body: some View {
+        ZStack {
+            if #available(macOS 26, *) {
+                GlassBackgroundView(
+                    cornerRadius: cornerRadius,
+                    style: glassStyle,
+                    tintColor: glassTint
+                )
+            } else {
+                VisualEffectView(
+                    material: glassStyle == .clear ? .hudWindow : .popover,
+                    blendingMode: .behindWindow,
+                    state: .active
+                )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+        )
+    }
+}
+
+private struct LiquidTuningPreview: View {
+    let group: LiquidTuningGroup
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    @State private var materialStyleRaw = AppearancePreferences.materialStyle.rawValue
+    @State private var glassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    @State private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
+    @State private var regularTintModeRaw = AppearancePreferences.glassTintModeRegular.rawValue
+    @State private var clearTintModeRaw = AppearancePreferences.glassTintModeClear.rawValue
+    @State private var regularTintRaw = AppearancePreferences.glassTintRegular
+    @State private var clearTintRaw = AppearancePreferences.glassTintClear
+    @State private var cornerRadius = AppearancePreferences.liquidGlassCornerRadius
+    @State private var animationDuration = AppearancePreferences.liquidGlassAnimationDuration
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            groupContent
+            Spacer()
+        }
+        .padding(8)
+    }
+
+    @ViewBuilder
+    private var groupContent: some View {
+        switch group {
+        case .search:
+            searchControls
+        case .rows:
+            rowsControls
+        case .animation:
+            animationControls
+        }
+    }
+
+    private var glassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+    }
+
+    private var rowGlassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? .regular
+    }
+
+    private var materialStyle: AppearancePreferences.MaterialStyle {
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+    }
+
+    private var activeTintMode: AppearancePreferences.TintMode {
+        get {
+            let raw = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+            return AppearancePreferences.TintMode(rawValue: raw)
+            ?? AppearancePreferences.defaultTintMode(for: glassStyle)
+        }
+        nonmutating set {
+            if glassStyle == .regular {
+                regularTintModeRaw = newValue.rawValue
+            } else {
+                clearTintModeRaw = newValue.rawValue
+            }
+            AppearancePreferences.setGlassTintMode(newValue, for: glassStyle)
+        }
+    }
+
+    private var activeTintRaw: String {
+        get { glassStyle == .regular ? regularTintRaw : clearTintRaw }
+        nonmutating set {
+            if glassStyle == .regular {
+                regularTintRaw = newValue
+            } else {
+                clearTintRaw = newValue
+            }
+            AppearancePreferences.setGlassTint(newValue, for: glassStyle)
+        }
+    }
+
+    private var defaultTintColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.618) : Color.white.opacity(0.618)
+    }
+
+    private var tintEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { activeTintMode != .off },
+            set: { isOn in
+                if isOn {
+                    if activeTintMode == .off {
+                        let newMode = AppearancePreferences.defaultTintMode(for: glassStyle)
+                        activeTintMode = newMode
+                        if newMode == .custom && activeTintRaw.isEmpty {
+                            activeTintRaw = rgbaString(from: defaultTintColor)
+                        }
+                    }
+                } else {
+                    activeTintMode = .off
+                }
+            }
+        )
+    }
+
+    private var activeTintColor: Color {
+        colorFromRGBA(activeTintRaw) ?? defaultTintColor
+    }
+
+    private var activeTintOpacity: Double {
+        alphaFromRGBA(activeTintRaw) ?? 0.618
+    }
+
+    private var searchControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker("材质", selection: Binding(
+                get: { materialStyleRaw },
+                set: { newValue in
+                    materialStyleRaw = newValue
+                    if let style = AppearancePreferences.MaterialStyle(rawValue: newValue) {
+                        AppearancePreferences.materialStyle = style
+                    }
+                    if materialStyle != .liquid {
+                        AppearancePreferences.setGlassTintMode(.off, for: .regular)
+                        AppearancePreferences.setGlassTintMode(.systemDefault, for: .clear)
+                    }
+                }
+            )) {
+                Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
+                Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
+            }
+            .pickerStyle(.segmented)
+
+            if materialStyle == .liquid {
+                Picker("液态玻璃风格", selection: Binding(
+                    get: { glassStyleRaw },
+                set: { newValue in
+                    glassStyleRaw = newValue
+                    if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
+                        AppearancePreferences.glassStyle = style
+                    }
+                }
+            )) {
+                Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+            }
+            .pickerStyle(.segmented)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: tintEnabledBinding) {
+                    HStack {
+                        Text("色调")
+                        Spacer()
+                        Text(glassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(.switch)
+
+                Picker("色调模式", selection: Binding(
+                    get: { activeTintMode.rawValue },
+                    set: { newValue in
+                        let mode = AppearancePreferences.TintMode(rawValue: newValue) ?? .systemDefault
+                        activeTintMode = mode
+                        if mode == .custom && activeTintRaw.isEmpty {
+                            activeTintRaw = rgbaString(from: defaultTintColor)
+                        }
+                    }
+                )) {
+                    Text("默认").tag(AppearancePreferences.TintMode.systemDefault.rawValue)
+                    Text("自定义").tag(AppearancePreferences.TintMode.custom.rawValue)
+                }
+                .pickerStyle(.segmented)
+                .disabled(!tintEnabledBinding.wrappedValue)
+
+                if tintEnabledBinding.wrappedValue && activeTintMode == .custom {
+                    HStack(spacing: 12) {
+                        ColorPicker(
+                            "",
+                            selection: Binding(
+                                get: { activeTintColor },
+                                set: { newValue in
+                                    activeTintRaw = rgbaString(from: newValue, overrideAlpha: activeTintOpacity)
+                                }
+                            ),
+                            supportsOpacity: false
+                        )
+                        .labelsHidden()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("透明度")
+                                Spacer()
+                                Text(String(format: "%.0f%%", activeTintOpacity * 100))
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            Slider(
+                                value: Binding(
+                                    get: { activeTintOpacity },
+                                    set: { newValue in
+                                        activeTintRaw = rgbaString(from: activeTintColor, overrideAlpha: newValue)
+                                    }
+                                ),
+                                in: 0...1,
+                                step: 0.01
+                            )
+                            .controlSize(.small)
+                        }
+                    }
+                } else if tintEnabledBinding.wrappedValue {
+                    Text("默认：浅色白色 61.8% 透明度；深色黑色 61.8% 透明度。")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("已关闭色调，使用系统默认透明玻璃。")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            } else {
+                Text("液态玻璃配置仅在材质为“液态玻璃”时可用。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            TuningSlider(
+                title: "搜索框圆角大小",
+                value: debouncedBinding(
+                    state: $cornerRadius,
+                    key: "cornerRadius",
+                    apply: { AppearancePreferences.liquidGlassCornerRadius = $0 }
+                ),
+                range: 8...24,
+                step: 1,
+                unit: "pt"
+            )
+        }
+    }
+
+    private var rowsControls: some View {
+        Group {
+            if materialStyle == .liquid {
+                Picker("液态玻璃风格", selection: Binding(
+                    get: { rowGlassStyleRaw },
+                    set: { newValue in
+                        rowGlassStyleRaw = newValue
+                        if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
+                            AppearancePreferences.rowGlassStyle = style
+                        }
+                    }
+                )) {
+                    Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                    Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                }
+                .pickerStyle(.segmented)
+            } else {
+                Text("候选项液态玻璃样式仅在材质为“液态玻璃”时可用。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var animationControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TuningSlider(
+                title: "候选项过渡速度",
+                value: debouncedBinding(
+                    state: $animationDuration,
+                    key: "animationDuration",
+                    apply: { AppearancePreferences.liquidGlassAnimationDuration = $0 }
+                ),
+                range: 0.05...0.5,
+                step: 0.01,
+                unit: "s"
+            )
+        }
+    }
+
+    private func debouncedBinding(
+        state: Binding<Double>,
+        key: String,
+        apply: @escaping (Double) -> Void
+    ) -> Binding<Double> {
+        Binding(
+            get: { state.wrappedValue },
+            set: { newValue in
+                state.wrappedValue = newValue
+                LiquidTuningDebouncer.shared.debounce(key: key) {
+                    apply(newValue)
+                }
+            }
+        )
+    }
+
+    private func colorFromRGBA(_ raw: String) -> Color? {
+        let parts = raw.split(separator: ",").compactMap { Double($0) }
+        guard parts.count == 4 else { return nil }
+        return Color(.sRGB, red: parts[0], green: parts[1], blue: parts[2], opacity: parts[3])
+    }
+
+    private func alphaFromRGBA(_ raw: String) -> Double? {
+        let parts = raw.split(separator: ",").compactMap { Double($0) }
+        guard parts.count == 4 else { return nil }
+        return parts[3]
+    }
+
+    private func rgbaString(from color: Color, overrideAlpha: Double? = nil) -> String {
+        let nsColor = NSColor(color).usingColorSpace(.sRGB) ?? NSColor.white
+        let alpha = overrideAlpha ?? nsColor.alphaComponent
+        return String(format: "%.3f,%.3f,%.3f,%.3f",
+                      nsColor.redComponent,
+                      nsColor.greenComponent,
+                      nsColor.blueComponent,
+                      alpha)
+    }
+}
+
+private struct TuningSlider: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let unit: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(String(format: "%.2f", value) + unit)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+            Slider(value: $value, in: range, step: step)
+                .controlSize(.small)
+        }
+    }
+}
+
+private final class LiquidTuningDebouncer {
+    static let shared = LiquidTuningDebouncer()
+    private var workItems: [String: DispatchWorkItem] = [:]
+    private let queue = DispatchQueue(label: "liquid.tuning.debounce")
+
+    func debounce(key: String, delay: TimeInterval = 0.18, action: @escaping @MainActor () -> Void) {
+        queue.async {
+            self.workItems[key]?.cancel()
+            let item = DispatchWorkItem {
+                Task { @MainActor in
+                    action()
+                }
+            }
+            self.workItems[key] = item
+            self.queue.asyncAfter(deadline: .now() + delay, execute: item)
+        }
+    }
+}
+
+private extension LiquidTuningGroup {
+    static func fromTitle(_ title: String) -> LiquidTuningGroup {
+        switch title {
+        case LiquidTuningGroup.search.title:
+            return .search
+        case LiquidTuningGroup.rows.title:
+            return .rows
+        case LiquidTuningGroup.animation.title:
+            return .animation
+        default:
+            return .search
+        }
     }
 }
 
@@ -578,8 +1133,10 @@ private struct PreviewPane: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
             )
+        } else if item.providerID == StyleProvider.providerID {
+            LiquidTuningPreview(group: LiquidTuningGroup.fromTitle(item.title))
         } else {
-            Text("预览仅适用于剪贴板、Snippets 和翻译")
+            Text("预览仅适用于剪贴板、Snippets、翻译和液态玻璃调试")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             Spacer()

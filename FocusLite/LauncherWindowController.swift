@@ -3,31 +3,32 @@ import SwiftUI
 
 @MainActor
 final class LauncherWindowController: NSObject, NSWindowDelegate {
+    enum FocusOrigin {
+        case external(NSRunningApplication)
+        case appWindow(Int)
+        case unknown
+    }
+
     private let viewModel: LauncherViewModel
     private var window: NSWindow?
     private let showOnAllSpaces = true
     private var keyMonitor: Any?
-    private var previousApp: NSRunningApplication?
-    private var suppressRestoreFocusOnResign = false
-    
-    // 用于关闭设置页的回调
-    var onCloseSettings: (() -> Void)?
+    private var focusOrigin: FocusOrigin = .unknown
+    private var wasInterrupted = false
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
     }
 
     func show(resetSearch: Bool = true) {
-        // 先关闭设置页（如果打开了）
-        onCloseSettings?()
-        
         createWindowIfNeeded()
         if resetSearch {
             viewModel.resetSearch()
         }
-        capturePreviousApp()
+        captureFocusOrigin()
+        wasInterrupted = false
         centerWindow()
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate(ignoringOtherApps: false)
         window?.makeKeyAndOrderFront(nil)
         startKeyMonitor()
         Task { @MainActor in
@@ -35,17 +36,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func prepareForSettingsOpen() {
-        guard window?.isVisible == true else { return }
-        suppressRestoreFocusOnResign = true
-    }
-
-    func hide(restoreFocus: Bool = true) {
+    func hide(restoreBehavior: LauncherViewModel.ExitBehavior = .restoreOrigin) {
         stopKeyMonitor()
         window?.orderOut(nil)
-        if restoreFocus {
-            previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
-        }
+        guard restoreBehavior == .restoreOrigin, !wasInterrupted else { return }
+        restoreFocusOrigin()
     }
 
     func toggle() {
@@ -57,12 +52,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     }
 
     func pasteTextAndHide(_ text: String) -> Bool {
-        guard AccessibilityPermission.isTrusted(prompt: true) else {
+        guard AccessibilityPermission.requestIfNeeded() else {
             return false
         }
 
-        hide(restoreFocus: false)
-        previousApp?.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        hide(restoreBehavior: .restoreOrigin)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             self.sendPasteCommand()
@@ -114,7 +108,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
             if event.modifierFlags.contains(.command), event.keyCode == 43 {
                 Task { @MainActor in
-                    self.viewModel.prepareSettings(tab: .clipboard)
+                    self.viewModel.prepareSettings(tab: self.viewModel.preferredSettingsTab())
                 }
                 return event
             }
@@ -131,6 +125,9 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
                 }
                 return nil
             case 51: // delete / backspace
+                if let editor = self.window?.firstResponder as? NSTextView, editor.hasMarkedText() {
+                    return event
+                }
                 let handled = self.viewModel.handleBackspaceKey()
                 return handled ? nil : event
             case 53: // esc
@@ -162,10 +159,31 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func capturePreviousApp() {
-        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return }
-        guard frontmost.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
-        previousApp = frontmost
+    private func captureFocusOrigin() {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else {
+            focusOrigin = .unknown
+            return
+        }
+        if frontmost.bundleIdentifier == Bundle.main.bundleIdentifier {
+            // 如果本身已经是前台窗口（如搜索框已在前），不记录以免关闭时重新唤醒自己
+            focusOrigin = .unknown
+        } else {
+            focusOrigin = .external(frontmost)
+        }
+    }
+
+    private func restoreFocusOrigin() {
+        switch focusOrigin {
+        case .external(let app):
+            app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        case .appWindow(let windowNumber):
+            NSApp.activate(ignoringOtherApps: true)
+            if let window = NSApp.window(withWindowNumber: windowNumber) {
+                window.makeKeyAndOrderFront(nil)
+            }
+        case .unknown:
+            break
+        }
     }
 
     private func sendPasteCommand() {
@@ -183,11 +201,12 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
 extension LauncherWindowController {
     func windowDidResignKey(_ notification: Notification) {
+        guard window?.isVisible == true else { return }
         let frontmostID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        let isSwitchingWithinApp = frontmostID == Bundle.main.bundleIdentifier
-        let shouldRestore = !suppressRestoreFocusOnResign && !isSwitchingWithinApp
-        suppressRestoreFocusOnResign = false
-        hide(restoreFocus: shouldRestore)
+        if frontmostID != Bundle.main.bundleIdentifier {
+            wasInterrupted = true
+        }
+        hide(restoreBehavior: .none)
     }
 }
 
