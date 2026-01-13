@@ -49,6 +49,7 @@
 		1A2B3C4D5E6F000000000254 /* SnippetsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000154 /* SnippetsProvider.swift */; };
 		1A2B3C4D5E6F000000000256 /* AccessibilityPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000156 /* AccessibilityPermission.swift */; };
 		1A2B3C4D5E6F000000000257 /* HotKeyDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000157 /* HotKeyDescriptor.swift */; };
+		9B79A1C92E3D4A0DAAA10002 /* PermissionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */; };
 		1A2B3C4D5E6F000000000260 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000160 /* ClipboardSettingsView.swift */; };
 		1A2B3C4D5E6F000000000270 /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000170 /* ClipboardEntry.swift */; };
 		1A2B3C4D5E6F000000000271 /* ClipboardPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000171 /* ClipboardPreferences.swift */; };
@@ -166,6 +167,7 @@
 		1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000570 /* AppIndexWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIndexWatcher.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000575 /* LiquidTuningProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidTuningProvider.swift; sourceTree = "<group>"; };
+		9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionSettingsView.swift; sourceTree = "<group>"; };
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -239,6 +241,7 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
+				9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */,
 				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
 				1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */,
 				1A2B3C4D5E6F000000000575 /* LiquidTuningProvider.swift */,
@@ -522,6 +525,7 @@
 				1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
+				9B79A1C92E3D4A0DAAA10002 /* PermissionSettingsView.swift in Sources */,
 				81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000204 /* LauncherViewModel.swift in Sources */,

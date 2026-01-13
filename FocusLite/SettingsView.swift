@@ -7,6 +7,7 @@ enum SettingsTab: String, CaseIterable {
     case snippets
     case translate
     case apps
+    case permissions
 
     var iconName: String {
         switch self {
@@ -22,6 +23,8 @@ enum SettingsTab: String, CaseIterable {
             return "character.bubble"
         case .apps:
             return "square.grid.2x2"
+        case .permissions:
+            return "lock.shield"
         }
     }
 
@@ -39,6 +42,8 @@ enum SettingsTab: String, CaseIterable {
             return "配置翻译服务与前缀"
         case .apps:
             return "管理应用索引与搜索"
+        case .permissions:
+            return "查看系统权限状态"
         }
     }
 }
@@ -70,6 +75,8 @@ extension SettingsTab {
             return "翻译"
         case .apps:
             return "应用"
+        case .permissions:
+            return "权限"
         }
     }
 }
@@ -264,6 +271,11 @@ struct SettingsView: View {
                 Button("检查更新…") {
                     viewModel.appUpdater.checkForUpdates()
                 }
+            } else if viewModel.selectedTab == .permissions {
+                // 刷新权限
+                Button("刷新") {
+                    NotificationCenter.default.post(name: .permissionsShouldRefresh, object: nil)
+                }
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
@@ -287,6 +299,8 @@ struct SettingsView: View {
             TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .permissions:
+            PermissionSettingsView()
         }
     }
 
