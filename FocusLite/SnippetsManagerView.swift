@@ -162,17 +162,22 @@ struct SnippetsManagerView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("搜索前缀") {
+            SettingsSection(
+                "搜索前缀",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 prefixSettings
             }
 
             SettingsSection("行为") {
-                Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
-                    .toggleStyle(.switch)
-                    .onChange(of: viewModel.autoPasteEnabled) { _ in
-                        viewModel.saveAutoPaste()
-                        onSaved?()
-                    }
+                SettingsFieldRow(title: "自动粘贴") {
+                    Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoPasteEnabled) { _ in
+                            viewModel.saveAutoPaste()
+                            onSaved?()
+                        }
+                }
             }
 
             SettingsSection {
@@ -235,32 +240,30 @@ struct SnippetsManagerView: View {
     }
 
     private var prefixSettings: some View {
-        HStack(spacing: 8) {
-            Text("搜索前缀")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-            TextField("如 Sn", text: $viewModel.searchPrefixText)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 120)
-                .onSubmit {
-                    viewModel.saveSearchPrefix()
-                    onSaved?()
-                }
-                .onChange(of: viewModel.searchPrefixText) { _ in
-                    viewModel.saveSearchPrefix()
-                    onSaved?()
-                }
-            Text("快捷键")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-            HotKeyRecorderField(
-                text: $viewModel.hotKeyText,
-                conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, TranslatePreferences.hotKeyText]
-            ) {
-                viewModel.saveHotKey()
-                onSaved?()
+        VStack(spacing: 12) {
+            SettingsFieldRow(title: "搜索前缀") {
+                TextField("如 Sn", text: $viewModel.searchPrefixText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                    .onSubmit {
+                        viewModel.saveSearchPrefix()
+                        onSaved?()
+                    }
+                    .onChange(of: viewModel.searchPrefixText) { _ in
+                        viewModel.saveSearchPrefix()
+                        onSaved?()
+                    }
             }
-            Spacer()
+
+            SettingsFieldRow(title: "快捷键") {
+                HotKeyRecorderField(
+                    text: $viewModel.hotKeyText,
+                    conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, TranslatePreferences.hotKeyText]
+                ) {
+                    viewModel.saveHotKey()
+                    onSaved?()
+                }
+            }
         }
     }
 

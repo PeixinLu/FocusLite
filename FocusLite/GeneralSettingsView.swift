@@ -46,7 +46,7 @@ struct GeneralSettingsView: View {
 
                 SettingsSection(
                     "快捷键",
-                    note: "必须包含 command/option/control 中的至少一个。示例：option+space 或 option+k。"
+                    note: "需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
                 ) {
                     SettingsFieldRow(title: "唤起搜索") {
                         HotKeyRecorderField(

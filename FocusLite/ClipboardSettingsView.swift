@@ -49,7 +49,10 @@ struct ClipboardSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("记录") {
+            SettingsSection(
+                "记录",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 SettingsFieldRow(title: "启用记录") {
                     Toggle("", isOn: $viewModel.isRecordingEnabled)
                         .labelsHidden()
@@ -78,6 +81,7 @@ struct ClipboardSettingsView: View {
 
                 SettingsFieldRow(title: "搜索前缀") {
                     TextField("如 V", text: $viewModel.searchPrefixText)
+                        .textFieldStyle(.roundedBorder)
                         .frame(width: 120)
                         .onChange(of: viewModel.searchPrefixText) { _ in
                             applyAndNotify()

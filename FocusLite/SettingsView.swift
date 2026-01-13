@@ -255,7 +255,7 @@ struct SettingsView: View {
             }
             Spacer()
             if viewModel.selectedTab == .updates {
-                Button("Check for Updates…") {
+                Button("检查更新…") {
                     viewModel.appUpdater.checkForUpdates()
                 }
             }

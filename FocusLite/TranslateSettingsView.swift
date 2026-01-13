@@ -111,9 +111,13 @@ struct TranslateSettingsView: View {
 
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
-            SettingsSection("翻译前缀") {
+            SettingsSection(
+                "翻译前缀",
+                note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
+            ) {
                 SettingsFieldRow(title: "前缀") {
                     TextField("如 Ts", text: $viewModel.translatePrefixText)
+                        .textFieldStyle(.roundedBorder)
                         .frame(width: 120)
                         .onChange(of: viewModel.translatePrefixText) { _ in
                             applyAndNotify()
