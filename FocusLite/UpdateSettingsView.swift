@@ -33,7 +33,7 @@ struct UpdateSettingsView: View {
 
                 SettingsSection {
                     Toggle(
-                        "Automatically check for updates",
+                        "自动检查更新",
                         isOn: Binding(
                             get: { updater.automaticallyChecksForUpdates },
                             set: { newValue in

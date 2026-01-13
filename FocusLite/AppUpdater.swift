@@ -20,7 +20,7 @@ final class AppUpdater: NSObject, ObservableObject {
     private override init() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
-        versionDescription = "Version \(version) (\(build))"
+        versionDescription = "版本 \(version)（\(build)）"
         UserDefaults.standard.register(defaults: [Self.automaticChecksKey: false])
         automaticallyChecksForUpdates = false
 
