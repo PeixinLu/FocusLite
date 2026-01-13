@@ -1,18 +1,15 @@
+import AppKit
 import Foundation
 
 enum AppearancePreferences {
     static let materialStyleKey = "appearance.materialStyle"
-    static let glassStyleKey = "appearance.glassStyle"
-    static let glassTintKey = "appearance.glassTint"
-    static let liquidGlassExtraBlurMaterialKey = "appearance.liquidGlass.extraBlurMaterial"
-    
-    // Liquid Glass 精细调节参数
-    static let liquidGlassHighlightIntensityKey = "appearance.liquidGlass.highlightIntensity"
-    static let liquidGlassBlurRadiusKey = "appearance.liquidGlass.blurRadius"
-    static let liquidGlassRefractionStrengthKey = "appearance.liquidGlass.refractionStrength"
-    static let liquidGlassBorderOpacityKey = "appearance.liquidGlass.borderOpacity"
-    static let liquidGlassGradientStartOpacityKey = "appearance.liquidGlass.gradientStartOpacity"
-    static let liquidGlassGradientEndOpacityKey = "appearance.liquidGlass.gradientEndOpacity"
+    static let glassStyleKey = "appearance.glassStyle" // 搜索框
+    static let rowGlassStyleKey = "appearance.rowGlassStyle" // 候选项
+    static let legacyGlassTintKey = "appearance.glassTint"
+    static let glassTintRegularKey = "appearance.glassTint.regular"
+    static let glassTintClearKey = "appearance.glassTint.clear"
+    static let glassTintModeRegularKey = "appearance.glassTintMode.regular"
+    static let glassTintModeClearKey = "appearance.glassTintMode.clear"
     static let liquidGlassAnimationDurationKey = "appearance.liquidGlass.animationDuration"
     static let liquidGlassCornerRadiusKey = "appearance.liquidGlass.cornerRadius"
 
@@ -31,13 +28,10 @@ enum AppearancePreferences {
         var id: String { rawValue }
     }
 
-    enum ExtraBlurMaterial: String, CaseIterable, Identifiable {
-        case system
-        case ultraThin
-        case thin
-        case regular
-        case thick
-        case ultraThick
+    enum TintMode: String, CaseIterable, Identifiable {
+        case off
+        case systemDefault
+        case custom
 
         var id: String { rawValue }
     }
@@ -62,84 +56,99 @@ enum AppearancePreferences {
         }
     }
 
-    static var glassTint: String {
+    static var rowGlassStyle: GlassStyle {
         get {
-            UserDefaults.standard.string(forKey: glassTintKey) ?? ""
+            if let value = UserDefaults.standard.string(forKey: rowGlassStyleKey),
+               let style = GlassStyle(rawValue: value) {
+                return style
+            }
+            return glassStyle
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: glassTintKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: rowGlassStyleKey)
         }
     }
-    
-    // MARK: - Liquid Glass 微调参数
-    
-    /// 高光强度（聚焦时顶部渐变的起始透明度，范围 0.0-1.0）
-    static var liquidGlassHighlightIntensity: Double {
+
+    static var glassTintModeRegular: TintMode {
         get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassHighlightIntensityKey)
-            return value > 0 ? value : 0.45 // 默认 0.45
+            let value = UserDefaults.standard.string(forKey: glassTintModeRegularKey)
+            return TintMode(rawValue: value ?? "") ?? .off
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassHighlightIntensityKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: glassTintModeRegularKey)
         }
     }
-    
-    /// 模糊半径（背景模糊程度，范围 0-100）
-    static var liquidGlassBlurRadius: Double {
+
+    static var glassTintModeClear: TintMode {
         get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassBlurRadiusKey)
-            return value > 0 ? value : 30.0 // 默认 30
+            let value = UserDefaults.standard.string(forKey: glassTintModeClearKey)
+            return TintMode(rawValue: value ?? "") ?? .systemDefault
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassBlurRadiusKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: glassTintModeClearKey)
         }
     }
-    
-    /// 折射强度（玻璃折射效果，范围 0.0-1.0）
-    static var liquidGlassRefractionStrength: Double {
+
+    static func glassTintMode(for style: GlassStyle) -> TintMode {
+        switch style {
+        case .regular:
+            return glassTintModeRegular == .off ? .off : glassTintModeRegular
+        case .clear:
+            return glassTintModeClear == .off ? .systemDefault : glassTintModeClear
+        }
+    }
+
+    static func setGlassTintMode(_ mode: TintMode, for style: GlassStyle) {
+        switch style {
+        case .regular:
+            glassTintModeRegular = mode
+        case .clear:
+            glassTintModeClear = mode
+        }
+    }
+
+    static var glassTintRegular: String {
         get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassRefractionStrengthKey)
-            return value > 0 ? value : 0.6 // 默认 0.6
+            UserDefaults.standard.string(forKey: glassTintRegularKey)
+            ?? UserDefaults.standard.string(forKey: legacyGlassTintKey)
+            ?? ""
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassRefractionStrengthKey)
+            UserDefaults.standard.set(newValue, forKey: glassTintRegularKey)
         }
     }
-    
-    /// 边框透明度（聚焦时，范围 0.0-1.0）
-    static var liquidGlassBorderOpacity: Double {
+
+    static var glassTintClear: String {
         get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassBorderOpacityKey)
-            return value > 0 ? value : 0.6 // 默认 0.6
+            UserDefaults.standard.string(forKey: glassTintClearKey) ?? ""
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassBorderOpacityKey)
+            UserDefaults.standard.set(newValue, forKey: glassTintClearKey)
         }
     }
-    
-    /// 渐变起始透明度（聚焦时顶部）
-    static var liquidGlassGradientStartOpacity: Double {
-        get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassGradientStartOpacityKey)
-            return value > 0 ? value : 0.45 // 默认 0.45
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassGradientStartOpacityKey)
+
+    static func glassTint(for style: GlassStyle) -> String {
+        switch style {
+        case .regular:
+            return glassTintRegular
+        case .clear:
+            return glassTintClear
         }
     }
-    
-    /// 渐变结束透明度（聚焦时底部）
-    static var liquidGlassGradientEndOpacity: Double {
-        get {
-            let value = UserDefaults.standard.double(forKey: liquidGlassGradientEndOpacityKey)
-            return value > 0 ? value : 0.14 // 默认 0.14
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: liquidGlassGradientEndOpacityKey)
+
+    static func setGlassTint(_ value: String, for style: GlassStyle) {
+        switch style {
+        case .regular:
+            glassTintRegular = value
+        case .clear:
+            glassTintClear = value
         }
     }
-    
-    /// 动画时长（秒）
+
+    static func defaultTintMode(for style: GlassStyle) -> TintMode {
+        style == .regular ? .off : .systemDefault
+    }
+
     static var liquidGlassAnimationDuration: Double {
         get {
             let value = UserDefaults.standard.double(forKey: liquidGlassAnimationDurationKey)
@@ -149,8 +158,7 @@ enum AppearancePreferences {
             UserDefaults.standard.set(newValue, forKey: liquidGlassAnimationDurationKey)
         }
     }
-    
-    /// 圆角半径
+
     static var liquidGlassCornerRadius: Double {
         get {
             let value = UserDefaults.standard.double(forKey: liquidGlassCornerRadiusKey)
@@ -161,13 +169,8 @@ enum AppearancePreferences {
         }
     }
 
-    static var liquidGlassExtraBlurMaterial: ExtraBlurMaterial {
-        get {
-            let raw = UserDefaults.standard.string(forKey: liquidGlassExtraBlurMaterialKey)
-            return ExtraBlurMaterial(rawValue: raw ?? "") ?? .system
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: liquidGlassExtraBlurMaterialKey)
-        }
+    static func defaultTintColor(isDarkMode: Bool) -> NSColor {
+        let base = isDarkMode ? NSColor.black : NSColor.white
+        return base.withAlphaComponent(0.618)
     }
 }

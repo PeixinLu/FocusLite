@@ -37,34 +37,30 @@ struct LiquidTuningProvider: ResultProvider {
 }
 
 enum LiquidTuningGroup: CaseIterable {
-    case base
-    case gradient
-    case blur
+    case search
+    case rows
     case animation
 
     var title: String {
         switch self {
-        case .base: return "基础参数"
-        case .gradient: return "高光与渐变"
-        case .blur: return "额外模糊"
-        case .animation: return "动画与过渡"
+        case .search: return "搜索框外观"
+        case .rows: return "候选项外观"
+        case .animation: return "过渡动画"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .base: return "风格 / Tint / 圆角"
-        case .gradient: return "渐变"
-        case .blur: return "清晰玻璃的额外模糊"
-        case .animation: return "动画时长与交互节奏"
+        case .search: return "风格 / 色调 / 圆角"
+        case .rows: return "候选项风格"
+        case .animation: return "候选项过渡速度"
         }
     }
 
     var iconName: String {
         switch self {
-        case .base: return "slider.horizontal.3"
-        case .gradient: return "sun.max"
-        case .blur: return "drop.degreesign"
+        case .search: return "magnifyingglass.circle"
+        case .rows: return "list.bullet.rectangle"
         case .animation: return "sparkles"
         }
     }
@@ -72,24 +68,5 @@ enum LiquidTuningGroup: CaseIterable {
     func matches(query: String) -> Bool {
         let haystack = (title + subtitle).lowercased()
         return haystack.contains(query)
-    }
-}
-
-extension AppearancePreferences.ExtraBlurMaterial {
-    var material: NSVisualEffectView.Material {
-        switch self {
-        case .system:
-            return .hudWindow
-        case .ultraThin:
-            return .popover
-        case .thin:
-            return .menu
-        case .regular:
-            return .popover
-        case .thick:
-            return .sidebar
-        case .ultraThick:
-            return .headerView
-        }
     }
 }
