@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
     private let launcherHotKeyID: UInt32 = 1
     private let clipboardHotKeyID: UInt32 = 2
+    private let snippetsHotKeyID: UInt32 = 3
+    private let translateHotKeyID: UInt32 = 4
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 设置为 accessory 模式，不显示 Dock 图标，只显示菜单栏图标
@@ -57,6 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         registerLauncherHotKey()
         registerClipboardHotKey()
+        registerSnippetsHotKey()
+        registerTranslateHotKey()
         windowController?.show()
         clipboardMonitor.start()
         NotificationCenter.default.addObserver(
@@ -134,6 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func handleUserDefaultsChange() {
         registerLauncherHotKey()
         registerClipboardHotKey()
+        registerSnippetsHotKey()
+        registerTranslateHotKey()
     }
 
     @objc private func quitApp() {
@@ -207,4 +213,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func registerSnippetsHotKey() {
+        guard let descriptor = HotKeyDescriptor.parse(SnippetsPreferences.hotKeyText) else {
+            hotKeyManager.unregister(identifier: snippetsHotKeyID)
+            return
+        }
+
+        let registered = hotKeyManager.register(
+            keyCode: descriptor.keyCode,
+            modifiers: descriptor.modifiers,
+            identifier: snippetsHotKeyID
+        ) { [weak self] in
+            DispatchQueue.main.async {
+                guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == SnippetsProvider.providerID }) else { return }
+                self?.launcherViewModel?.resetSearch()
+                self?.launcherViewModel?.activateCustomPrefix(entry)
+                self?.windowController?.show(resetSearch: false)
+            }
+        }
+
+        if !registered {
+            Log.info("Snippets hotkey registration failed (\(SnippetsPreferences.hotKeyText)).")
+        }
+    }
+
+    private func registerTranslateHotKey() {
+        guard let descriptor = HotKeyDescriptor.parse(TranslatePreferences.hotKeyText) else {
+            hotKeyManager.unregister(identifier: translateHotKeyID)
+            return
+        }
+
+        let registered = hotKeyManager.register(
+            keyCode: descriptor.keyCode,
+            modifiers: descriptor.modifiers,
+            identifier: translateHotKeyID
+        ) { [weak self] in
+            DispatchQueue.main.async {
+                guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == TranslateProvider.providerID }) else { return }
+                self?.launcherViewModel?.resetSearch()
+                self?.launcherViewModel?.activateCustomPrefix(entry)
+                self?.windowController?.show(resetSearch: false)
+            }
+        }
+
+        if !registered {
+            Log.info("Translate hotkey registration failed (\(TranslatePreferences.hotKeyText)).")
+        }
+    }
 }

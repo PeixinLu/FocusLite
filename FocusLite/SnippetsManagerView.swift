@@ -8,6 +8,7 @@ final class SnippetsManagerViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var searchPrefixText: String
     @Published var autoPasteEnabled: Bool
+    @Published var hotKeyText: String
 
     private let store: SnippetStore
 
@@ -15,6 +16,7 @@ final class SnippetsManagerViewModel: ObservableObject {
         self.store = store
         self.searchPrefixText = SnippetsPreferences.searchPrefix
         self.autoPasteEnabled = SnippetsPreferences.autoPasteAfterSelect
+        self.hotKeyText = SnippetsPreferences.hotKeyText
     }
 
     func load() {
@@ -84,6 +86,10 @@ final class SnippetsManagerViewModel: ObservableObject {
 
     func saveAutoPaste() {
         SnippetsPreferences.autoPasteAfterSelect = autoPasteEnabled
+    }
+
+    func saveHotKey() {
+        SnippetsPreferences.hotKeyText = hotKeyText
     }
 }
 
@@ -244,6 +250,16 @@ struct SnippetsManagerView: View {
                     viewModel.saveSearchPrefix()
                     onSaved?()
                 }
+            Text("快捷键")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+            HotKeyRecorderField(
+                text: $viewModel.hotKeyText,
+                conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, TranslatePreferences.hotKeyText]
+            ) {
+                viewModel.saveHotKey()
+                onSaved?()
+            }
             Spacer()
         }
     }

@@ -165,11 +165,8 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
             return
         }
         if frontmost.bundleIdentifier == Bundle.main.bundleIdentifier {
-            if let keyWindow = NSApp.keyWindow {
-                focusOrigin = .appWindow(keyWindow.windowNumber)
-            } else {
-                focusOrigin = .unknown
-            }
+            // 如果本身已经是前台窗口（如搜索框已在前），不记录以免关闭时重新唤醒自己
+            focusOrigin = .unknown
         } else {
             focusOrigin = .external(frontmost)
         }

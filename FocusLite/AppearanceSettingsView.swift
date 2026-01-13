@@ -94,9 +94,9 @@ struct AppearanceSettingsView: View {
             // 材质选择
             SettingsSection("材质") {
                 Picker("材质", selection: $materialStyleRaw) {
-                    Text("经典").tag(AppearancePreferences.MaterialStyle.classic.rawValue)
-                    Text("液态玻璃").tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
-                    Text("纯净").tag(AppearancePreferences.MaterialStyle.pure.rawValue)
+                    Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
+                    Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                    Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
                 }
                 .pickerStyle(.segmented)
             }
@@ -106,8 +106,8 @@ struct AppearanceSettingsView: View {
                 SettingsSection("搜索框外观") {
                     VStack(alignment: .leading, spacing: 12) {
                         Picker("液态玻璃风格", selection: $glassStyleRaw) {
-                            Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                            Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                            Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                            Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
                         }
                         .pickerStyle(.segmented)
 
@@ -203,8 +203,8 @@ struct AppearanceSettingsView: View {
 
                 SettingsSection("候选项外观") {
                     Picker("液态玻璃风格", selection: $rowGlassStyleRaw) {
-                        Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                        Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                        Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                        Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
                     }
                     .pickerStyle(.segmented)
                 }
@@ -217,6 +217,12 @@ struct AppearanceSettingsView: View {
                         step: 0.01,
                         unit: "s"
                     )
+                    .disabled(materialStyle != .liquid)
+                    if materialStyle != .liquid {
+                        Text("液态玻璃模式下可调整过渡速度。")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 

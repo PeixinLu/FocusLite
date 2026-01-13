@@ -180,11 +180,13 @@ struct SettingsView: View {
             }
         }
         .frame(width: SettingsLayout.windowWidth, height: SettingsLayout.windowHeight)
+        .background(KeyboardTabSwitcher(selectedTab: $viewModel.selectedTab))
         .onAppear {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             DispatchQueue.main.async {
                 settingsWindow = NSApp.keyWindow
+                settingsWindow?.collectionBehavior.insert(.moveToActiveSpace)
             }
             startEscMonitorIfNeeded()
         }
@@ -285,6 +287,7 @@ struct SettingsView: View {
     private func startEscMonitorIfNeeded() {
         guard escMonitor == nil else { return }
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard settingsWindow?.isKeyWindow == true else { return event }
             if event.keyCode == 53 {
                 settingsWindow?.performClose(nil)
                 return nil
@@ -299,5 +302,51 @@ struct SettingsView: View {
             escMonitor = nil
         }
         settingsWindow = nil
+    }
+}
+
+private struct KeyboardTabSwitcher: NSViewRepresentable {
+    @Binding var selectedTab: SettingsTab
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard let window = view.window, window.isKeyWindow else { return event }
+            switch event.keyCode {
+            case 125: // down arrow
+                select(offset: 1)
+                return nil
+            case 126: // up arrow
+                select(offset: -1)
+                return nil
+            default:
+                return event
+            }
+        }
+        context.coordinator.monitor = monitor
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        if let monitor = coordinator.monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    private func select(offset: Int) {
+        let tabs = SettingsTab.allCases
+        guard let currentIndex = tabs.firstIndex(of: selectedTab) else { return }
+        let next = max(0, min(currentIndex + offset, tabs.count - 1))
+        selectedTab = tabs[next]
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var monitor: Any?
     }
 }

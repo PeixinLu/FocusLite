@@ -19,6 +19,14 @@ enum AppearancePreferences {
         case pure
 
         var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .classic: return "macOS经典"
+            case .liquid: return "液态玻璃"
+            case .pure: return "纯色"
+            }
+        }
     }
 
     enum GlassStyle: String, CaseIterable, Identifiable {
@@ -26,6 +34,13 @@ enum AppearancePreferences {
         case clear
 
         var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .regular: return "常规"
+            case .clear: return "通透"
+            }
+        }
     }
 
     enum TintMode: String, CaseIterable, Identifiable {

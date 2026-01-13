@@ -90,6 +90,7 @@ final class LauncherViewModel: ObservableObject {
             shouldAnimateSelection = false
             return
         }
+        shouldAnimateSelection = false
         handleExit()
     }
 

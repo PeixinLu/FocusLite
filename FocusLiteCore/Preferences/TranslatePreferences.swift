@@ -17,6 +17,7 @@ enum TranslatePreferences {
     private static let deepseekEndpoint = "translate.deepseek.endpoint"
     private static let deepseekModel = "translate.deepseek.model"
     private static let autoPasteKey = "translate.autoPasteAfterSelect"
+    private static let hotKeyTextKey = "translate.hotKeyText"
 
     enum TargetMode: String {
         case auto
@@ -62,6 +63,11 @@ enum TranslatePreferences {
         set {
             UserDefaults.standard.set(newValue, forKey: autoPasteKey)
         }
+    }
+
+    static var hotKeyText: String {
+        get { UserDefaults.standard.string(forKey: hotKeyTextKey) ?? "" }
+        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: hotKeyTextKey) }
     }
 
     static var enabledServices: [String] {

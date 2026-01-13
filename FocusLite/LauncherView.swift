@@ -319,7 +319,7 @@ private struct LiquidGlassBackground: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         // 边框已移除，可以在设置中重新启用
-        .animation(.easeInOut(duration: animationDuration), value: isHighlighted)
+        .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style == .liquid)
     }
 
     @ViewBuilder
@@ -771,15 +771,15 @@ private struct LiquidTuningPreview: View {
                     }
                 }
             )) {
-                Text("经典").tag(AppearancePreferences.MaterialStyle.classic.rawValue)
-                Text("液态玻璃").tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
-                Text("纯净").tag(AppearancePreferences.MaterialStyle.pure.rawValue)
+                Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
+                Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
             }
             .pickerStyle(.segmented)
 
             if materialStyle == .liquid {
-            Picker("液态玻璃风格", selection: Binding(
-                get: { glassStyleRaw },
+                Picker("液态玻璃风格", selection: Binding(
+                    get: { glassStyleRaw },
                 set: { newValue in
                     glassStyleRaw = newValue
                     if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
@@ -897,8 +897,8 @@ private struct LiquidTuningPreview: View {
                         }
                     }
                 )) {
-                    Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                    Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                    Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
+                    Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
                 }
                 .pickerStyle(.segmented)
             } else {

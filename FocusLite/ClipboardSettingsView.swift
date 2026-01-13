@@ -239,11 +239,21 @@ struct HotKeyRecorderField: View {
                 }
             }
             .buttonStyle(.bordered)
+            Button("清除") {
+                clearBinding()
+            }
+            .buttonStyle(.bordered)
         }
     }
 
     private func handleCaptured(_ combo: String) {
         guard isRecording else { return }
+        if combo.isEmpty {
+            text = ""
+            stopRecording(revert: false)
+            onRecorded?()
+            return
+        }
         guard let descriptor = HotKeyDescriptor.parse(combo) else { return }
         if let conflict = conflictDescriptor(for: descriptor) {
             stopRecording(revert: true, conflictMessage: "与现有快捷键「\(conflict)」冲突，请选择其他组合。")
@@ -275,8 +285,17 @@ struct HotKeyRecorderField: View {
         }
     }
 
+    private func clearBinding() {
+        previousText = text
+        text = ""
+        captureSession.stop()
+        isRecording = false
+        NotificationCenter.default.post(name: .hotKeyRecordingDidEnd, object: nil)
+        onRecorded?()
+    }
+
     private func conflictDescriptor(for descriptor: HotKeyDescriptor) -> String? {
-        for item in conflictHotKeys {
+        for item in conflictHotKeys where !item.isEmpty {
             guard let other = HotKeyDescriptor.parse(item) else { continue }
             if other == descriptor {
                 return item
@@ -365,6 +384,12 @@ private struct KeyRecorderTextField: NSViewRepresentable {
             if event.keyCode == kVK_Escape {
                 isRecording = false
                 onCancel()
+                return
+            }
+
+            if event.keyCode == kVK_Delete || event.keyCode == kVK_ForwardDelete {
+                isRecording = false
+                onCaptured("")
                 return
             }
 

@@ -12,6 +12,7 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var enabledServices: [String]
     @Published var translatePrefixText: String
     @Published var autoPasteEnabled: Bool
+    @Published var hotKeyText: String
 
     @Published var youdaoAppKey: String
     @Published var youdaoSecret: String
@@ -36,6 +37,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         enabledServices = TranslatePreferences.enabledServices
         translatePrefixText = TranslatePreferences.searchPrefix
         autoPasteEnabled = TranslatePreferences.autoPasteAfterSelect
+        hotKeyText = TranslatePreferences.hotKeyText
         youdaoAppKey = TranslatePreferences.youdaoAppKeyValue
         youdaoSecret = TranslatePreferences.youdaoSecretValue
         baiduAppID = TranslatePreferences.baiduAppIDValue
@@ -54,6 +56,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.enabledServices = enabledServices
         TranslatePreferences.searchPrefix = translatePrefixText
         TranslatePreferences.autoPasteAfterSelect = autoPasteEnabled
+        TranslatePreferences.hotKeyText = hotKeyText
         TranslatePreferences.youdaoAppKeyValue = youdaoAppKey
         TranslatePreferences.youdaoSecretValue = youdaoSecret
         TranslatePreferences.baiduAppIDValue = baiduAppID
@@ -115,6 +118,14 @@ struct TranslateSettingsView: View {
                         .onChange(of: viewModel.translatePrefixText) { _ in
                             applyAndNotify()
                         }
+                }
+                SettingsFieldRow(title: "快捷键") {
+                    HotKeyRecorderField(
+                        text: $viewModel.hotKeyText,
+                        conflictHotKeys: [GeneralPreferences.launcherHotKeyText, ClipboardPreferences.hotKeyText, SnippetsPreferences.hotKeyText]
+                    ) {
+                        applyAndNotify()
+                    }
                 }
                 SettingsFieldRow(title: "自动粘贴") {
                     Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
