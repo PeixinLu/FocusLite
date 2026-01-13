@@ -234,12 +234,18 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            ScrollView {
+            if viewModel.selectedTab == .apps {
+                // 应用设置页面不使用 ScrollView，让表格自己处理滚动
                 contentView
-                    .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
-                    .padding(.vertical, SettingsLayout.topPadding + 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    contentView
+                        .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+                        .padding(.vertical, SettingsLayout.topPadding + 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

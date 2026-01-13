@@ -121,7 +121,7 @@ struct AppIndexSettingsView: View {
     @StateObject var viewModel: AppIndexSettingsViewModel
 
     var body: some View {
-        VStack(spacing: SettingsLayout.sectionSpacing) {
+        VStack(alignment: .leading, spacing: 0) {
             // 搜索框
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -145,54 +145,52 @@ struct AppIndexSettingsView: View {
                 }
                 .buttonStyle(.bordered)
             }
-            .padding(.bottom, 8)
+            .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+            .padding(.top, SettingsLayout.topPadding + 8)
+            .padding(.bottom, 12)
 
-            SettingsSection {
-                Table(viewModel.filteredApps) {
-                    TableColumn("App 名称") { entry in
-                        HStack(spacing: 8) {
-                            Image(nsImage: viewModel.icon(for: entry.path))
-                                .resizable()
-                                .frame(width: 18, height: 18)
-                            Text(entry.name)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
-                    TableColumn("路径") { entry in
-                        Button {
-                            let url = URL(fileURLWithPath: entry.path)
-                            NSWorkspace.shared.activateFileViewerSelecting([url])
-                        } label: {
-                            Text(entry.path)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .buttonStyle(.plain)
-                        .help(entry.path)
-                    }
-                    TableColumn("排除") { entry in
-                        let binding = Binding<Bool>(
-                            get: { viewModel.isExcluded(entry) },
-                            set: { viewModel.setExcluded(entry, isExcluded: $0) }
-                        )
-                        Toggle("", isOn: binding)
-                            .toggleStyle(.checkbox)
-                            .labelsHidden()
-                    }
-                    TableColumn("别名") { entry in
-                        aliasEditor(for: entry)
+            // 表格区域，充满剩余高度
+            Table(viewModel.filteredApps) {
+                TableColumn("App 名称") { entry in
+                    HStack(spacing: 8) {
+                        Image(nsImage: viewModel.icon(for: entry.path))
+                            .resizable()
+                            .frame(width: 18, height: 18)
+                        Text(entry.name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                 }
-                .frame(minHeight: 320, maxHeight: .infinity, alignment: .top)
+                TableColumn("路径") { entry in
+                    Button {
+                        let url = URL(fileURLWithPath: entry.path)
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } label: {
+                        Text(entry.path)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .buttonStyle(.plain)
+                    .help(entry.path)
+                }
+                TableColumn("排除") { entry in
+                    let binding = Binding<Bool>(
+                        get: { viewModel.isExcluded(entry) },
+                        set: { viewModel.setExcluded(entry, isExcluded: $0) }
+                    )
+                    Toggle("", isOn: binding)
+                        .toggleStyle(.checkbox)
+                        .labelsHidden()
+                }
+                TableColumn("别名") { entry in
+                    aliasEditor(for: entry)
+                }
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, SettingsLayout.horizontalPadding + 4)
+            .padding(.bottom, SettingsLayout.bottomPadding + 8)
         }
-        .padding(.horizontal, SettingsLayout.horizontalPadding)
-        .padding(.top, SettingsLayout.topPadding)
-        .padding(.bottom, SettingsLayout.bottomPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             viewModel.load()
         }
