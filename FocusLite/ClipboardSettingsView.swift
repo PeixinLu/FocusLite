@@ -10,6 +10,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
     @Published var searchPrefixText: String
     @Published var retentionHours: Int
     @Published var autoPasteEnabled: Bool
+    @Published var accessibilityTrusted: Bool
 
     init() {
         isRecordingEnabled = !ClipboardPreferences.isPaused
@@ -19,6 +20,7 @@ final class ClipboardSettingsViewModel: ObservableObject {
         searchPrefixText = ClipboardPreferences.searchPrefix
         retentionHours = ClipboardPreferences.historyRetentionHours
         autoPasteEnabled = ClipboardPreferences.autoPasteAfterSelect
+        accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
     }
 
     func applyChanges() {
@@ -41,6 +43,7 @@ struct ClipboardSettingsView: View {
     @StateObject var viewModel: ClipboardSettingsViewModel
     let onSaved: (() -> Void)?
     @State private var manualBundleID = ""
+    @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: ClipboardSettingsViewModel, onSaved: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -66,8 +69,13 @@ struct ClipboardSettingsView: View {
                     Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)
                         .toggleStyle(.switch)
                         .onChange(of: viewModel.autoPasteEnabled) { _ in
-                            applyAndNotify()
+                            ensureAccessibilityIfNeeded()
                         }
+                    if viewModel.autoPasteEnabled && !viewModel.accessibilityTrusted {
+                        Text("请检查 FocusLite 的辅助功能权限")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
                 }
 
                 SettingsFieldRow(title: "快捷键") {
@@ -156,11 +164,41 @@ struct ClipboardSettingsView: View {
         .padding(.top, SettingsLayout.topPadding)
         .padding(.bottom, SettingsLayout.bottomPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .permissionsShouldRefresh)) { _ in
+            refreshPermissionStatus()
+        }
+        .onChange(of: scenePhase) { _ in
+            refreshPermissionStatus()
+        }
     }
 
     private func applyAndNotify() {
         viewModel.applyChanges()
         onSaved?()
+    }
+
+    private func ensureAccessibilityIfNeeded() {
+        if viewModel.autoPasteEnabled && !AccessibilityPermission.isTrusted(prompt: false) {
+            let granted = AccessibilityPermission.requestIfNeeded()
+            if !granted {
+                viewModel.autoPasteEnabled = false
+            }
+            viewModel.accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
+        }
+        applyAndNotify()
+    }
+
+    private func refreshPermissionStatus() {
+        let trusted = AccessibilityPermission.isTrusted(prompt: false)
+        if trusted != viewModel.accessibilityTrusted {
+            viewModel.accessibilityTrusted = trusted
+        }
     }
 
     private var ignoredBundleIDs: [String] {

@@ -52,7 +52,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     }
 
     func pasteTextAndHide(_ text: String) -> Bool {
-        guard AccessibilityPermission.isTrusted(prompt: true) else {
+        guard AccessibilityPermission.requestIfNeeded() else {
             return false
         }
 

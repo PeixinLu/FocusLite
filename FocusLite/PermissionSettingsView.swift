@@ -68,6 +68,16 @@ enum PermissionsChecker {
         guard let url = type.settingsURL else { return }
         NSWorkspace.shared.open(url)
     }
+
+    static func request(for type: PermissionType) -> PermissionStatus {
+        switch type {
+        case .accessibility:
+            let granted = AccessibilityPermission.requestIfNeeded()
+            if granted { return .granted }
+            openSettings(for: type)
+            return .denied
+        }
+    }
 }
 
 struct PermissionSettingsView: View {
@@ -79,8 +89,11 @@ struct PermissionSettingsView: View {
             SettingsSection {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(items) { item in
-                        PermissionRow(item: item, onOpen: {
-                            PermissionsChecker.openSettings(for: item.type)
+                        PermissionRow(item: item, onRequest: {
+                            let newStatus = PermissionsChecker.request(for: item.type)
+                            if let index = items.firstIndex(where: { $0.id == item.id }) {
+                                items[index].status = newStatus
+                            }
                         })
                     }
                 }
@@ -119,7 +132,7 @@ struct PermissionSettingsView: View {
 
 private struct PermissionRow: View {
     let item: PermissionItem
-    let onOpen: () -> Void
+    let onRequest: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -139,8 +152,8 @@ private struct PermissionRow: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Button(item.status == .granted ? "打开系统设置" : "去系统设置开启") {
-                onOpen()
+            Button(item.status == .granted ? "打开系统设置" : "立即申请") {
+                onRequest()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
