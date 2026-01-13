@@ -87,7 +87,12 @@ struct LauncherView: View {
                     .foregroundColor(.secondary)
 
                 if let prefix = viewModel.searchState.activePrefix {
-                    TagView(title: prefix.title, subtitle: prefix.subtitle)
+                    TagView(
+                        title: prefix.title,
+                        subtitle: prefix.subtitle,
+                        useLiquidStyle: materialStyle == .liquid,
+                        tint: Color.accentColor
+                    )
                 }
 
                 TextField("Search", text: $viewModel.searchText)
