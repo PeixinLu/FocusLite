@@ -169,6 +169,26 @@ final class LauncherViewModel: ObservableObject {
         onOpenSettings?(tab)
     }
 
+    func preferredSettingsTab() -> SettingsTab {
+        switch searchState.scope {
+        case .global:
+            return .apps
+        case .prefixed(let providerID):
+            switch providerID {
+            case TranslateProvider.providerID:
+                return .translate
+            case ClipboardProvider.providerID:
+                return .clipboard
+            case SnippetsProvider.providerID:
+                return .snippets
+            case LiquidTuningProvider.providerID:
+                return .appearance
+            default:
+                return .apps
+            }
+        }
+    }
+
     func activateClipboardSearch() {
         activatePrefix(providerID: ClipboardProvider.providerID)
     }

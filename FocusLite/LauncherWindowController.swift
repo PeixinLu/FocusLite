@@ -108,7 +108,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
 
             if event.modifierFlags.contains(.command), event.keyCode == 43 {
                 Task { @MainActor in
-                    self.viewModel.prepareSettings(tab: .clipboard)
+                    self.viewModel.prepareSettings(tab: self.viewModel.preferredSettingsTab())
                 }
                 return event
             }

@@ -282,12 +282,12 @@ struct LauncherView: View {
             .buttonStyle(.plain)
             .keyboardShortcut(",", modifiers: .command)
             .simultaneousGesture(TapGesture().onEnded {
-                viewModel.prepareSettings(tab: .clipboard)
+                viewModel.prepareSettings(tab: viewModel.preferredSettingsTab())
             })
             .help("设置")
         } else {
             Button {
-                viewModel.openSettings(tab: .clipboard)
+                viewModel.openSettings(tab: viewModel.preferredSettingsTab())
             } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 14, weight: .semibold))
