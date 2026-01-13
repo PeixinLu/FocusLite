@@ -12,6 +12,7 @@ enum AppearancePreferences {
     static let glassTintModeClearKey = "appearance.glassTintMode.clear"
     static let liquidGlassAnimationDurationKey = "appearance.liquidGlass.animationDuration"
     static let liquidGlassCornerRadiusKey = "appearance.liquidGlass.cornerRadius"
+    private static let modernGlassOSVersion = OperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)
 
     enum MaterialStyle: String, CaseIterable, Identifiable {
         case classic
@@ -51,10 +52,22 @@ enum AppearancePreferences {
         var id: String { rawValue }
     }
 
+    static var defaultMaterialStyle: MaterialStyle {
+        ProcessInfo.processInfo.isOperatingSystemAtLeast(modernGlassOSVersion) ? .liquid : .classic
+    }
+
+    static var defaultGlassStyle: GlassStyle {
+        ProcessInfo.processInfo.isOperatingSystemAtLeast(modernGlassOSVersion) ? .clear : .regular
+    }
+
+    static var defaultAnimationDuration: Double { 0.08 }
+
+    static var defaultCornerRadius: Double { 20.0 }
+
     static var materialStyle: MaterialStyle {
         get {
             let value = UserDefaults.standard.string(forKey: materialStyleKey)
-            return MaterialStyle(rawValue: value ?? "") ?? .liquid
+            return MaterialStyle(rawValue: value ?? "") ?? defaultMaterialStyle
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: materialStyleKey)
@@ -64,7 +77,7 @@ enum AppearancePreferences {
     static var glassStyle: GlassStyle {
         get {
             let value = UserDefaults.standard.string(forKey: glassStyleKey)
-            return GlassStyle(rawValue: value ?? "") ?? .regular
+            return GlassStyle(rawValue: value ?? "") ?? defaultGlassStyle
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: glassStyleKey)
@@ -167,7 +180,7 @@ enum AppearancePreferences {
     static var liquidGlassAnimationDuration: Double {
         get {
             let value = UserDefaults.standard.double(forKey: liquidGlassAnimationDurationKey)
-            return value > 0 ? value : 0.18 // 默认 0.18s
+            return value > 0 ? value : defaultAnimationDuration
         }
         set {
             UserDefaults.standard.set(newValue, forKey: liquidGlassAnimationDurationKey)
@@ -177,7 +190,7 @@ enum AppearancePreferences {
     static var liquidGlassCornerRadius: Double {
         get {
             let value = UserDefaults.standard.double(forKey: liquidGlassCornerRadiusKey)
-            return value > 0 ? value : 16.0 // 默认 16
+            return value > 0 ? value : defaultCornerRadius
         }
         set {
             UserDefaults.standard.set(newValue, forKey: liquidGlassCornerRadiusKey)

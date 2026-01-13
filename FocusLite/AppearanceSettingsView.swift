@@ -4,9 +4,9 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(AppearancePreferences.materialStyleKey)
-    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    private var materialStyleRaw = AppearancePreferences.defaultMaterialStyle.rawValue
     @AppStorage(AppearancePreferences.glassStyleKey)
-    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
     private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
@@ -19,9 +19,9 @@ struct AppearanceSettingsView: View {
     private var clearTintRaw = AppearancePreferences.glassTintClear
     
     @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
-    private var animationDuration = 0.18
+    private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
-    private var cornerRadius = 16.0
+    private var cornerRadius = AppearancePreferences.defaultCornerRadius
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
         AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid

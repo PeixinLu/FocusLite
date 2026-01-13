@@ -168,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func registerLauncherHotKey() {
         guard let descriptor = HotKeyDescriptor.parse(GeneralPreferences.launcherHotKeyText) else {
             hotKeyManager.unregister(identifier: launcherHotKeyID)
-            Log.info("Launcher hotkey is invalid. Use format like command+space.")
+            Log.info("Launcher hotkey is invalid. Use format like option+space.")
             return
         }
 

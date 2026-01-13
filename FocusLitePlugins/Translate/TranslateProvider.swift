@@ -13,7 +13,7 @@ struct TranslateProvider: ResultProvider {
         if trimmed.isEmpty && isScoped {
             return [ResultItem(
                 title: "Type text to translate",
-                subtitle: "Prefix: tr",
+                subtitle: "Prefix: \(TranslatePreferences.searchPrefix)",
                 icon: .system("globe"),
                 score: 0.1,
                 action: .none,

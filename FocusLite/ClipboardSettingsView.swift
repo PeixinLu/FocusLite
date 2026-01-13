@@ -77,7 +77,7 @@ struct ClipboardSettingsView: View {
                 }
 
                 SettingsFieldRow(title: "搜索前缀") {
-                    TextField("如 c", text: $viewModel.searchPrefixText)
+                    TextField("如 V", text: $viewModel.searchPrefixText)
                         .frame(width: 120)
                         .onChange(of: viewModel.searchPrefixText) { _ in
                             applyAndNotify()

@@ -239,7 +239,7 @@ struct SnippetsManagerView: View {
             Text("搜索前缀")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
-            TextField("如 sn", text: $viewModel.searchPrefixText)
+            TextField("如 Sn", text: $viewModel.searchPrefixText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 120)
                 .onSubmit {

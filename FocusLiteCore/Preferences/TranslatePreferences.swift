@@ -49,14 +49,14 @@ enum TranslatePreferences {
     }
 
     static var searchPrefix: String {
-        get { UserDefaults.standard.string(forKey: prefixKey) ?? "tr" }
+        get { UserDefaults.standard.string(forKey: prefixKey) ?? "Ts" }
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: prefixKey) }
     }
 
     static var autoPasteAfterSelect: Bool {
         get {
             if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
-                return true
+                return false
             }
             return UserDefaults.standard.bool(forKey: autoPasteKey)
         }

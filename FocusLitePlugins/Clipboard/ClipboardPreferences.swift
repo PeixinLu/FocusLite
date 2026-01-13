@@ -59,7 +59,7 @@ enum ClipboardPreferences {
 
     static var searchPrefix: String {
         get {
-            UserDefaults.standard.string(forKey: prefixKey) ?? "c"
+            UserDefaults.standard.string(forKey: prefixKey) ?? "V"
         }
         set {
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -77,7 +77,7 @@ enum ClipboardPreferences {
                 UserDefaults.standard.set(hours, forKey: retentionHoursKey)
                 return hours
             }
-            return 168
+            return 24
         }
         set {
             UserDefaults.standard.set(max(0, newValue), forKey: retentionHoursKey)
@@ -87,7 +87,7 @@ enum ClipboardPreferences {
     static var autoPasteAfterSelect: Bool {
         get {
             if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
-                return true
+                return false
             }
             return UserDefaults.standard.bool(forKey: autoPasteKey)
         }

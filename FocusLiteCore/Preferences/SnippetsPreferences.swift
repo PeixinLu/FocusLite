@@ -7,7 +7,7 @@ enum SnippetsPreferences {
 
     static var searchPrefix: String {
         get {
-            UserDefaults.standard.string(forKey: prefixKey) ?? "sn"
+            UserDefaults.standard.string(forKey: prefixKey) ?? "Sn"
         }
         set {
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -18,7 +18,7 @@ enum SnippetsPreferences {
     static var autoPasteAfterSelect: Bool {
         get {
             if UserDefaults.standard.object(forKey: autoPasteKey) == nil {
-                return true
+                return false
             }
             return UserDefaults.standard.bool(forKey: autoPasteKey)
         }

@@ -8,9 +8,9 @@ struct LauncherView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var isHovered = false
     @AppStorage(AppearancePreferences.materialStyleKey)
-    private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
+    private var materialStyleRaw = AppearancePreferences.defaultMaterialStyle.rawValue
     @AppStorage(AppearancePreferences.glassStyleKey)
-    private var glassStyleRaw = AppearancePreferences.GlassStyle.regular.rawValue
+    private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
     private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
@@ -24,23 +24,23 @@ struct LauncherView: View {
     
     // Liquid Glass 微调参数
     @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
-    private var animationDuration = 0.18
+    private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
-    private var cornerRadius = 16.0
+    private var cornerRadius = AppearancePreferences.defaultCornerRadius
     private var rowCornerRadius: CGFloat {
         max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
     }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
-        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
+        AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? AppearancePreferences.defaultMaterialStyle
     }
 
     private var glassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? .regular
+        AppearancePreferences.GlassStyle(rawValue: glassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
     }
 
     private var rowGlassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? .regular
+        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
     }
 
     private var regularTintMode: AppearancePreferences.TintMode {

@@ -113,7 +113,7 @@ struct TranslateSettingsView: View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
             SettingsSection("翻译前缀") {
                 SettingsFieldRow(title: "前缀") {
-                    TextField("如 tr", text: $viewModel.translatePrefixText)
+                    TextField("如 Ts", text: $viewModel.translatePrefixText)
                         .frame(width: 120)
                         .onChange(of: viewModel.translatePrefixText) { _ in
                             applyAndNotify()

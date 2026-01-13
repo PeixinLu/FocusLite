@@ -4,7 +4,7 @@ import Foundation
 struct StyleProvider: ResultProvider {
     static let providerID = "style.tuning"
     static let prefixEntry = PrefixEntry(
-        id: "style",
+        id: "Style",
         providerID: StyleProvider.providerID,
         title: "Style",
         subtitle: "配置 FocusLite 外观",
