@@ -15,10 +15,11 @@
 
 ## 常见问题
 
-### 1. 提示“app已损坏”
-
-    在终端中输入：`xattr -cr /Applications/FocusLite.app` 回车
-    再次运行app即可
+### 1. 提示“FocusLite”已损坏，无法打开。 你应该将它移到废纸篓。
+原因：Apple 逐渐收紧未签名app的权限，由于没有开发者认证签名，系统会弹这个提示
+- 在终端中输入：`xattr -cr /Applications/FocusLite.app` 回车
+- 再次运行 app 即可
+- 详细参考[博客文章](https://www.cnblogs.com/cnndevelop/p/18702837)
 
 ## License
 
