@@ -4,11 +4,34 @@
 
 一款轻量级的类聚焦搜索体验的效率启动器。
 
+## 安装
+
+1. 进入[releases](https://github.com/PeixinLu/FocusLite/releases)页，选择最新的版本，下载`FocusLite.zip`
+2. 双击`FocusLite.zip`解压，会获得一个 `FocusLite.app` 文件
+3. 将`FocusLite.app` 移动到 `/Applications` 或 `/应用程序` 目录下，双击运行
+4. 启动后将在菜单栏看到图标
+   ![菜单栏图标](Assets/menuIcon.png)
+5. 默认通过 `⌥ + 空格` 唤起启动器，可在设置中配置
+
+## 常见问题
+
+### 1. 提示“app已损坏”
+
+    在终端中输入：`xattr -cr /Applications/FocusLite.app` 回车
+    再次运行app即可
+
+## License
+
+MIT License. See `LICENSE`.
+
 ## 主要界面
 
 ![FocusLite](Assets/主界面.png)
 
 ## ✨ 核心特性
+
+支持最新的液态玻璃效果（需更新至 macOS 26）支持丰富的外观配置项
+
 
 ### 🚀 应用启动
 - **智能搜索**：支持应用名称、拼音首字母、模糊匹配
