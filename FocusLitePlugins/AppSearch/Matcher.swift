@@ -299,7 +299,9 @@ private enum Gate {
     }
 
     static func allowToken(_ info: QueryInfo) -> Bool {
-        info.length >= 2
+        if info.length >= 2 { return true }
+        // 允许单个 CJK 字符走 token 逻辑，用于中文名单字匹配
+        return info.length == 1 && info.hasCJK
     }
 
     static func allowSubstring(_ info: QueryInfo) -> Bool {
