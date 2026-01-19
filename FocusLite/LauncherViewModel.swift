@@ -293,45 +293,63 @@ final class LauncherViewModel: ObservableObject {
 
         switch searchState.scope {
         case .global:
-            let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
+            let rawText = searchText
+            let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let isDirectoryMode = trimmed.hasPrefix("/")
+            if trimmed.isEmpty && !isDirectoryMode {
                 let prefixItems = PrefixResultItemBuilder.items(matching: searchText)
                 setResults(prefixItems)
                 return
             }
 
-            var prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
-            if !trimmed.isEmpty {
-                let normalized = trimmed.lowercased()
-                let hasExactMatch = prefixItems.contains { $0.title.lowercased() == normalized }
-                if hasExactMatch {
-                    prefixItems = prefixItems.filter { $0.title.lowercased().hasPrefix(normalized) }
+            var prefixItems: [ResultItem] = []
+            var hasExactPrefixMatch = false
+            if !isDirectoryMode {
+                prefixItems = PrefixResultItemBuilder.items(matching: trimmed)
+                if !trimmed.isEmpty {
+                    let normalized = trimmed.lowercased()
+                    let exactMatch = prefixItems.contains { $0.title.lowercased() == normalized }
+                    hasExactPrefixMatch = exactMatch
+                    if exactMatch {
+                        prefixItems = prefixItems.filter { $0.title.lowercased().hasPrefix(normalized) }
+                    }
                 }
             }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
-                let items = await searchEngine.search(
+                async let appItemsTask: [ResultItem] = isDirectoryMode ? [] : searchEngine.search(
                     query: trimmed,
                     isScoped: false,
                     providerIDs: [AppSearchProvider.providerID, CalcProvider.providerID]
                 )
+                async let directoryItemsTask: [ResultItem] = searchEngine.search(
+                    query: trimmed,
+                    isScoped: false,
+                    providerIDs: [QuickDirectoryProvider.providerID]
+                )
+                let items = await appItemsTask
+                let directoryItems = await directoryItemsTask
                 if Task.isCancelled {
                     return
                 }
                 await MainActor.run { [weak self] in
                     guard self?.searchState == currentState else { return }
-                    if items.isEmpty {
-                        self?.setResults(prefixItems)
-                    } else {
-                        let hasExactPrefixMatch = prefixItems.contains { item in
-                            item.title.lowercased() == trimmed.lowercased()
-                        }
-                        if hasExactPrefixMatch {
-                            self?.setResults(prefixItems + items)
-                        } else {
-                            self?.setResults(items + prefixItems)
-                        }
+                    guard let self else { return }
+                    if isDirectoryMode {
+                        self.setResults(directoryItems)
+                        return
                     }
+
+                    var combined: [ResultItem] = []
+                    if hasExactPrefixMatch {
+                        combined.append(contentsOf: prefixItems)
+                        combined.append(contentsOf: items)
+                    } else {
+                        combined.append(contentsOf: items)
+                        combined.append(contentsOf: prefixItems)
+                    }
+                    combined.append(contentsOf: directoryItems)
+                    self.setResults(combined)
                 }
             }
         case .prefixed(let providerID):

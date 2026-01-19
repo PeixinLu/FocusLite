@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SettingsTab: String, CaseIterable {
     case general
+    case quickDirectories
     case updates
     case clipboard
     case snippets
@@ -13,6 +14,8 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .general:
             return "gearshape"
+        case .quickDirectories:
+            return "folder"
         case .updates:
             return "arrow.triangle.2.circlepath"
         case .clipboard:
@@ -32,6 +35,8 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .general:
             return "设置启动行为与唤起快捷键"
+        case .quickDirectories:
+            return "管理常用目录与别名"
         case .updates:
             return "检查并获取最新版本"
         case .clipboard:
@@ -65,6 +70,8 @@ extension SettingsTab {
         switch self {
         case .general:
             return "通用"
+        case .quickDirectories:
+            return "快捷目录"
         case .updates:
             return "更新"
         case .clipboard:
@@ -144,6 +151,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var selectedTab: SettingsTab
     @Published var isShowingSaved = false
     let generalViewModel: GeneralSettingsViewModel
+    let quickDirectoryViewModel: QuickDirectorySettingsViewModel
     let appUpdater: AppUpdater
     let clipboardViewModel: ClipboardSettingsViewModel
     let snippetsViewModel: SnippetsManagerViewModel
@@ -152,6 +160,7 @@ final class SettingsViewModel: ObservableObject {
     init(
         selectedTab: SettingsTab = .general,
         generalViewModel: GeneralSettingsViewModel,
+        quickDirectoryViewModel: QuickDirectorySettingsViewModel,
         appUpdater: AppUpdater,
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
@@ -159,6 +168,7 @@ final class SettingsViewModel: ObservableObject {
     ) {
         self.selectedTab = selectedTab
         self.generalViewModel = generalViewModel
+        self.quickDirectoryViewModel = quickDirectoryViewModel
         self.appUpdater = appUpdater
         self.clipboardViewModel = clipboardViewModel
         self.snippetsViewModel = snippetsViewModel
@@ -289,6 +299,8 @@ struct SettingsView: View {
         switch viewModel.selectedTab {
         case .general:
             GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
+        case .quickDirectories:
+            QuickDirectorySettingsView(viewModel: viewModel.quickDirectoryViewModel, onSaved: viewModel.markSaved)
         case .updates:
             UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
         case .clipboard:

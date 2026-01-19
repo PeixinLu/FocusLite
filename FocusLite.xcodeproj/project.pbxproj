@@ -81,6 +81,9 @@
 		96AE658C2F0039F200F4C762 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 96AE658B2F0039F200F4C762 /* Sparkle */; };
 		98746D42D3E646CCB757A85D /* AppUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98746D42D3E646CCB757A85C /* AppUpdater.swift */; };
 		9B79A1C92E3D4A0DAAA10002 /* PermissionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */; };
+		DF4C9A944E1B4BE1862D487F /* QuickDirectoryPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */; };
+		9152699C733D4472A1C37EFC /* QuickDirectoryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B1CAE6EB3B41CA8F51D366 /* QuickDirectoryProvider.swift */; };
+		369E871525DF4DD0BD884030 /* QuickDirectorySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -170,6 +173,9 @@
 		81DD649A6F1340A498062F06 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		98746D42D3E646CCB757A85C /* AppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdater.swift; sourceTree = "<group>"; };
 		9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionSettingsView.swift; sourceTree = "<group>"; };
+		5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryPreferences.swift; sourceTree = "<group>"; };
+		B4B1CAE6EB3B41CA8F51D366 /* QuickDirectoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryProvider.swift; sourceTree = "<group>"; };
+		2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectorySettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -241,6 +247,7 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
+				2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */,
 				9B79A1C82E3D4A0DAAA10001 /* PermissionSettingsView.swift */,
 				1A2B3C4D5E6F000000000142 /* AppIndexSettingsView.swift */,
 				1A2B3C4D5E6F000000000561 /* AppearanceSettingsView.swift */,
@@ -290,6 +297,7 @@
 				1A2B3C4D5E6F00000000000C /* AppSearch */,
 				1A2B3C4D5E6F00000000000D /* Snippets */,
 				1A2B3C4D5E6F00000000000E /* Clipboard */,
+				971D080DAFDD4864AC0E9758 /* QuickDirectory */,
 				1A2B3C4D5E6F000000000329 /* Translate */,
 			);
 			path = FocusLitePlugins;
@@ -360,6 +368,14 @@
 			path = Clipboard;
 			sourceTree = "<group>";
 		};
+		971D080DAFDD4864AC0E9758 /* QuickDirectory */ = {
+			isa = PBXGroup;
+			children = (
+				B4B1CAE6EB3B41CA8F51D366 /* QuickDirectoryProvider.swift */,
+			);
+			path = QuickDirectory;
+			sourceTree = "<group>";
+		};
 		1A2B3C4D5E6F00000000013E /* Vendors/Pinyin4Swift */ = {
 			isa = PBXGroup;
 			children = (
@@ -379,6 +395,7 @@
 			children = (
 				1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */,
 				1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */,
+				5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */,
 				1A2B3C4D5E6F000000000551 /* AppearancePreferences.swift */,
 				1A2B3C4D5E6F000000000304 /* SnippetsPreferences.swift */,
 				1A2B3C4D5E6F000000000420 /* TranslatePreferences.swift */,
@@ -525,6 +542,7 @@
 				1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000331 /* TranslateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000332 /* SettingsView.swift in Sources */,
+				369E871525DF4DD0BD884030 /* QuickDirectorySettingsView.swift in Sources */,
 				9B79A1C92E3D4A0DAAA10002 /* PermissionSettingsView.swift in Sources */,
 				81DD649A6F1340A498062F07 /* UpdateSettingsView.swift in Sources */,
 				1A2B3C4D5E6F000000000242 /* AppIndexSettingsView.swift in Sources */,
@@ -543,12 +561,14 @@
 				1A2B3C4D5E6F000000000323 /* SearchStateReducer.swift in Sources */,
 				1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */,
+				DF4C9A944E1B4BE1862D487F /* QuickDirectoryPreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000552 /* AppearancePreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000324 /* SnippetsPreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000330 /* TranslatePreferences.swift in Sources */,
 				1A2B3C4D5E6F000000000211 /* CalcProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000212 /* ExpressionParser.swift in Sources */,
 				1A2B3C4D5E6F000000000230 /* AppSearchProvider.swift in Sources */,
+				9152699C733D4472A1C37EFC /* QuickDirectoryProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000231 /* AppIndex.swift in Sources */,
 				1A2B3C4D5E6F000000000233 /* AppNameIndex.swift in Sources */,
 				1A2B3C4D5E6F000000000234 /* Matcher.swift in Sources */,

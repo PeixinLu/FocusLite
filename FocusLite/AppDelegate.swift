@@ -11,11 +11,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appUpdater = AppUpdater.shared
     lazy var settingsViewModel: SettingsViewModel = {
         let generalSettingsViewModel = GeneralSettingsViewModel()
+        let quickDirectoryViewModel = QuickDirectorySettingsViewModel()
         let snippetsViewModel = SnippetsManagerViewModel(store: .shared)
         let clipboardSettingsViewModel = ClipboardSettingsViewModel()
         let translateSettingsViewModel = TranslateSettingsViewModel()
         return SettingsViewModel(
             generalViewModel: generalSettingsViewModel,
+            quickDirectoryViewModel: quickDirectoryViewModel,
             appUpdater: appUpdater,
             clipboardViewModel: clipboardSettingsViewModel,
             snippetsViewModel: snippetsViewModel,
@@ -37,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ClipboardProvider(),
             TranslateProvider(),
             AppSearchProvider(),
+            QuickDirectoryProvider(),
             StyleProvider()
         ]
         let searchEngine = SearchEngine(providers: providers)
