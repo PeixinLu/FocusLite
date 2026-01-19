@@ -573,6 +573,8 @@ private struct ResultRow: View {
         } else if item.providerID == AppSearchProvider.providerID ||
                     item.providerID == QuickDirectoryProvider.providerID {
             keyCaps(labels: ["⏎"], description: "打开")
+        } else if item.providerID == WebSearchProvider.providerID, item.action != .none {
+            keyCaps(labels: ["⏎"], description: "搜索")
         } else if item.providerID == SnippetsProvider.providerID ||
                     item.providerID == ClipboardProvider.providerID ||
                     item.providerID == TranslateProvider.providerID {

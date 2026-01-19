@@ -158,6 +158,11 @@ final class LauncherViewModel: ObservableObject {
             copyFilesToPasteboard(paths)
             showToast("已复制文件")
         case .none:
+            if item.providerID == WebSearchProvider.providerID {
+                showToast("请输入内容后再搜索")
+                shouldAnimateSelection = false
+                return
+            }
             break
         }
 
@@ -327,8 +332,14 @@ final class LauncherViewModel: ObservableObject {
                     isScoped: false,
                     providerIDs: [QuickDirectoryProvider.providerID]
                 )
+                async let webItemsTask: [ResultItem] = isDirectoryMode ? [] : searchEngine.search(
+                    query: trimmed,
+                    isScoped: false,
+                    providerIDs: [WebSearchProvider.providerID]
+                )
                 let items = await appItemsTask
                 let directoryItems = await directoryItemsTask
+                let webItems = await webItemsTask
                 if Task.isCancelled {
                     return
                 }
@@ -349,6 +360,11 @@ final class LauncherViewModel: ObservableObject {
                         combined.append(contentsOf: prefixItems)
                     }
                     combined.append(contentsOf: directoryItems)
+                    if let boosted = webItems.first, boosted.score > 1.0 {
+                        combined.insert(boosted, at: 0)
+                    } else {
+                        combined.append(contentsOf: webItems)
+                    }
                     self.setResults(combined)
                 }
             }

@@ -3,6 +3,7 @@ import SwiftUI
 enum SettingsTab: String, CaseIterable {
     case general
     case quickDirectories
+    case webSearch
     case updates
     case clipboard
     case snippets
@@ -16,6 +17,8 @@ enum SettingsTab: String, CaseIterable {
             return "gearshape"
         case .quickDirectories:
             return "folder"
+        case .webSearch:
+            return "globe"
         case .updates:
             return "arrow.triangle.2.circlepath"
         case .clipboard:
@@ -37,6 +40,8 @@ enum SettingsTab: String, CaseIterable {
             return "设置启动行为与唤起快捷键"
         case .quickDirectories:
             return "管理常用目录与别名"
+        case .webSearch:
+            return "配置默认浏览器搜索"
         case .updates:
             return "检查并获取最新版本"
         case .clipboard:
@@ -72,6 +77,8 @@ extension SettingsTab {
             return "通用"
         case .quickDirectories:
             return "快捷目录"
+        case .webSearch:
+            return "网页搜索"
         case .updates:
             return "更新"
         case .clipboard:
@@ -152,6 +159,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var isShowingSaved = false
     let generalViewModel: GeneralSettingsViewModel
     let quickDirectoryViewModel: QuickDirectorySettingsViewModel
+    let webSearchViewModel: WebSearchSettingsViewModel
     let appUpdater: AppUpdater
     let clipboardViewModel: ClipboardSettingsViewModel
     let snippetsViewModel: SnippetsManagerViewModel
@@ -161,6 +169,7 @@ final class SettingsViewModel: ObservableObject {
         selectedTab: SettingsTab = .general,
         generalViewModel: GeneralSettingsViewModel,
         quickDirectoryViewModel: QuickDirectorySettingsViewModel,
+        webSearchViewModel: WebSearchSettingsViewModel,
         appUpdater: AppUpdater,
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
@@ -169,6 +178,7 @@ final class SettingsViewModel: ObservableObject {
         self.selectedTab = selectedTab
         self.generalViewModel = generalViewModel
         self.quickDirectoryViewModel = quickDirectoryViewModel
+        self.webSearchViewModel = webSearchViewModel
         self.appUpdater = appUpdater
         self.clipboardViewModel = clipboardViewModel
         self.snippetsViewModel = snippetsViewModel
@@ -301,6 +311,8 @@ struct SettingsView: View {
             GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
         case .quickDirectories:
             QuickDirectorySettingsView(viewModel: viewModel.quickDirectoryViewModel, onSaved: viewModel.markSaved)
+        case .webSearch:
+            WebSearchSettingsView(viewModel: viewModel.webSearchViewModel, onSaved: viewModel.markSaved)
         case .updates:
             UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
         case .clipboard:
