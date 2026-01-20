@@ -20,6 +20,15 @@ struct AboutView: View {
         VStack(spacing: 28) {
             Spacer()
             VStack(spacing: 10) {
+                if let icon = NSImage(named: "AppIcon") {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .antialiased(true)
+                        .frame(width: 72, height: 72)
+                        .cornerRadius(16)
+                        .shadow(radius: 4, y: 2)
+                }
                 Text("FocusLite")
                     .font(.system(size: 24, weight: .bold))
                 Text(versionString)
