@@ -27,6 +27,9 @@ struct FocusLiteApp: App {
             Button("外观") {
                 appDelegate.openStylePrefix()
             }
+            Button("操作指引") {
+                appDelegate.presentOnboarding()
+            }
             Divider()
             if #available(macOS 14, *) {
                 SettingsLink {

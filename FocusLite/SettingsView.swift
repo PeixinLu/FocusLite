@@ -171,6 +171,7 @@ final class SettingsViewModel: ObservableObject {
     let clipboardViewModel: ClipboardSettingsViewModel
     let snippetsViewModel: SnippetsManagerViewModel
     let translateViewModel: TranslateSettingsViewModel
+    let onShowOnboarding: () -> Void
 
     init(
         selectedTab: SettingsTab = .general,
@@ -180,7 +181,8 @@ final class SettingsViewModel: ObservableObject {
         appUpdater: AppUpdater,
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
-        translateViewModel: TranslateSettingsViewModel
+        translateViewModel: TranslateSettingsViewModel,
+        onShowOnboarding: @escaping () -> Void
     ) {
         self.selectedTab = selectedTab
         self.generalViewModel = generalViewModel
@@ -190,6 +192,7 @@ final class SettingsViewModel: ObservableObject {
         self.clipboardViewModel = clipboardViewModel
         self.snippetsViewModel = snippetsViewModel
         self.translateViewModel = translateViewModel
+        self.onShowOnboarding = onShowOnboarding
     }
 
     func markSaved() {
@@ -315,7 +318,11 @@ struct SettingsView: View {
     private var contentView: some View {
         switch viewModel.selectedTab {
         case .general:
-            GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
+            GeneralSettingsView(
+                viewModel: viewModel.generalViewModel,
+                onSaved: viewModel.markSaved,
+                onShowOnboarding: viewModel.onShowOnboarding
+            )
         case .apps:
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         case .translate:

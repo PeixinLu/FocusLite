@@ -88,6 +88,8 @@
 		416A961C89744B75867FC16C /* WebSearchProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F778C795712846EB8441ABF8 /* WebSearchProvider.swift */; };
 		6B8CEC407F6F466FA5ACE132 /* WebSearchSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0CFB5CA8D4F7296E58AF8 /* WebSearchSettingsView.swift */; };
 		D7385D215AB44638A81F0FF4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */; };
+		B0D9F9F5ABF4418CB046D0F7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41BABAD0A43411F944AE11B /* OnboardingView.swift */; };
+		ADF17B42F1194431975F6049 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F00A1886D8944F7B2E4544A /* OnboardingState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -181,6 +183,8 @@
 		F778C795712846EB8441ABF8 /* WebSearchProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchProvider.swift; sourceTree = "<group>"; };
 		F4F0CFB5CA8D4F7296E58AF8 /* WebSearchSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSettingsView.swift; sourceTree = "<group>"; };
 		FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		E41BABAD0A43411F944AE11B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		2F00A1886D8944F7B2E4544A /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
 		5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryPreferences.swift; sourceTree = "<group>"; };
 		B4B1CAE6EB3B41CA8F51D366 /* QuickDirectoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryProvider.swift; sourceTree = "<group>"; };
 		2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectorySettingsView.swift; sourceTree = "<group>"; };
@@ -254,6 +258,7 @@
 				1A2B3C4D5E6F000000000104 /* LauncherViewModel.swift */,
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */,
+				E41BABAD0A43411F944AE11B /* OnboardingView.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */,
@@ -281,6 +286,7 @@
 				1A2B3C4D5E6F000000000006 /* Search */,
 				1A2B3C4D5E6F000000000306 /* Preferences */,
 				1A2B3C4D5E6F00000000000A /* Utils */,
+				52BD6E9DF454479B8D07934C /* Onboarding */,
 			);
 			path = FocusLiteCore;
 			sourceTree = "<group>";
@@ -298,6 +304,14 @@
 				1A2B3C4D5E6F000000000303 /* SearchStateReducer.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		52BD6E9DF454479B8D07934C /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				2F00A1886D8944F7B2E4544A /* OnboardingState.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		1A2B3C4D5E6F000000000007 /* FocusLitePlugins */ = {
@@ -622,6 +636,8 @@
 				1A2B3C4D5E6F000000000562 /* AppearanceSettingsView.swift in Sources */,
 				1A2B3C4D5E6F00000000020A /* Log.swift in Sources */,
 				D7385D215AB44638A81F0FF4 /* AboutView.swift in Sources */,
+				B0D9F9F5ABF4418CB046D0F7 /* OnboardingView.swift in Sources */,
+				ADF17B42F1194431975F6049 /* OnboardingState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

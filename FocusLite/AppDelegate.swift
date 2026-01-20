@@ -1,6 +1,7 @@
 import Carbon.HIToolbox
 import Cocoa
 import SwiftUI
+import Combine
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -9,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let clipboardMonitor = ClipboardMonitor()
     private let hotKeyManager = HotKeyManager.shared
     private let appUpdater = AppUpdater.shared
+    private let onboardingState = OnboardingState()
     lazy var settingsViewModel: SettingsViewModel = {
         let generalSettingsViewModel = GeneralSettingsViewModel()
         let quickDirectoryViewModel = QuickDirectorySettingsViewModel()
@@ -23,9 +25,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appUpdater: appUpdater,
             clipboardViewModel: clipboardSettingsViewModel,
             snippetsViewModel: snippetsViewModel,
-            translateViewModel: translateSettingsViewModel
+            translateViewModel: translateSettingsViewModel,
+            onShowOnboarding: { [weak self] in
+                self?.presentOnboarding()
+            }
         )
     }()
+    private var onboardingWindow: NSWindow?
+    private var onboardingCancellable: AnyCancellable?
+    private var onboardingEscMonitor: Any?
     private let launcherHotKeyID: UInt32 = 1
     private let clipboardHotKeyID: UInt32 = 2
     private let snippetsHotKeyID: UInt32 = 3
@@ -60,6 +68,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.onPaste = { [weak self] text in
             self?.windowController?.pasteTextAndHide(text) ?? false
         }
+        viewModel.onPresentOnboarding = { [weak self] in
+            self?.presentOnboarding()
+        }
 
         windowController = LauncherWindowController(viewModel: viewModel)
         
@@ -69,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerTranslateHotKey()
         windowController?.show()
         clipboardMonitor.start()
+        presentOnboardingIfNeeded()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleUserDefaultsChange),
@@ -89,6 +101,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
+        onboardingCancellable = onboardingState.$isPresented
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] presented in
+                guard let self else { return }
+                if presented {
+                    self.showOnboardingWindow()
+                } else {
+                    self.onboardingWindow?.orderOut(nil)
+                    self.stopOnboardingEscMonitor()
+                }
+            }
+
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -101,6 +125,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleWindow() {
         windowController?.toggle()
+    }
+
+    private func handleLauncherHotKey() {
+        if onboardingState.isPresented, onboardingState.currentStep == .hotkey {
+            onboardingState.hotkeyStepCompleted = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak onboardingState] in
+                onboardingState?.advance()
+            }
+            return
+        }
+        toggleWindow()
     }
 
     @MainActor @objc private func showSettingsWindow() {
@@ -171,6 +206,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsViewModel.selectedTab = tab
     }
 
+    @MainActor
+    func presentOnboarding() {
+        onboardingState.present()
+        showOnboardingWindow()
+    }
+
+    @MainActor
+    private func presentOnboardingIfNeeded() {
+        guard !onboardingState.hasSeenOnboarding else { return }
+        presentOnboarding()
+    }
+
+    @MainActor
+    private func showOnboardingWindow() {
+        if onboardingWindow == nil {
+            let view = OnboardingView(state: onboardingState)
+            let hosting = NSHostingController(rootView: view)
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 420),
+                styleMask: [.nonactivatingPanel, .hudWindow, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
+            )
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isMovable = true
+            panel.isFloatingPanel = true
+            panel.hidesOnDeactivate = false
+            panel.level = .floating
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.standardWindowButton(.closeButton)?.isHidden = true
+            panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            panel.standardWindowButton(.zoomButton)?.isHidden = true
+            panel.collectionBehavior.insert(.fullScreenAuxiliary)
+            panel.contentViewController = hosting
+            onboardingWindow = panel
+        }
+
+        if let window = onboardingWindow {
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            startOnboardingEscMonitor()
+        }
+    }
+
+    private func startOnboardingEscMonitor() {
+        guard onboardingEscMonitor == nil else { return }
+        onboardingEscMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 { // esc
+                self?.onboardingState.dismiss(markSeen: true)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func stopOnboardingEscMonitor() {
+        if let monitor = onboardingEscMonitor {
+            NSEvent.removeMonitor(monitor)
+            onboardingEscMonitor = nil
+        }
+    }
+
     private func registerLauncherHotKey() {
         guard let descriptor = HotKeyDescriptor.parse(GeneralPreferences.launcherHotKeyText) else {
             hotKeyManager.unregister(identifier: launcherHotKeyID)
@@ -184,7 +284,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             identifier: launcherHotKeyID
         ) { [weak self] in
             DispatchQueue.main.async {
-                self?.toggleWindow()
+                self?.handleLauncherHotKey()
             }
         }
 
