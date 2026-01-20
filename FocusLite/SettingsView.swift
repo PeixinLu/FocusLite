@@ -2,14 +2,14 @@ import SwiftUI
 
 enum SettingsTab: String, CaseIterable {
     case general
+    case apps
+    case clipboard
+    case translate
+    case snippets
     case quickDirectories
     case webSearch
-    case updates
-    case clipboard
-    case snippets
-    case translate
-    case apps
     case permissions
+    case updates
     case about
 
     var iconName: String {
@@ -27,7 +27,7 @@ enum SettingsTab: String, CaseIterable {
         case .snippets:
             return "text.append"
         case .translate:
-            return "character.bubble"
+            return "translate"
         case .apps:
             return "square.grid.2x2"
         case .permissions:
@@ -316,22 +316,22 @@ struct SettingsView: View {
         switch viewModel.selectedTab {
         case .general:
             GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
-        case .quickDirectories:
-            QuickDirectorySettingsView(viewModel: viewModel.quickDirectoryViewModel, onSaved: viewModel.markSaved)
-        case .webSearch:
-            WebSearchSettingsView(viewModel: viewModel.webSearchViewModel, onSaved: viewModel.markSaved)
-        case .updates:
-            UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
+        case .apps:
+            AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .translate:
+            TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
         case .clipboard:
             ClipboardSettingsView(viewModel: viewModel.clipboardViewModel, onSaved: viewModel.markSaved)
         case .snippets:
             SnippetsManagerView(viewModel: viewModel.snippetsViewModel, onSaved: viewModel.markSaved)
-        case .translate:
-            TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
-        case .apps:
-            AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .quickDirectories:
+            QuickDirectorySettingsView(viewModel: viewModel.quickDirectoryViewModel, onSaved: viewModel.markSaved)
+        case .webSearch:
+            WebSearchSettingsView(viewModel: viewModel.webSearchViewModel, onSaved: viewModel.markSaved)
         case .permissions:
             PermissionSettingsView()
+        case .updates:
+            UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
         case .about:
             AboutView()
         }

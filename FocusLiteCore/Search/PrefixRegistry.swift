@@ -50,7 +50,7 @@ enum PrefixRegistry {
             providerID: TranslateProvider.providerID,
             title: prefix,
             subtitle: "翻译文本",
-            icon: .system("globe")
+            icon: .system("translate")
         )
     }
 
