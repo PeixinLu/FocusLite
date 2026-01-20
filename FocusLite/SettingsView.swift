@@ -10,6 +10,7 @@ enum SettingsTab: String, CaseIterable {
     case translate
     case apps
     case permissions
+    case about
 
     var iconName: String {
         switch self {
@@ -31,6 +32,8 @@ enum SettingsTab: String, CaseIterable {
             return "square.grid.2x2"
         case .permissions:
             return "lock.shield"
+        case .about:
+            return "info.circle"
         }
     }
 
@@ -54,6 +57,8 @@ enum SettingsTab: String, CaseIterable {
             return "管理应用索引与搜索"
         case .permissions:
             return "查看系统权限状态"
+        case .about:
+            return "版本信息与反馈渠道"
         }
     }
 }
@@ -75,22 +80,24 @@ extension SettingsTab {
         switch self {
         case .general:
             return "通用"
+        case .apps:
+            return "应用搜索"
+        case .clipboard:
+            return "剪贴板历史"
+        case .translate:
+            return "快捷翻译"
+        case .snippets:
+            return "文本片段"
         case .quickDirectories:
             return "快捷目录"
         case .webSearch:
             return "网页搜索"
-        case .updates:
-            return "更新"
-        case .clipboard:
-            return "剪贴板"
-        case .snippets:
-            return "文本片段"
-        case .translate:
-            return "翻译"
-        case .apps:
-            return "应用"
         case .permissions:
             return "权限"
+        case .updates:
+            return "更新"
+        case .about:
+            return "关于"
         }
     }
 }
@@ -325,6 +332,8 @@ struct SettingsView: View {
             AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
         case .permissions:
             PermissionSettingsView()
+        case .about:
+            AboutView()
         }
     }
 
