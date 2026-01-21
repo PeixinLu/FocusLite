@@ -25,6 +25,7 @@ final class LauncherViewModel: ObservableObject {
     var onOpenSettings: ((SettingsTab) -> Void)?
     var onPrepareSettings: ((SettingsTab) -> Void)?
     var onPaste: ((String) -> Bool)?
+    var onPresentOnboarding: (() -> Void)?
 
     init(searchEngine: SearchEngine) {
         self.searchEngine = searchEngine

@@ -24,10 +24,12 @@ final class GeneralSettingsViewModel: ObservableObject {
 struct GeneralSettingsView: View {
     @StateObject var viewModel: GeneralSettingsViewModel
     let onSaved: (() -> Void)?
+    let onShowOnboarding: (() -> Void)?
 
-    init(viewModel: GeneralSettingsViewModel, onSaved: (() -> Void)? = nil) {
+    init(viewModel: GeneralSettingsViewModel, onSaved: (() -> Void)? = nil, onShowOnboarding: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: viewModel)
         self.onSaved = onSaved
+        self.onShowOnboarding = onShowOnboarding
     }
 
     var body: some View {
@@ -58,6 +60,15 @@ struct GeneralSettingsView: View {
                     }
                 }
 
+            }
+
+            SettingsSection("操作指引") {
+                SettingsFieldRow(title: "快速上手") {
+                    Button("查看入门指引") {
+                        onShowOnboarding?()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
         .padding(.horizontal, SettingsLayout.horizontalPadding)
