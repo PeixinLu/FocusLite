@@ -2,17 +2,24 @@ import SwiftUI
 
 enum SettingsTab: String, CaseIterable {
     case general
-    case updates
-    case clipboard
-    case snippets
-    case translate
     case apps
+    case clipboard
+    case translate
+    case snippets
+    case quickDirectories
+    case webSearch
     case permissions
+    case updates
+    case about
 
     var iconName: String {
         switch self {
         case .general:
             return "gearshape"
+        case .quickDirectories:
+            return "folder"
+        case .webSearch:
+            return "globe"
         case .updates:
             return "arrow.triangle.2.circlepath"
         case .clipboard:
@@ -20,11 +27,13 @@ enum SettingsTab: String, CaseIterable {
         case .snippets:
             return "text.append"
         case .translate:
-            return "character.bubble"
+            return "translate"
         case .apps:
             return "square.grid.2x2"
         case .permissions:
             return "lock.shield"
+        case .about:
+            return "info.circle"
         }
     }
 
@@ -32,6 +41,10 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .general:
             return "设置启动行为与唤起快捷键"
+        case .quickDirectories:
+            return "管理常用目录与别名"
+        case .webSearch:
+            return "配置默认浏览器搜索"
         case .updates:
             return "检查并获取最新版本"
         case .clipboard:
@@ -44,6 +57,8 @@ enum SettingsTab: String, CaseIterable {
             return "管理应用索引与搜索"
         case .permissions:
             return "查看系统权限状态"
+        case .about:
+            return "版本信息与反馈渠道"
         }
     }
 }
@@ -65,18 +80,24 @@ extension SettingsTab {
         switch self {
         case .general:
             return "通用"
-        case .updates:
-            return "更新"
+        case .apps:
+            return "应用搜索"
         case .clipboard:
-            return "剪贴板"
+            return "剪贴板历史"
+        case .translate:
+            return "快捷翻译"
         case .snippets:
             return "文本片段"
-        case .translate:
-            return "翻译"
-        case .apps:
-            return "应用"
+        case .quickDirectories:
+            return "快捷目录"
+        case .webSearch:
+            return "网页搜索"
         case .permissions:
             return "权限"
+        case .updates:
+            return "更新"
+        case .about:
+            return "关于"
         }
     }
 }
@@ -144,6 +165,8 @@ final class SettingsViewModel: ObservableObject {
     @Published var selectedTab: SettingsTab
     @Published var isShowingSaved = false
     let generalViewModel: GeneralSettingsViewModel
+    let quickDirectoryViewModel: QuickDirectorySettingsViewModel
+    let webSearchViewModel: WebSearchSettingsViewModel
     let appUpdater: AppUpdater
     let clipboardViewModel: ClipboardSettingsViewModel
     let snippetsViewModel: SnippetsManagerViewModel
@@ -152,6 +175,8 @@ final class SettingsViewModel: ObservableObject {
     init(
         selectedTab: SettingsTab = .general,
         generalViewModel: GeneralSettingsViewModel,
+        quickDirectoryViewModel: QuickDirectorySettingsViewModel,
+        webSearchViewModel: WebSearchSettingsViewModel,
         appUpdater: AppUpdater,
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
@@ -159,6 +184,8 @@ final class SettingsViewModel: ObservableObject {
     ) {
         self.selectedTab = selectedTab
         self.generalViewModel = generalViewModel
+        self.quickDirectoryViewModel = quickDirectoryViewModel
+        self.webSearchViewModel = webSearchViewModel
         self.appUpdater = appUpdater
         self.clipboardViewModel = clipboardViewModel
         self.snippetsViewModel = snippetsViewModel
@@ -289,18 +316,24 @@ struct SettingsView: View {
         switch viewModel.selectedTab {
         case .general:
             GeneralSettingsView(viewModel: viewModel.generalViewModel, onSaved: viewModel.markSaved)
-        case .updates:
-            UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
+        case .apps:
+            AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .translate:
+            TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
         case .clipboard:
             ClipboardSettingsView(viewModel: viewModel.clipboardViewModel, onSaved: viewModel.markSaved)
         case .snippets:
             SnippetsManagerView(viewModel: viewModel.snippetsViewModel, onSaved: viewModel.markSaved)
-        case .translate:
-            TranslateSettingsView(viewModel: viewModel.translateViewModel, onSaved: viewModel.markSaved)
-        case .apps:
-            AppIndexSettingsView(viewModel: AppIndexSettingsViewModel())
+        case .quickDirectories:
+            QuickDirectorySettingsView(viewModel: viewModel.quickDirectoryViewModel, onSaved: viewModel.markSaved)
+        case .webSearch:
+            WebSearchSettingsView(viewModel: viewModel.webSearchViewModel, onSaved: viewModel.markSaved)
         case .permissions:
             PermissionSettingsView()
+        case .updates:
+            UpdateSettingsView(updater: viewModel.appUpdater, onSaved: viewModel.markSaved)
+        case .about:
+            AboutView()
         }
     }
 

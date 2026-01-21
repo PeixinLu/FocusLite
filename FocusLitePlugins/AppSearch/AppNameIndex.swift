@@ -13,7 +13,10 @@ struct AppNameIndex: Codable, Hashable, Sendable {
     init(name: String, aliasEntry: AliasEntry?, pinyinProvider: PinyinProvider?) {
         original = name
         normalized = MatchingNormalizer.normalize(name)
-        tokens = MatchingNormalizer.tokens(from: name)
+        let baseTokens = MatchingNormalizer.tokens(from: name)
+        let cjkTokens = MatchingNormalizer.cjkCharacters(fromNormalized: normalized)
+        let cjkGrams = MatchingNormalizer.cjkNGrams(fromNormalized: normalized, lengths: [2, 3])
+        tokens = MatchingNormalizer.mergeTokens(baseTokens, cjkTokens + cjkGrams)
         acronym = MatchingNormalizer.acronym(from: tokens)
 
         let normalizedFull = aliasEntry?.full.map { MatchingNormalizer.normalize($0) }.filter { !$0.isEmpty } ?? []
@@ -210,6 +213,49 @@ enum MatchingNormalizer {
         }
 
         return result
+    }
+
+    static func cjkCharacters(fromNormalized normalized: String) -> [String] {
+        var tokens: [String] = []
+        tokens.reserveCapacity(normalized.count)
+        for scalar in normalized.unicodeScalars {
+            if isCJKUnifiedIdeograph(scalar) {
+                tokens.append(String(scalar))
+            }
+        }
+        return tokens
+    }
+
+    static func mergeTokens(_ base: [String], _ extra: [String]) -> [String] {
+        var merged: [String] = base
+        for token in extra where !merged.contains(token) {
+            merged.append(token)
+        }
+        return merged
+    }
+
+    static func cjkNGrams(fromNormalized normalized: String, lengths: [Int]) -> [String] {
+        let scalars = Array(normalized.unicodeScalars)
+        var grams: [String] = []
+        for length in lengths {
+            guard length > 1 else { continue }
+            if scalars.count < length { continue }
+            for i in 0...(scalars.count - length) {
+                let slice = scalars[i..<(i + length)]
+                if slice.allSatisfy({ isCJKUnifiedIdeograph($0) }) {
+                    grams.append(String(String.UnicodeScalarView(slice)))
+                }
+            }
+        }
+        // 去重
+        var seen: Set<String> = []
+        var deduped: [String] = []
+        for gram in grams {
+            if seen.insert(gram).inserted {
+                deduped.append(gram)
+            }
+        }
+        return deduped
     }
 
     static func acronym(from tokens: [String]) -> String {

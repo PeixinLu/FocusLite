@@ -570,8 +570,11 @@ private struct ResultRow: View {
             let prefixText = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let labels = query == prefixText ? ["␣", "⏎"] : ["⏎"]
             keyCaps(labels: labels, description: "进入")
-        } else if item.providerID == AppSearchProvider.providerID {
+        } else if item.providerID == AppSearchProvider.providerID ||
+                    item.providerID == QuickDirectoryProvider.providerID {
             keyCaps(labels: ["⏎"], description: "打开")
+        } else if item.providerID == WebSearchProvider.providerID, item.action != .none {
+            keyCaps(labels: ["⏎"], description: "搜索")
         } else if item.providerID == SnippetsProvider.providerID ||
                     item.providerID == ClipboardProvider.providerID ||
                     item.providerID == TranslateProvider.providerID {
