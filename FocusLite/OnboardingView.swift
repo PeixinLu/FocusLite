@@ -152,7 +152,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("高级功能")
                 .font(.system(size: 22, weight: .bold))
-            Text("通过特殊文本前缀激活翻译｜剪贴板历史｜文本片段等功能（亦可在设置中配置各个功能的直达快捷键）")
+            Text("通过可自定义的文本前缀激活 翻译｜剪贴板历史｜文本片段 等功能（亦可在设置中配置各个功能的直达快捷键）")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.secondary)
             prefixChips
