@@ -28,12 +28,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             translateViewModel: translateSettingsViewModel,
             onShowOnboarding: { [weak self] in
                 self?.presentOnboarding()
+            },
+            isOnboardingPresented: { [weak self] in
+                self?.onboardingState.isPresented ?? false
             }
         )
     }()
     private var onboardingWindow: NSWindow?
     private var onboardingCancellable: AnyCancellable?
     private var onboardingEscMonitor: Any?
+    private var isRecordingHotKey = false
     private let launcherHotKeyID: UInt32 = 1
     private let clipboardHotKeyID: UInt32 = 2
     private let snippetsHotKeyID: UInt32 = 3
@@ -97,6 +101,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(resumeHotKeys),
+            name: .hotKeyRecordingDidEnd,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(markRecordingHotKey),
+            name: .hotKeyRecordingWillBegin,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(unmarkRecordingHotKey),
             name: .hotKeyRecordingDidEnd,
             object: nil
         )
@@ -194,6 +210,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func resumeHotKeys() {
         registerLauncherHotKey()
         registerClipboardHotKey()
+        registerSnippetsHotKey()
+        registerTranslateHotKey()
+    }
+
+    @objc private func markRecordingHotKey() {
+        isRecordingHotKey = true
+    }
+
+    @objc private func unmarkRecordingHotKey() {
+        isRecordingHotKey = false
     }
 
     @MainActor
@@ -223,9 +249,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if onboardingWindow == nil {
             let view = OnboardingView(state: onboardingState)
             let hosting = NSHostingController(rootView: view)
-            let panel = NSPanel(
+            let panel = OnboardingPanel(
                 contentRect: NSRect(x: 0, y: 0, width: 520, height: 420),
-                styleMask: [.nonactivatingPanel, .hudWindow, .fullSizeContentView],
+                styleMask: [.hudWindow, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
@@ -233,6 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.titlebarAppearsTransparent = true
             panel.isMovable = true
             panel.isFloatingPanel = true
+            panel.becomesKeyOnlyIfNeeded = false
             panel.hidesOnDeactivate = false
             panel.level = .floating
             panel.isOpaque = false
@@ -256,11 +283,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startOnboardingEscMonitor() {
         guard onboardingEscMonitor == nil else { return }
         onboardingEscMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 { // esc
-                self?.onboardingState.dismiss(markSeen: true)
-                return nil
+            guard let self else { return event }
+            guard self.onboardingState.isPresented, self.onboardingWindow?.isKeyWindow == true else { return event }
+            if self.isRecordingHotKey {
+                return event
             }
-            return event
+            switch event.keyCode {
+            case 36, 48, 76: // return, tab, keypad enter
+                self.advanceOnboarding()
+                return nil
+            case 124, 125: // right, down
+                self.advanceOnboarding()
+                return nil
+            case 123, 126: // left, up
+                self.goBackOnboarding()
+                return nil
+            case 53: // esc
+                self.onboardingState.dismiss(markSeen: true)
+                return nil
+            default:
+                return event
+            }
         }
     }
 
@@ -269,6 +312,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(monitor)
             onboardingEscMonitor = nil
         }
+    }
+
+    private func advanceOnboarding() {
+        if onboardingState.currentStep == .appearance {
+            onboardingState.dismiss(markSeen: true)
+        } else {
+            onboardingState.advance()
+        }
+    }
+
+    private func goBackOnboarding() {
+        guard let prev = OnboardingState.Step(rawValue: onboardingState.currentStep.rawValue - 1) else {
+            return
+        }
+        onboardingState.currentStep = prev
     }
 
     private func registerLauncherHotKey() {
@@ -366,4 +424,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Translate hotkey registration failed (\(TranslatePreferences.hotKeyText)).")
         }
     }
+}
+
+private final class OnboardingPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }

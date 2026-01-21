@@ -23,6 +23,7 @@ struct OnboardingView: View {
     private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @State private var isRecordingHotKey = false
     @State private var keyMonitor: Any?
+    @State private var hostingWindow: NSWindow?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,7 +55,8 @@ struct OnboardingView: View {
         .contentShape(Rectangle())
         .onAppear {
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                handleKey(event: event)
+                guard let window = hostingWindow, window.isKeyWindow else { return event }
+                return handleKey(event: event)
             }
         }
         .onDisappear {
@@ -69,6 +71,9 @@ struct OnboardingView: View {
         .onReceive(NotificationCenter.default.publisher(for: .hotKeyRecordingDidEnd)) { _ in
             isRecordingHotKey = false
         }
+        .background(
+            WindowAccessor(window: $hostingWindow)
+        )
     }
 
     @ViewBuilder
@@ -313,6 +318,9 @@ struct OnboardingView: View {
             return nil
         case 123, 126: // left, up
             goBack()
+            return nil
+        case 53: // esc
+            state.dismiss(markSeen: true)
             return nil
         default:
             return event

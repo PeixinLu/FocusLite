@@ -90,6 +90,7 @@
 		D7385D215AB44638A81F0FF4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */; };
 		B0D9F9F5ABF4418CB046D0F7 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41BABAD0A43411F944AE11B /* OnboardingView.swift */; };
 		ADF17B42F1194431975F6049 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F00A1886D8944F7B2E4544A /* OnboardingState.swift */; };
+		5C1B2E08B3E7497BBE4A5E1A /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDC0DECAFEBABE00000001 /* WindowAccessor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +186,7 @@
 		FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E41BABAD0A43411F944AE11B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		2F00A1886D8944F7B2E4544A /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		FEEDC0DECAFEBABE00000001 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryPreferences.swift; sourceTree = "<group>"; };
 		B4B1CAE6EB3B41CA8F51D366 /* QuickDirectoryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectoryProvider.swift; sourceTree = "<group>"; };
 		2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickDirectorySettingsView.swift; sourceTree = "<group>"; };
@@ -259,6 +261,7 @@
 				1A2B3C4D5E6F000000000305 /* TagView.swift */,
 				FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */,
 				E41BABAD0A43411F944AE11B /* OnboardingView.swift */,
+				FEEDC0DECAFEBABE00000001 /* WindowAccessor.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */,
@@ -638,6 +641,7 @@
 				D7385D215AB44638A81F0FF4 /* AboutView.swift in Sources */,
 				B0D9F9F5ABF4418CB046D0F7 /* OnboardingView.swift in Sources */,
 				ADF17B42F1194431975F6049 /* OnboardingState.swift in Sources */,
+				5C1B2E08B3E7497BBE4A5E1A /* WindowAccessor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

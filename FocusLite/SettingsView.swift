@@ -172,6 +172,7 @@ final class SettingsViewModel: ObservableObject {
     let snippetsViewModel: SnippetsManagerViewModel
     let translateViewModel: TranslateSettingsViewModel
     let onShowOnboarding: () -> Void
+    let isOnboardingPresented: () -> Bool
 
     init(
         selectedTab: SettingsTab = .general,
@@ -182,7 +183,8 @@ final class SettingsViewModel: ObservableObject {
         clipboardViewModel: ClipboardSettingsViewModel,
         snippetsViewModel: SnippetsManagerViewModel,
         translateViewModel: TranslateSettingsViewModel,
-        onShowOnboarding: @escaping () -> Void
+        onShowOnboarding: @escaping () -> Void,
+        isOnboardingPresented: @escaping () -> Bool
     ) {
         self.selectedTab = selectedTab
         self.generalViewModel = generalViewModel
@@ -193,6 +195,7 @@ final class SettingsViewModel: ObservableObject {
         self.snippetsViewModel = snippetsViewModel
         self.translateViewModel = translateViewModel
         self.onShowOnboarding = onShowOnboarding
+        self.isOnboardingPresented = isOnboardingPresented
     }
 
     func markSaved() {
@@ -217,7 +220,10 @@ struct SettingsView: View {
             }
         }
         .frame(width: SettingsLayout.windowWidth, height: SettingsLayout.windowHeight)
-        .background(KeyboardTabSwitcher(selectedTab: $viewModel.selectedTab))
+        .background(KeyboardTabSwitcher(
+            selectedTab: $viewModel.selectedTab,
+            onboardingIsPresented: viewModel.isOnboardingPresented
+        ))
         .onAppear {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
@@ -367,11 +373,16 @@ struct SettingsView: View {
 
 private struct KeyboardTabSwitcher: NSViewRepresentable {
     @Binding var selectedTab: SettingsTab
+    var onboardingIsPresented: (() -> Bool)?
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard let window = view.window, window.isKeyWindow else { return event }
+            if context.coordinator.onboardingIsPresented?() == true {
+                // 避免拦截 Onboarding 的按键
+                return event
+            }
             switch event.keyCode {
             case 125: // down arrow
                 select(offset: 1)
@@ -403,10 +414,15 @@ private struct KeyboardTabSwitcher: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(onboardingIsPresented: onboardingIsPresented)
     }
 
     final class Coordinator {
         var monitor: Any?
+        var onboardingIsPresented: (() -> Bool)?
+
+        init(onboardingIsPresented: (() -> Bool)? = nil) {
+            self.onboardingIsPresented = onboardingIsPresented
+        }
     }
 }

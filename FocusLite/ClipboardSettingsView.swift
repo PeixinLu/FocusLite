@@ -446,6 +446,7 @@ private struct KeyRecorderTextField: NSViewRepresentable {
 private final class HotKeyCaptureSession {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var localMonitor: Any?
     private var onCaptured: ((String) -> Void)?
 
     @discardableResult
@@ -461,27 +462,38 @@ private final class HotKeyCaptureSession {
             return Unmanaged.passUnretained(event)
         }
 
-        guard let tap = CGEvent.tapCreate(
+        if let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
             options: .listenOnly,
             eventsOfInterest: CGEventMask(mask),
             callback: callback,
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
-        ) else {
-            return false
+        ) {
+            eventTap = tap
+            runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+            if let source = runLoopSource {
+                CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+            }
+            CGEvent.tapEnable(tap: tap, enable: true)
         }
 
-        eventTap = tap
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        if localMonitor == nil {
+            // Local monitor ensures hotkey recording works even without input monitoring permission.
+            localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
+                self?.handle(event: event)
+                return event
+            }
         }
-        CGEvent.tapEnable(tap: tap, enable: true)
-        return true
+        return eventTap != nil || localMonitor != nil
     }
 
     func stop() {
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
+        }
+        localMonitor = nil
+
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
@@ -492,6 +504,16 @@ private final class HotKeyCaptureSession {
         }
         eventTap = nil
         onCaptured = nil
+    }
+
+    private func handle(event: NSEvent) {
+        guard event.type == .keyDown else { return }
+        guard let key = keyToken(for: event) else { return }
+        let tokens = modifierTokens(from: event) + [key]
+        let candidate = tokens.joined(separator: "+")
+        DispatchQueue.main.async { [weak self] in
+            self?.onCaptured?(candidate)
+        }
     }
 
     private func handle(event: CGEvent, type: CGEventType) {
