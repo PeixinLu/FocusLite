@@ -96,6 +96,16 @@ struct PermissionSettingsView: View {
                             }
                         })
                     }
+                    if items.contains(where: { $0.status == .denied }) {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.orange)
+                            Text("更新app后，app权限可能会失效，需手动前往系统设置移除FocusLite的权限并重新添加")
+                                .font(.system(size: 12))
+                                .foregroundColor(.orange)
+                        }
+                    }
                 }
             }
         }
