@@ -397,11 +397,19 @@ private struct LiquidGlassBackground: View {
                 state: .active
             )
         case .liquid:
-            VisualEffectView(
-                material: glassMaterial,
-                blendingMode: .behindWindow,
-                state: .active
-            )
+            if #available(macOS 26, *) {
+                GlassBackgroundView(
+                    cornerRadius: cornerRadius,
+                    style: glassStyle,
+                    tintColor: glassTint
+                )
+            } else {
+                VisualEffectView(
+                    material: glassMaterial,
+                    blendingMode: .behindWindow,
+                    state: .active
+                )
+            }
         case .pure:
             Color(nsColor: .windowBackgroundColor)
         }
@@ -415,6 +423,39 @@ private struct LiquidGlassBackground: View {
             return glassStyle == .clear ? .hudWindow : .popover
         }
         return glassStyle == .clear ? .hudWindow : .hudWindow
+    }
+}
+
+@available(macOS 26, *)
+private struct GlassBackgroundView: NSViewRepresentable {
+    let cornerRadius: CGFloat
+    let style: AppearancePreferences.GlassStyle
+    let tintColor: NSColor?
+
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        view.cornerRadius = cornerRadius
+        view.style = style.nsStyle
+        view.tintColor = tintColor
+        return view
+    }
+
+    func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
+        nsView.cornerRadius = cornerRadius
+        nsView.style = style.nsStyle
+        nsView.tintColor = tintColor
+    }
+}
+
+@available(macOS 26, *)
+private extension AppearancePreferences.GlassStyle {
+    var nsStyle: NSGlassEffectView.Style {
+        switch self {
+        case .regular:
+            return .regular
+        case .clear:
+            return .clear
+        }
     }
 }
 
@@ -441,9 +482,10 @@ private struct VisualEffectView: NSViewRepresentable {
 private func colorFromRGBA(_ raw: String) -> NSColor? {
     let parts = raw.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
     guard parts.count == 4 else { return nil }
-    let r = CGFloat(parts[0] / 255.0)
-    let g = CGFloat(parts[1] / 255.0)
-    let b = CGFloat(parts[2] / 255.0)
-    let a = CGFloat(parts[3])
-    return NSColor(red: r, green: g, blue: b, alpha: a)
+    return NSColor(
+        calibratedRed: parts[0],
+        green: parts[1],
+        blue: parts[2],
+        alpha: parts[3]
+    )
 }
