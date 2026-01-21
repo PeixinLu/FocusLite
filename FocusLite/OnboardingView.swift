@@ -24,6 +24,7 @@ struct OnboardingView: View {
     @State private var isRecordingHotKey = false
     @State private var keyMonitor: Any?
     @State private var hostingWindow: NSWindow?
+    @State private var overviewSelection = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -92,13 +93,11 @@ struct OnboardingView: View {
 
     private var hotkeyStep: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("按下唤起搜索的快捷键")
+            let displayKey = hotKeyDisplayText(for: state.launcherHotKeyText) ?? "⌘ + 空格"
+            Text("设置FocusLite快捷键")
                 .font(.system(size: 22, weight: .bold))
-            Text("当前快捷键：\(state.launcherHotKeyText)")
+            Text("请测试启动搜索框的快捷键「\(displayKey)」，完成后将自动进入下一步")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.primary)
-            Text("可在「设置 - 通用」修改。")
-                .font(.system(size: 14))
                 .foregroundColor(.secondary)
             HotKeyRecorderField(
                 text: Binding(
@@ -113,26 +112,37 @@ struct OnboardingView: View {
                 state.hotkeyStepCompleted = false
             }
             if state.hotkeyStepCompleted {
-                Label("完成 ✅", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                Text("完成 🎉")
                     .font(.system(size: 16, weight: .semibold))
-            } else {
-                Text("请按下快捷键，完成后将自动进入下一步。")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
+            Text("亦可稍后在「设置-通用」中修改")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var overviewStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("核心能力速览")
+            Text("基础能力速览")
                 .font(.system(size: 22, weight: .bold))
+            Text("键盘[↑][↓]键选中搜索结果，回车打开｜确认｜复制，可在下方尝试交互")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 8) {
-                bullet("搜索应用、文件夹，输入 `/` 进入快捷目录，`?` 置顶浏览器搜索")
-                bullet("直接算式：如 `1+2*3`")
-                bullet("输入网址/关键字：快速在浏览器打开")
+                ForEach(Array(overviewItems.enumerated()), id: \.offset) { entry in
+                    let index = entry.offset
+                    let item = entry.element
+                    OnboardingCandidateRow(
+                        title: item.title,
+                        subtitle: item.subtitle,
+                        isSelected: overviewSelection == index
+                    )
+                    .onTapGesture {
+                        overviewSelection = index
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -140,10 +150,10 @@ struct OnboardingView: View {
 
     private var prefixesStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("三大默认前缀")
+            Text("高级功能")
                 .font(.system(size: 22, weight: .bold))
-            Text("点击前缀查看示例，不依赖真实搜索，低耦合且直观演示。")
-                .font(.system(size: 13))
+            Text("通过特殊文本前缀激活翻译｜剪贴板历史｜文本片段等功能（亦可在设置中配置各个功能的直达快捷键）")
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.secondary)
             prefixChips
             demoSearch
@@ -153,10 +163,10 @@ struct OnboardingView: View {
 
     private var appearanceStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("外观与主题调节")
+            Text("自定义外观")
                 .font(.system(size: 22, weight: .bold))
-            Text("在搜索框中可调节外观/主题；前往设置可进一步微调玻璃效果与配色。")
-                .font(.system(size: 14))
+            Text("在搜索框输入style并回车即可进入外观配置")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -166,10 +176,15 @@ struct OnboardingView: View {
         HStack(spacing: 8) {
             ForEach(Array(OnboardingState.Step.allCases.enumerated()), id: \.element) { index, step in
                 let isActive = step == state.currentStep
-                Circle()
-                    .fill(isActive ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: isActive ? 12 : 8, height: isActive ? 12 : 8)
-                    .animation(.easeInOut(duration: 0.2), value: isActive)
+                Button {
+                    state.currentStep = step
+                } label: {
+                    Circle()
+                        .fill(isActive ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .frame(width: isActive ? 12 : 8, height: isActive ? 12 : 8)
+                        .animation(.easeInOut(duration: 0.2), value: isActive)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -177,10 +192,11 @@ struct OnboardingView: View {
     private var footer: some View {
         HStack {
             if state.currentStep != .appearance {
-                Button("我是老手，跳过教程") {
+                Button("我是老手，跳过教程 Esc") {
                     state.dismiss(markSeen: true)
                 }
                 .buttonStyle(.plain)
+                .underline()
                 .padding(.vertical, 6)
             } else {
                 Spacer()
@@ -188,7 +204,14 @@ struct OnboardingView: View {
 
             Spacer()
 
-            let nextTitle = state.currentStep == .appearance ? "已学会并成为老手😎" : "下一步"
+            if state.currentStep != .hotkey {
+                Button("上一页 ←") {
+                    goBack()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            let nextTitle = state.currentStep == .appearance ? "已学会并成为老手😎 ⏎" : "下一步 ⏎"
             Button(nextTitle) {
                 if state.currentStep == .appearance {
                     state.dismiss(markSeen: true)
@@ -209,11 +232,11 @@ struct OnboardingView: View {
             })
             chip(title: ClipboardPreferences.searchPrefix, subtitle: "剪贴板", action: {
                 playDemo(query: "\(ClipboardPreferences.searchPrefix) 近期文本")
-                demoResult = "剪贴板: 最近复制的文本"
+                demoResult = "在剪贴板历史中搜索包含“近期文本”的项目"
             })
             chip(title: SnippetsPreferences.searchPrefix, subtitle: "文本片段", action: {
                 playDemo(query: "\(SnippetsPreferences.searchPrefix) 邮箱")
-                demoResult = "片段: 填充常用邮箱"
+                demoResult = "在已配置的文本片段中搜索包含“邮箱”的项目"
             })
         }
     }
@@ -259,19 +282,7 @@ struct OnboardingView: View {
                 )
                 .frame(height: 48)
 
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.accentColor.opacity(0.08))
-                .overlay(
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("示例结果")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text(demoResult)
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .padding(12)
-                )
-                .frame(height: 70)
+            OnboardingCandidateRow(title: demoResult, subtitle: nil, isSelected: true, showsIcon: true)
         }
         .padding(.top, 4)
     }
@@ -293,30 +304,30 @@ struct OnboardingView: View {
         }
     }
 
-    private func bullet(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 6, height: 6)
-                .padding(.top, 6)
-            Text(text)
-                .font(.system(size: 14))
-                .foregroundColor(.primary)
-        }
-    }
-
     private func handleKey(event: NSEvent) -> NSEvent? {
         if isRecordingHotKey {
             return event
+        }
+        if state.currentStep == .overview {
+            switch event.keyCode {
+            case 125: // down arrow
+                overviewSelection = min(overviewSelection + 1, overviewItems.count - 1)
+                return nil
+            case 126: // up arrow
+                overviewSelection = max(overviewSelection - 1, 0)
+                return nil
+            default:
+                break
+            }
         }
         switch event.keyCode {
         case 36, 48: // return, tab
             advance()
             return nil
-        case 124, 125: // right, down
+        case 124: // right
             advance()
             return nil
-        case 123, 126: // left, up
+        case 123: // left
             goBack()
             return nil
         case 53: // esc
@@ -340,6 +351,58 @@ struct OnboardingView: View {
             return
         }
         state.currentStep = prev
+    }
+
+    private struct OverviewItem {
+        let title: String
+        let subtitle: String
+    }
+
+    private var overviewItems: [OverviewItem] {
+        [
+            OverviewItem(title: "应用搜索", subtitle: "支持中英文名称匹配、亦可配置别名"),
+            OverviewItem(title: "快捷目录", subtitle: "输入 / 可以搜索常用文件夹一键打开，可在设置中配置常用的文件夹"),
+            OverviewItem(title: "直达浏览器搜索", subtitle: "输入 ？+ 文本，回车即可自动打开浏览器搜索"),
+            OverviewItem(title: "简单运算", subtitle: "输入 168 / 2，会自动计算结果，回车复制")
+        ]
+    }
+
+    private func hotKeyDisplayText(for text: String) -> String? {
+        let parts = text
+            .split(separator: "+")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+        guard !parts.isEmpty else { return nil }
+        var modifiers: [String] = []
+        var keyToken: String?
+        for token in parts {
+            switch token {
+            case "command", "cmd", "⌘":
+                modifiers.append("⌘")
+            case "option", "opt", "alt", "⌥":
+                modifiers.append("⌥")
+            case "shift", "⇧":
+                modifiers.append("⇧")
+            case "control", "ctrl", "⌃":
+                modifiers.append("⌃")
+            default:
+                keyToken = token
+            }
+        }
+        let keyText: String
+        if let keyToken {
+            if keyToken == "space" {
+                keyText = "空格"
+            } else if keyToken.count == 1 {
+                keyText = keyToken.uppercased()
+            } else {
+                keyText = keyToken.uppercased()
+            }
+        } else {
+            keyText = ""
+        }
+        let chunks = modifiers + (keyText.isEmpty ? [] : [keyText])
+        return chunks.isEmpty ? nil : chunks.joined(separator: " + ")
     }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
@@ -368,6 +431,45 @@ struct OnboardingView: View {
     private var defaultTintColor: NSColor {
         let base = colorScheme == .dark ? NSColor.black : NSColor.white
         return base.withAlphaComponent(0.618)
+    }
+}
+
+private struct OnboardingCandidateRow: View {
+    let title: String
+    let subtitle: String?
+    let isSelected: Bool
+    var showsIcon: Bool = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if showsIcon {
+                Image(systemName: "sparkle.magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.18) : Color(nsColor: .controlBackgroundColor).opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isSelected ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.15), lineWidth: 1)
+        )
     }
 }
 

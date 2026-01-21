@@ -292,10 +292,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case 36, 48, 76: // return, tab, keypad enter
                 self.advanceOnboarding()
                 return nil
-            case 124, 125: // right, down
+            case 124: // right
                 self.advanceOnboarding()
                 return nil
-            case 123, 126: // left, up
+            case 123: // left
                 self.goBackOnboarding()
                 return nil
             case 53: // esc
