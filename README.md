@@ -1,9 +1,13 @@
 
-![FocusLite](FocusLite/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png)
+<p align="center">
+  <img src="FocusLite/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png" alt="FocusLite App Icon" width="256" height="256" />
+</p>
 
-# FocusLite
+<h1 align="center">FocusLite.app</h1>
 
+<p align="center">
 一款轻量级的类聚焦搜索体验的效率启动器。
+</p>
 
 ![FocusLite](Assets/主界面.png)
 
