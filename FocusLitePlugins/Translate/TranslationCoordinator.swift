@@ -40,25 +40,26 @@ actor TranslationCoordinator {
             return []
         }
 
-        let direction = TranslationDirection.from(detected: detected)
-        guard let direction else { return [] }
-
-        let request = TranslationRequest(
-            text: text,
-            sourceLanguage: direction.source,
-            targetLanguage: direction.target
-        )
-
-        let services = activeServices()
-        if services.isEmpty {
+        let projects = TranslatePreferences.activeProjects()
+        if projects.isEmpty {
             return []
         }
 
-        let order = TranslatePreferences.enabledServices
-        let orderMap = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+        let orderMap = Dictionary(uniqueKeysWithValues: projects.enumerated().map { ($0.element.id, $0.offset) })
+        let services = serviceMap()
 
         return await withTaskGroup(of: TranslationResult?.self) { group in
-            for service in services {
+            for project in projects {
+                guard let id = TranslateServiceID(rawValue: project.serviceID),
+                      let service = services[id] else { continue }
+                let direction = TranslationDirection.resolve(for: project, detected: detected)
+                let request = TranslationRequest(
+                    text: text,
+                    sourceLanguage: direction.source,
+                    targetLanguage: direction.target,
+                    projectID: project.id,
+                    usedFallback: direction.usedFallback
+                )
                 group.addTask {
                     await service.translate(request: request)
                 }
@@ -85,36 +86,38 @@ actor TranslationCoordinator {
         }
     }
 
-    private func activeServices() -> [TranslationService] {
-        let order = TranslatePreferences.enabledServices
-        return order.compactMap { rawValue in
-            guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
-            switch id {
-            case .youdaoAPI:
-                return APITranslationService(id: id, displayName: "有道 API")
-            case .baiduAPI:
-                return APITranslationService(id: id, displayName: "百度 API")
-            case .googleAPI:
-                return APITranslationService(id: id, displayName: "Google API")
-            case .bingAPI:
-                return APITranslationService(id: id, displayName: "微软翻译 API")
-            case .deepseekAPI:
-                return APITranslationService(id: id, displayName: "DeepSeek API")
-            }
-        }
+    private func serviceMap() -> [TranslateServiceID: TranslationService] {
+        Dictionary(uniqueKeysWithValues: TranslateServiceID.allCases.map { id in
+            (id, APITranslationService(id: id, displayName: serviceDisplayName(for: id)))
+        })
     }
 
     private func sortResults(
         _ results: [TranslationResult],
-        orderMap: [String: Int]
+        orderMap: [UUID: Int]
     ) -> [TranslationResult] {
         results.sorted { lhs, rhs in
-            let left = orderMap[lhs.serviceID.rawValue] ?? Int.max
-            let right = orderMap[rhs.serviceID.rawValue] ?? Int.max
+            let left = orderMap[lhs.projectID] ?? Int.max
+            let right = orderMap[rhs.projectID] ?? Int.max
             if left != right {
                 return left < right
             }
             return lhs.serviceName.localizedCaseInsensitiveCompare(rhs.serviceName) == .orderedAscending
+        }
+    }
+
+    private func serviceDisplayName(for id: TranslateServiceID) -> String {
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
         }
     }
 }
@@ -131,15 +134,30 @@ extension Notification.Name {
 private struct TranslationDirection {
     let source: String
     let target: String
+    let usedFallback: Bool
 
-    static func from(detected: DetectedLanguage) -> TranslationDirection? {
-        let code = detected.code.lowercased()
-        if code.hasPrefix("zh") {
-            return TranslationDirection(source: "zh-Hans", target: "en")
+    static func resolve(for project: TranslateProject, detected: DetectedLanguage) -> TranslationDirection {
+        let detectedCode = TranslatePreferences.normalizedLanguageCode(detected.code)
+        let primaryCode = TranslatePreferences.normalizedLanguageCode(project.primaryLanguage)
+        let secondaryCode = TranslatePreferences.normalizedLanguageCode(project.secondaryLanguage)
+        if detectedCode == primaryCode {
+            return TranslationDirection(
+                source: project.primaryLanguage,
+                target: project.secondaryLanguage,
+                usedFallback: false
+            )
         }
-        if code.hasPrefix("en") {
-            return TranslationDirection(source: "en", target: "zh-Hans")
+        if detectedCode == secondaryCode {
+            return TranslationDirection(
+                source: project.secondaryLanguage,
+                target: project.primaryLanguage,
+                usedFallback: false
+            )
         }
-        return nil
+        return TranslationDirection(
+            source: project.primaryLanguage,
+            target: project.secondaryLanguage,
+            usedFallback: true
+        )
     }
 }

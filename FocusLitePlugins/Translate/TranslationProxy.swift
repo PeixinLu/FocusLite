@@ -28,7 +28,13 @@ enum TranslationProxy {
             return TranslationServiceTestResult(success: false, message: "未配置密钥")
         }
 
-        let request = TranslationRequest(text: "hello", sourceLanguage: "en", targetLanguage: "zh-Hans")
+        let request = TranslationRequest(
+            text: "hello",
+            sourceLanguage: "en",
+            targetLanguage: "zh-Hans",
+            projectID: UUID(),
+            usedFallback: false
+        )
         switch serviceID {
         case .youdaoAPI:
             let response = await translateWithYoudao(request: request)
@@ -299,7 +305,7 @@ enum TranslationProxy {
         if lowercased.hasPrefix("en") {
             return "en"
         }
-        return "auto"
+        return lowercased
     }
 
     private static func baiduLanguageCode(_ code: String) -> String {
@@ -310,7 +316,7 @@ enum TranslationProxy {
         if lowercased.hasPrefix("en") {
             return "en"
         }
-        return "auto"
+        return lowercased
     }
 
     private static func googleLanguageCode(_ code: String) -> String {
@@ -321,7 +327,7 @@ enum TranslationProxy {
         if lowercased.hasPrefix("en") {
             return "en"
         }
-        return "auto"
+        return lowercased
     }
 
     private static func bingLanguageCode(_ code: String) -> String {
@@ -332,7 +338,7 @@ enum TranslationProxy {
         if lowercased.hasPrefix("en") {
             return "en"
         }
-        return "auto"
+        return lowercased
     }
 
     private static func md5(_ string: String) -> String {

@@ -10,17 +10,21 @@ enum TranslateServiceID: String, CaseIterable {
 }
 
 struct TranslationResult: Hashable, Sendable {
+    let projectID: UUID
     let serviceID: TranslateServiceID
     let serviceName: String
     let translatedText: String
     let sourceLanguage: String
     let targetLanguage: String
+    let usedFallback: Bool
 }
 
 struct TranslationRequest: Hashable, Sendable {
     let text: String
     let sourceLanguage: String
     let targetLanguage: String
+    let projectID: UUID
+    let usedFallback: Bool
 }
 
 protocol TranslationService: Sendable {
@@ -50,12 +54,8 @@ enum LanguageDetector {
         recognizer.processString(trimmed)
         let language = recognizer.dominantLanguage
 
-        // Only trust NLLanguageRecognizer if it detects Chinese or English
         if let language {
-            let code = language.rawValue.lowercased()
-            if code.hasPrefix("zh") || code.hasPrefix("en") {
-                return DetectedLanguage(code: language.rawValue, isMixed: isMixed)
-            }
+            return DetectedLanguage(code: language.rawValue, isMixed: isMixed)
         }
 
         // Fallback to character-based detection for short texts or when NL detection is unreliable

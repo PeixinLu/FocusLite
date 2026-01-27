@@ -417,12 +417,8 @@ final class LauncherViewModel: ObservableObject {
     private var isUpdatingText = false
 
     private func translateItems(from results: [TranslationResult]) -> [ResultItem] {
-        let enabled = TranslatePreferences.enabledServices
-        let configured = enabled.compactMap { rawValue -> TranslateServiceID? in
-            guard let id = TranslateServiceID(rawValue: rawValue) else { return nil }
-            return TranslatePreferences.isConfigured(serviceID: id) ? id : nil
-        }
-        guard !configured.isEmpty else {
+        let projects = TranslatePreferences.activeProjects()
+        guard !projects.isEmpty else {
             return [ResultItem(
                 title: "正在翻译…",
                 subtitle: "未配置翻译服务",
@@ -434,15 +430,16 @@ final class LauncherViewModel: ObservableObject {
             )]
         }
 
-        let resultMap = Dictionary(uniqueKeysWithValues: results.map { ($0.serviceID, $0) })
-        return configured.enumerated().map { index, id in
-            if let result = resultMap[id] {
+        let resultMap = Dictionary(uniqueKeysWithValues: results.map { ($0.projectID, $0) })
+        return projects.enumerated().map { index, project in
+            if let result = resultMap[project.id] {
                 let action: ResultAction = TranslatePreferences.autoPasteAfterSelect
                     ? .pasteText(result.translatedText)
                     : .copyText(result.translatedText)
+                let fallbackNote = result.usedFallback ? " · 自动识别失败，按默认方向" : ""
                 return ResultItem(
                     title: result.translatedText,
-                    subtitle: "\(result.serviceName) · \(result.sourceLanguage) → \(result.targetLanguage)",
+                    subtitle: "\(result.serviceName) · \(TranslatePreferences.displayName(for: result.sourceLanguage)) → \(TranslatePreferences.displayName(for: result.targetLanguage))\(fallbackNote)",
                     icon: .system("globe"),
                     score: 0.9 - Double(index) * 0.05,
                     action: action,
@@ -450,9 +447,10 @@ final class LauncherViewModel: ObservableObject {
                     category: .standard
                 )
             }
+            let serviceName = serviceDisplayName(for: TranslateServiceID(rawValue: project.serviceID))
             return ResultItem(
                 title: "正在翻译…",
-                subtitle: serviceDisplayName(for: id),
+                subtitle: "\(serviceName) · \(TranslatePreferences.displayName(for: project.primaryLanguage)) ↔ \(TranslatePreferences.displayName(for: project.secondaryLanguage))",
                 icon: .system("arrow.triangle.2.circlepath"),
                 score: 0.2 - Double(index) * 0.01,
                 action: .none,
@@ -477,7 +475,8 @@ final class LauncherViewModel: ObservableObject {
         setResults(translateItems(from: results))
     }
 
-    private func serviceDisplayName(for id: TranslateServiceID) -> String {
+    private func serviceDisplayName(for id: TranslateServiceID?) -> String {
+        guard let id else { return "未知服务" }
         switch id {
         case .youdaoAPI:
             return "有道 API"

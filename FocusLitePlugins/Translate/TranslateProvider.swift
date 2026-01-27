@@ -22,6 +22,19 @@ struct TranslateProvider: ResultProvider {
             )]
         }
 
+        let projects = TranslatePreferences.activeProjects()
+        if projects.isEmpty {
+            return [ResultItem(
+                title: "No translation available",
+                subtitle: "未配置翻译服务",
+                icon: .system("exclamationmark.triangle"),
+                score: 0.1,
+                action: .none,
+                providerID: id,
+                category: .standard
+            )]
+        }
+
         let results = await TranslationCoordinator.shared.translate(text: trimmed)
         if results.isEmpty {
             return [ResultItem(
@@ -39,9 +52,10 @@ struct TranslateProvider: ResultProvider {
             let action: ResultAction = TranslatePreferences.autoPasteAfterSelect
                 ? .pasteText(result.translatedText)
                 : .copyText(result.translatedText)
+            let fallbackNote = result.usedFallback ? " · 自动识别失败，按默认方向" : ""
             return ResultItem(
                 title: result.translatedText,
-                subtitle: "\(result.serviceName) · \(result.sourceLanguage) → \(result.targetLanguage)",
+                subtitle: "\(result.serviceName) · \(TranslatePreferences.displayName(for: result.sourceLanguage)) → \(TranslatePreferences.displayName(for: result.targetLanguage))\(fallbackNote)",
                 icon: .system("globe"),
                 score: 0.9 - Double(index) * 0.05,
                 action: action,

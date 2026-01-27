@@ -10,11 +10,13 @@ struct APITranslationService: TranslationService {
             return nil
         }
         return TranslationResult(
+            projectID: request.projectID,
             serviceID: id,
             serviceName: displayName,
             translatedText: translated,
             sourceLanguage: request.sourceLanguage,
-            targetLanguage: request.targetLanguage
+            targetLanguage: request.targetLanguage,
+            usedFallback: request.usedFallback
         )
     }
 }
