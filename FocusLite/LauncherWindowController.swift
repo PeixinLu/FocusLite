@@ -64,6 +64,15 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         return true
     }
 
+    /// 选中搜索框中所有文本，用于自动带入选中文本后方便用户直接替换输入。
+    func selectAllInSearchField() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let window = self?.window,
+                  let editor = window.firstResponder as? NSTextView else { return }
+            editor.selectAll(nil)
+        }
+    }
+
     private func createWindowIfNeeded() {
         guard window == nil else { return }
 

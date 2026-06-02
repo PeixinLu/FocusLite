@@ -30,6 +30,8 @@ enum TranslatePreferences {
     private static let deepseekEndpoint = "translate.deepseek.endpoint"
     private static let deepseekModel = "translate.deepseek.model"
     private static let autoPasteKey = "translate.autoPasteAfterSelect"
+    private static let autoCaptureSelectedTextKey = "translate.autoCaptureSelectedText"
+    private static let showTranslationBubbleKey = "translate.showTranslationBubble"
     private static let hotKeyTextKey = "translate.hotKeyText"
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
@@ -77,6 +79,30 @@ enum TranslatePreferences {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: autoPasteKey)
+        }
+    }
+
+    static var autoCaptureSelectedText: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: autoCaptureSelectedTextKey) == nil {
+                return false
+            }
+            return UserDefaults.standard.bool(forKey: autoCaptureSelectedTextKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoCaptureSelectedTextKey)
+        }
+    }
+
+    static var showTranslationBubble: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: showTranslationBubbleKey) == nil {
+                return false
+            }
+            return UserDefaults.standard.bool(forKey: showTranslationBubbleKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: showTranslationBubbleKey)
         }
     }
 

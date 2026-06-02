@@ -12,6 +12,8 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var enabledServices: [String]
     @Published var translatePrefixText: String
     @Published var autoPasteEnabled: Bool
+    @Published var autoCaptureSelectedText: Bool
+    @Published var showTranslationBubble: Bool
     @Published var hotKeyText: String
     @Published var accessibilityTrusted: Bool
 
@@ -39,6 +41,8 @@ final class TranslateSettingsViewModel: ObservableObject {
         enabledServices = TranslatePreferences.enabledServices
         translatePrefixText = TranslatePreferences.searchPrefix
         autoPasteEnabled = TranslatePreferences.autoPasteAfterSelect
+        autoCaptureSelectedText = TranslatePreferences.autoCaptureSelectedText
+        showTranslationBubble = TranslatePreferences.showTranslationBubble
         hotKeyText = TranslatePreferences.hotKeyText
         accessibilityTrusted = AccessibilityPermission.isTrusted(prompt: false)
         youdaoAppKey = TranslatePreferences.youdaoAppKeyValue
@@ -60,6 +64,8 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.enabledServices = enabledServices
         TranslatePreferences.searchPrefix = translatePrefixText
         TranslatePreferences.autoPasteAfterSelect = autoPasteEnabled
+        TranslatePreferences.autoCaptureSelectedText = autoCaptureSelectedText
+        TranslatePreferences.showTranslationBubble = showTranslationBubble
         TranslatePreferences.hotKeyText = hotKeyText
         TranslatePreferences.youdaoAppKeyValue = youdaoAppKey
         TranslatePreferences.youdaoSecretValue = youdaoSecret
@@ -183,6 +189,25 @@ struct TranslateSettingsView: View {
                     ) {
                         applyAndNotify()
                     }
+                }
+                SettingsFieldRow(title: "自动获取选中文本") {
+                    Toggle("快捷键唤起时自动将选中的文本带入翻译", isOn: $viewModel.autoCaptureSelectedText)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.autoCaptureSelectedText) { _ in
+                            applyAndNotify()
+                        }
+                }
+                if viewModel.autoCaptureSelectedText && !viewModel.accessibilityTrusted {
+                    Text("此功能需要辅助功能权限，请在「系统设置 > 隐私与安全 > 辅助功能」中添加 FocusLite")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                }
+                SettingsFieldRow(title: "翻译气泡") {
+                    Toggle("以浮动气泡显示翻译结果，不打开主搜索窗口", isOn: $viewModel.showTranslationBubble)
+                        .toggleStyle(.switch)
+                        .onChange(of: viewModel.showTranslationBubble) { _ in
+                            applyAndNotify()
+                        }
                 }
                 SettingsFieldRow(title: "自动粘贴") {
                     Toggle("选中后自动粘贴到输入框", isOn: $viewModel.autoPasteEnabled)

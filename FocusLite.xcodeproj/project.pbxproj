@@ -91,6 +91,9 @@
 		D27071DA4ECF48EBBEC03C6D /* WebSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 269A6BDAC2524FDFB7ED682B /* WebSearchPreferences.swift */; };
 		D7385D215AB44638A81F0FF4 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */; };
 		DF4C9A944E1B4BE1862D487F /* QuickDirectoryPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A519FCE3CF04A0FAFD92C3B /* QuickDirectoryPreferences.swift */; };
+		11B1DFFBE8474B32800759A1 /* GlassMaterials.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF603153E82E481DB7AC64C0 /* GlassMaterials.swift */; };
+		64BFA333E5FB4EEB83AB670B /* TranslationBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 024B7CFC904E44CEA1BA60C4 /* TranslationBubbleView.swift */; };
+		FF1464490DEC42F7B7685071 /* TranslationBubbleController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A586BA4780A446C9DEF5642 /* TranslationBubbleController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,6 +193,9 @@
 		F778C795712846EB8441ABF8 /* WebSearchProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchProvider.swift; sourceTree = "<group>"; };
 		FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		FEEDC0DECAFEBABE00000001 /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
+		EF603153E82E481DB7AC64C0 /* GlassMaterials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassMaterials.swift; sourceTree = "<group>"; };
+		024B7CFC904E44CEA1BA60C4 /* TranslationBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationBubbleView.swift; sourceTree = "<group>"; };
+		2A586BA4780A446C9DEF5642 /* TranslationBubbleController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationBubbleController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -262,6 +268,9 @@
 				FA801ACF5EDC479FA4FC7B51 /* AboutView.swift */,
 				E41BABAD0A43411F944AE11B /* OnboardingView.swift */,
 				FEEDC0DECAFEBABE00000001 /* WindowAccessor.swift */,
+					EF603153E82E481DB7AC64C0 /* GlassMaterials.swift */,
+					024B7CFC904E44CEA1BA60C4 /* TranslationBubbleView.swift */,
+					2A586BA4780A446C9DEF5642 /* TranslationBubbleController.swift */,
 				1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */,
 				1A2B3C4D5E6F000000000430 /* SettingsView.swift */,
 				2439371D1BFC4369B5FAB6F7 /* QuickDirectorySettingsView.swift */,
@@ -642,6 +651,9 @@
 				B0D9F9F5ABF4418CB046D0F7 /* OnboardingView.swift in Sources */,
 				ADF17B42F1194431975F6049 /* OnboardingState.swift in Sources */,
 				5C1B2E08B3E7497BBE4A5E1A /* WindowAccessor.swift in Sources */,
+				11B1DFFBE8474B32800759A1 /* GlassMaterials.swift in Sources */,
+				64BFA333E5FB4EEB83AB670B /* TranslationBubbleView.swift in Sources */,
+				FF1464490DEC42F7B7685071 /* TranslationBubbleController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
