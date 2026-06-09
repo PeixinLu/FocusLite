@@ -33,6 +33,7 @@ enum TranslatePreferences {
     private static let autoCaptureSelectedTextKey = "translate.autoCaptureSelectedText"
     private static let showTranslationBubbleKey = "translate.showTranslationBubble"
     private static let hotKeyTextKey = "translate.hotKeyText"
+    static let translationBubblePinnedKey = "translate.bubblePinned"
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 
@@ -103,6 +104,18 @@ enum TranslatePreferences {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: showTranslationBubbleKey)
+        }
+    }
+
+    static var translationBubblePinned: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: translationBubblePinnedKey) == nil {
+                return false
+            }
+            return UserDefaults.standard.bool(forKey: translationBubblePinnedKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: translationBubblePinnedKey)
         }
     }
 

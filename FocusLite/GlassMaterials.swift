@@ -58,6 +58,7 @@ struct LiquidGlassBackground: View {
     var body: some View {
         ZStack {
             backgroundBase
+            fadeGradientOverlay
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style == .liquid)
@@ -76,7 +77,7 @@ struct LiquidGlassBackground: View {
             if #available(macOS 26, *) {
                 GlassBackgroundView(
                     cornerRadius: cornerRadius,
-                    style: glassStyle,
+                    style: glassStyle.baseGlassStyle,
                     tintColor: glassTint
                 )
             } else {
@@ -96,9 +97,25 @@ struct LiquidGlassBackground: View {
             return .hudWindow
         }
         if #available(macOS 13, *) {
-            return glassStyle == .clear ? .hudWindow : .popover
+            return glassStyle.baseGlassStyle == .clear ? .hudWindow : .popover
         }
-        return glassStyle == .clear ? .hudWindow : .hudWindow
+        return glassStyle.baseGlassStyle == .clear ? .hudWindow : .hudWindow
+    }
+
+    @ViewBuilder
+    private var fadeGradientOverlay: some View {
+        if style == .liquid, glassStyle == .fade {
+            LinearGradient(
+                stops: glassStyle.fadeOverlayStops.map { stop in
+                    Gradient.Stop(
+                        color: Color.black.opacity(stop.opacity),
+                        location: stop.location
+                    )
+                },
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
     }
 }
 
@@ -113,12 +130,12 @@ struct LiquidGlassRowBackground: View {
             if #available(macOS 26, *) {
                 GlassBackgroundView(
                     cornerRadius: cornerRadius,
-                    style: glassStyle,
+                    style: glassStyle.baseGlassStyle,
                     tintColor: glassTint
                 )
             } else {
                 VisualEffectView(
-                    material: glassStyle == .clear ? .hudWindow : .popover,
+                    material: glassStyle.baseGlassStyle == .clear ? .hudWindow : .popover,
                     blendingMode: .behindWindow,
                     state: .active
                 )
@@ -150,7 +167,7 @@ extension AppearancePreferences.GlassStyle {
         switch self {
         case .regular:
             return .regular
-        case .clear:
+        case .clear, .fade:
             return .clear
         }
     }

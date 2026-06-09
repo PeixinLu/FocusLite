@@ -33,6 +33,7 @@ enum AppearancePreferences {
     enum GlassStyle: String, CaseIterable, Identifiable {
         case regular
         case clear
+        case fade
 
         var id: String { rawValue }
 
@@ -40,8 +41,43 @@ enum AppearancePreferences {
             switch self {
             case .regular: return "常规"
             case .clear: return "通透"
+            case .fade: return "渐隐"
             }
         }
+
+        var baseGlassStyle: GlassStyle {
+            switch self {
+            case .regular:
+                return .regular
+            case .clear, .fade:
+                return .clear
+            }
+        }
+
+        var fadeOverlayStops: [FadeOverlayStop] {
+            guard self == .fade else { return [] }
+            return Self.defaultFadeOverlayStops
+        }
+
+        var usesLightForeground: Bool {
+            self == .fade
+        }
+
+        static let defaultFadeOverlayStops: [FadeOverlayStop] = [
+            FadeOverlayStop(location: 0.0, opacity: 0.96),
+            FadeOverlayStop(location: 0.25, opacity: 0.94),
+            FadeOverlayStop(location: 0.5, opacity: 0.9),
+            FadeOverlayStop(location: 0.68, opacity: 0.82),
+            FadeOverlayStop(location: 0.8, opacity: 0.62),
+            FadeOverlayStop(location: 0.9, opacity: 0.34),
+            FadeOverlayStop(location: 0.96, opacity: 0.16),
+            FadeOverlayStop(location: 1.0, opacity: 0.06)
+        ]
+    }
+
+    struct FadeOverlayStop: Equatable {
+        let location: Double
+        let opacity: Double
     }
 
     enum TintMode: String, CaseIterable, Identifiable {
@@ -88,12 +124,12 @@ enum AppearancePreferences {
         get {
             if let value = UserDefaults.standard.string(forKey: rowGlassStyleKey),
                let style = GlassStyle(rawValue: value) {
-                return style
+                return style.baseGlassStyle
             }
-            return glassStyle
+            return glassStyle.baseGlassStyle
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: rowGlassStyleKey)
+            UserDefaults.standard.set(newValue.baseGlassStyle.rawValue, forKey: rowGlassStyleKey)
         }
     }
 
@@ -118,19 +154,19 @@ enum AppearancePreferences {
     }
 
     static func glassTintMode(for style: GlassStyle) -> TintMode {
-        switch style {
+        switch style.baseGlassStyle {
         case .regular:
             return glassTintModeRegular == .off ? .off : glassTintModeRegular
-        case .clear:
+        case .clear, .fade:
             return glassTintModeClear == .off ? .systemDefault : glassTintModeClear
         }
     }
 
     static func setGlassTintMode(_ mode: TintMode, for style: GlassStyle) {
-        switch style {
+        switch style.baseGlassStyle {
         case .regular:
             glassTintModeRegular = mode
-        case .clear:
+        case .clear, .fade:
             glassTintModeClear = mode
         }
     }
@@ -156,25 +192,25 @@ enum AppearancePreferences {
     }
 
     static func glassTint(for style: GlassStyle) -> String {
-        switch style {
+        switch style.baseGlassStyle {
         case .regular:
             return glassTintRegular
-        case .clear:
+        case .clear, .fade:
             return glassTintClear
         }
     }
 
     static func setGlassTint(_ value: String, for style: GlassStyle) {
-        switch style {
+        switch style.baseGlassStyle {
         case .regular:
             glassTintRegular = value
-        case .clear:
+        case .clear, .fade:
             glassTintClear = value
         }
     }
 
     static func defaultTintMode(for style: GlassStyle) -> TintMode {
-        style == .regular ? .off : .systemDefault
+        style.baseGlassStyle == .regular ? .off : .systemDefault
     }
 
     static var liquidGlassAnimationDuration: Double {

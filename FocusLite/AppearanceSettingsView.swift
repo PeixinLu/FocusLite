@@ -8,7 +8,7 @@ struct AppearanceSettingsView: View {
     @AppStorage(AppearancePreferences.glassStyleKey)
     private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
-    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
     private var regularTintModeRaw = AppearancePreferences.defaultTintMode(for: .regular).rawValue
     @AppStorage(AppearancePreferences.glassTintModeClearKey)
@@ -33,12 +33,12 @@ struct AppearanceSettingsView: View {
 
     private var activeTintMode: AppearancePreferences.TintMode {
         get {
-            let raw = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+            let raw = glassStyle.baseGlassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
             return AppearancePreferences.TintMode(rawValue: raw)
             ?? AppearancePreferences.defaultTintMode(for: glassStyle)
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintModeRaw = newValue.rawValue
             } else {
                 clearTintModeRaw = newValue.rawValue
@@ -66,10 +66,10 @@ struct AppearanceSettingsView: View {
 
     private var activeTintRaw: String {
         get {
-            glassStyle == .regular ? regularTintRaw : clearTintRaw
+            glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintRaw = newValue
             } else {
                 clearTintRaw = newValue
@@ -108,6 +108,7 @@ struct AppearanceSettingsView: View {
                         Picker("液态玻璃风格", selection: $glassStyleRaw) {
                             Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
                             Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                            Text(AppearancePreferences.GlassStyle.fade.displayName).tag(AppearancePreferences.GlassStyle.fade.rawValue)
                         }
                         .pickerStyle(.segmented)
 
@@ -118,7 +119,7 @@ struct AppearanceSettingsView: View {
                                 HStack {
                                     Text("色调")
                                     Spacer()
-                                    Text(glassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
+                                    Text(glassStyle.baseGlassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                 }

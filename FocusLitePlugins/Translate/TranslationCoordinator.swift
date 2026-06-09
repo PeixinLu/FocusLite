@@ -30,13 +30,31 @@ actor TranslationCoordinator {
         return results
     }
 
-    private func performTranslation(for text: String) async -> [TranslationResult] {
+    func translate(text: String, sourceLanguage: String, targetLanguage: String) async -> [TranslationResult] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        debounceTask?.cancel()
+        return await performTranslation(
+            for: trimmed,
+            forcedDirection: TranslationDirection(
+                source: sourceLanguage,
+                target: targetLanguage,
+                usedFallback: false
+            )
+        )
+    }
+
+    private func performTranslation(
+        for text: String,
+        forcedDirection: TranslationDirection? = nil
+    ) async -> [TranslationResult] {
         guard let detected = LanguageDetector.detect(text) else {
             return []
         }
 
         let policy = TranslatePreferences.mixedTextPolicy
-        if detected.isMixed, policy == .none {
+        if forcedDirection == nil, detected.isMixed, policy == .none {
             return []
         }
 
@@ -52,7 +70,7 @@ actor TranslationCoordinator {
             for project in projects {
                 guard let id = TranslateServiceID(rawValue: project.serviceID),
                       let service = services[id] else { continue }
-                let direction = TranslationDirection.resolve(for: project, detected: detected)
+                let direction = forcedDirection ?? TranslationDirection.resolve(for: project, detected: detected)
                 let request = TranslationRequest(
                     text: text,
                     sourceLanguage: direction.source,

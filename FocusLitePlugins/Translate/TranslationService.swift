@@ -19,6 +19,46 @@ struct TranslationResult: Hashable, Sendable {
     let usedFallback: Bool
 }
 
+extension TranslationResult {
+    var compactDirectionLabel: String {
+        "\(Self.compactLanguageName(for: sourceLanguage))->\(Self.compactLanguageName(for: targetLanguage))"
+    }
+
+    private static func compactLanguageName(for code: String) -> String {
+        let normalized = TranslatePreferences.normalizedLanguageCode(code)
+        switch normalized {
+        case "zh":
+            return "中"
+        case "en":
+            return "英"
+        case "ja":
+            return "日"
+        case "ko":
+            return "韩"
+        case "fr":
+            return "法"
+        case "de":
+            return "德"
+        case "es":
+            return "西"
+        case "it":
+            return "意"
+        case "pt":
+            return "葡"
+        case "ru":
+            return "俄"
+        case "th":
+            return "泰"
+        case "vi":
+            return "越"
+        case "id":
+            return "印"
+        default:
+            return code
+        }
+    }
+}
+
 struct TranslationRequest: Hashable, Sendable {
     let text: String
     let sourceLanguage: String

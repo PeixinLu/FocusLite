@@ -12,7 +12,7 @@ struct LauncherView: View {
     @AppStorage(AppearancePreferences.glassStyleKey)
     private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
-    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
     private var regularTintModeRaw = AppearancePreferences.defaultTintMode(for: .regular).rawValue
     @AppStorage(AppearancePreferences.glassTintModeClearKey)
@@ -40,7 +40,7 @@ struct LauncherView: View {
     }
 
     private var rowGlassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
+        (AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle).baseGlassStyle
     }
 
     private var regularTintMode: AppearancePreferences.TintMode {
@@ -59,8 +59,8 @@ struct LauncherView: View {
     }
 
     private func resolvedTint(for style: AppearancePreferences.GlassStyle) -> NSColor? {
-        let mode = style == .regular ? regularTintMode : clearTintMode
-        let tintRaw = style == .regular ? regularTintRaw : clearTintRaw
+        let mode = style.baseGlassStyle == .regular ? regularTintMode : clearTintMode
+        let tintRaw = style.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         switch mode {
         case .off:
             return nil
@@ -77,8 +77,12 @@ struct LauncherView: View {
 
     private var rowAccentTint: NSColor {
         let base = NSColor(Color.accentColor)
-        let alpha: CGFloat = rowGlassStyle == .clear ? 0.28 : 0.24
+        let alpha: CGFloat = rowGlassStyle.baseGlassStyle == .clear ? 0.28 : 0.24
         return base.withAlphaComponent(alpha)
+    }
+
+    private var launcherColorScheme: ColorScheme {
+        materialStyle == .liquid && glassStyle.usesLightForeground ? .dark : colorScheme
     }
 
     var body: some View {
@@ -217,6 +221,7 @@ struct LauncherView: View {
             )
         )
         .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
+        .environment(\.colorScheme, launcherColorScheme)
         .onAppear {
             isSearchFocused = true
         }
@@ -332,7 +337,7 @@ private struct ResultRow: View {
     private var animationDuration = 0.18
 
     private var isLiquidClear: Bool {
-        materialStyle == .liquid && rowGlassStyle == .clear
+        materialStyle == .liquid && rowGlassStyle.baseGlassStyle == .clear
     }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
@@ -553,12 +558,12 @@ private struct LiquidTuningPreview: View {
 
     private var activeTintMode: AppearancePreferences.TintMode {
         get {
-            let raw = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+            let raw = glassStyle.baseGlassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
             return AppearancePreferences.TintMode(rawValue: raw)
             ?? AppearancePreferences.defaultTintMode(for: glassStyle)
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintModeRaw = newValue.rawValue
             } else {
                 clearTintModeRaw = newValue.rawValue
@@ -568,9 +573,9 @@ private struct LiquidTuningPreview: View {
     }
 
     private var activeTintRaw: String {
-        get { glassStyle == .regular ? regularTintRaw : clearTintRaw }
+        get { glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintRaw = newValue
             } else {
                 clearTintRaw = newValue
@@ -643,6 +648,7 @@ private struct LiquidTuningPreview: View {
             )) {
                 Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
                 Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                Text(AppearancePreferences.GlassStyle.fade.displayName).tag(AppearancePreferences.GlassStyle.fade.rawValue)
             }
             .pickerStyle(.segmented)
 
@@ -651,7 +657,7 @@ private struct LiquidTuningPreview: View {
                     HStack {
                         Text("色调")
                         Spacer()
-                        Text(glassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
+                        Text(glassStyle.baseGlassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
