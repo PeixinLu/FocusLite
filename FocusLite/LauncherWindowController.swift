@@ -1,5 +1,6 @@
 import Cocoa
 import SwiftUI
+import Combine
 
 @MainActor
 final class LauncherWindowController: NSObject, NSWindowDelegate {
@@ -15,9 +16,41 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private var keyMonitor: Any?
     private var focusOrigin: FocusOrigin = .unknown
     private var wasInterrupted = false
+    private var cancellables = Set<AnyCancellable>()
 
     init(viewModel: LauncherViewModel) {
         self.viewModel = viewModel
+        super.init()
+        setupSizeObserver()
+    }
+
+    /// 垂直：GeometryReader 逐帧跟随 SwiftUI spring
+    /// 水平：所有 x 由 windowCenterX 派生 — 窗口逻辑锚点设在顶部几何中心
+    private func setupSizeObserver() {
+        viewModel.$currentViewSize
+            .removeDuplicates()
+            .sink { [weak self] size in
+                self?.followWindowSize(size)
+            }
+            .store(in: &cancellables)
+    }
+
+    /// 窗口顶部几何中心的 x 坐标，所有 x 定位始终由它派生
+    private var windowCenterX: CGFloat = 0
+
+    private func followWindowSize(_ size: CGSize) {
+        guard let window else { return }
+        let currentFrame = window.frame
+        guard abs(currentFrame.width - size.width) > 0.5 || abs(currentFrame.height - size.height) > 0.5 else { return }
+
+        let newY = currentFrame.maxY - size.height
+        let newX = windowCenterX - size.width / 2
+
+        window.setFrame(
+            NSRect(x: newX, y: newY, width: size.width, height: size.height),
+            display: true,
+            animate: false
+        )
     }
 
     func show(resetSearch: Bool = true) {
@@ -27,6 +60,11 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         }
         captureFocusOrigin()
         wasInterrupted = false
+        // 在首次定位前锁定水平锚点
+        if let screenFrame = NSScreen.main?.visibleFrame {
+            windowCenterX = screenFrame.midX
+        }
+        syncWindowSize()
         centerWindow()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -34,6 +72,20 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         Task { @MainActor in
             viewModel.requestFocus()
         }
+    }
+
+    /// 无动画同步设到目标尺寸（show 前调用，确保 centerWindow 基于正确 frame）
+    private func syncWindowSize() {
+        guard let window else { return }
+        let targetSize = viewModel.currentViewSize
+        guard abs(window.frame.width - targetSize.width) > 0.5 || abs(window.frame.height - targetSize.height) > 0.5 else { return }
+        let currentFrame = window.frame
+        let newY = currentFrame.maxY - targetSize.height
+        let newX = windowCenterX - targetSize.width / 2
+        window.setFrame(
+            NSRect(x: newX, y: newY, width: targetSize.width, height: targetSize.height),
+            display: false
+        )
     }
 
     func hide(restoreBehavior: LauncherViewModel.ExitBehavior = .restoreOrigin) {
@@ -76,7 +128,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private func createWindowIfNeeded() {
         guard window == nil else { return }
 
-        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 420)
+        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 56)
         let window = LauncherWindow(
             contentRect: contentRect,
             styleMask: [.borderless],
@@ -160,8 +212,10 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private func centerWindow() {
         guard let window = window else { return }
         if let screenFrame = NSScreen.main?.visibleFrame {
-            let x = screenFrame.midX - window.frame.width / 2
-            let y = screenFrame.midY - window.frame.height / 2
+            let x = windowCenterX - window.frame.width / 2
+            // 顶部距离屏幕上边缘 30%
+            let windowTop = screenFrame.maxY - screenFrame.height * 0.3
+            let y = windowTop - window.frame.height
             window.setFrameOrigin(NSPoint(x: x, y: y))
         } else {
             window.center()

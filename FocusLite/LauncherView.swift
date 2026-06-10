@@ -86,135 +86,22 @@ struct LauncherView: View {
     }
 
     var body: some View {
+        let targetWidth: CGFloat = viewModel.showsPreviewPane ? 820 : 640
+        let expandedHeight: CGFloat = viewModel.showsPreviewPane ? 460 : 420
+        let resultsContentHeight: CGFloat = expandedHeight - compactHeight
+        let resultsClipHeight: CGFloat = viewModel.isExpanded ? resultsContentHeight : 0
+
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.secondary)
+            // 搜索框 — 固定锚点，不参与动画，始终可见不被遮挡
+            searchBar
 
-                if let prefix = viewModel.searchState.activePrefix {
-                    TagView(
-                        title: prefix.title,
-                        subtitle: prefix.subtitle,
-                        useLiquidStyle: materialStyle == .liquid,
-                        tint: Color.accentColor
-                    )
-                }
-
-                TextField("Search", text: $viewModel.searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 20, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .focused($isSearchFocused)
-                    .onChange(of: viewModel.searchText) { newValue in
-                        viewModel.updateInput(newValue)
-                    }
-                    .onSubmit {
-                        viewModel.submitPrimaryAction()
-                    }
-
-                settingsButton
+            // 结果区 — 向下展开、向上收缩，clip 只影响结果
+            ZStack(alignment: .top) {
+                resultsContent(targetWidth: targetWidth, contentHeight: resultsContentHeight)
             }
-            .padding(16)
-
-            Divider()
-
-            if showsPreviewPane {
-                HStack(spacing: 0) {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 8) {
-                                if viewModel.results.isEmpty {
-                                    EmptyStateView()
-                                        .padding(.top, 40)
-                                } else {
-                                    ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                        ResultRow(
-                                            item: item,
-                                            isSelected: viewModel.selectedIndex == index,
-                                            searchText: viewModel.searchText,
-                                            showsLiquidSelection: showsLiquidSelection
-                                        )
-                                            .id(item.id)
-                                            .onTapGesture {
-                                                viewModel.selectIndex(index)
-                                                if !isLiquidTuningMode {
-                                                    viewModel.submitPrimaryAction()
-                                                }
-                                            }
-                                    }
-                                }
-                            }
-                            .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
-                                selectionBackgroundLayer(for: anchor)
-                            }
-                            .padding(12)
-                        }
-                        .frame(width: 340)
-                        .onChange(of: viewModel.selectedIndex) { index in
-                            guard let index,
-                                  viewModel.results.indices.contains(index) else { return }
-                            let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
-                            withAnimation(.easeInOut(duration: duration)) {
-                                proxy.scrollTo(viewModel.results[index].id, anchor: .center)
-                            }
-                            viewModel.shouldAnimateSelection = false
-                        }
-                    }
-
-                    Divider()
-
-                    PreviewPane(
-                        item: viewModel.highlightedItem,
-                        currentTargetLanguage: viewModel.currentTranslateTarget,
-                        languageOptions: TranslatePreferences.languageOptions,
-                        onTargetLanguageChange: { viewModel.setTranslateTarget($0) }
-                    )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(12)
-                }
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            if viewModel.results.isEmpty {
-                                EmptyStateView()
-                                    .padding(.top, 40)
-                            } else {
-                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(
-                                    item: item,
-                                    isSelected: viewModel.selectedIndex == index,
-                                    searchText: viewModel.searchText,
-                                    showsLiquidSelection: showsLiquidSelection
-                                )
-                                .id(item.id)
-                                .onTapGesture {
-                                    viewModel.selectIndex(index)
-                                    if !isLiquidTuningMode {
-                                        viewModel.submitPrimaryAction()
-                                    }
-                                }
-                            }
-                        }
-                        }
-                        .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
-                            selectionBackgroundLayer(for: anchor)
-                        }
-                        .padding(12)
-                    }
-                    .onChange(of: viewModel.selectedIndex) { index in
-                        guard let index,
-                              viewModel.results.indices.contains(index) else { return }
-                        let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
-                        withAnimation(.easeInOut(duration: duration)) {
-                            proxy.scrollTo(viewModel.results[index].id, anchor: .center)
-                        }
-                        viewModel.shouldAnimateSelection = false
-                    }
-                }
-            }
+            .modifier(ClampedFrame(targetHeight: resultsClipHeight, minHeight: 0, width: targetWidth))
         }
+        .frame(width: targetWidth)
         .background(
             LiquidGlassBackground(
                 cornerRadius: cornerRadius,
@@ -225,7 +112,19 @@ struct LauncherView: View {
                 animationDuration: animationDuration
             )
         )
-        .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isExpanded)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.showsPreviewPane)
+        .overlay(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        viewModel.currentViewSize = geometry.size
+                    }
+                    .onChange(of: geometry.size) { newSize in
+                        viewModel.currentViewSize = newSize
+                    }
+            }
+        )
         .environment(\.colorScheme, launcherColorScheme)
         .onAppear {
             isSearchFocused = true
@@ -247,13 +146,150 @@ struct LauncherView: View {
         .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
     }
 
-    private var showsPreviewPane: Bool {
-        guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
-        return providerID == ClipboardProvider.providerID || 
-               providerID == SnippetsProvider.providerID || 
-               providerID == TranslateProvider.providerID ||
-               providerID == StyleProvider.providerID
+    /// 搜索栏 — 固定锚点，不参与动画
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            if let prefix = viewModel.searchState.activePrefix {
+                TagView(
+                    title: prefix.title,
+                    subtitle: prefix.subtitle,
+                    useLiquidStyle: materialStyle == .liquid,
+                    tint: Color.accentColor
+                )
+            }
+
+            TextField("Search", text: $viewModel.searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 20, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .focused($isSearchFocused)
+                .onChange(of: viewModel.searchText) { newValue in
+                    viewModel.updateInput(newValue)
+                }
+                .onSubmit {
+                    viewModel.submitPrimaryAction()
+                }
+
+            settingsButton
+        }
+        .padding(16)
     }
+
+    /// 结果区（分割线 + 列表/预览），始终以完整高度渲染，由 clip 控制可见范围
+    @ViewBuilder
+    private func resultsContent(targetWidth: CGFloat, contentHeight: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            if viewModel.showsPreviewPane {
+                HStack(spacing: 0) {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                if viewModel.results.isEmpty {
+                                    EmptyStateView()
+                                        .padding(.top, 40)
+                                } else {
+                                    ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                        ResultRow(
+                                            item: item,
+                                            isSelected: viewModel.selectedIndex == index,
+                                            searchText: viewModel.searchText,
+                                            showsLiquidSelection: showsLiquidSelection
+                                        )
+                                        .id(item.id)
+                                        .onTapGesture {
+                                            viewModel.selectIndex(index)
+                                            if !isLiquidTuningMode {
+                                                viewModel.submitPrimaryAction()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                                selectionBackgroundLayer(for: anchor)
+                            }
+                            .padding(12)
+                        }
+                        .frame(width: 340)
+                        .onChange(of: viewModel.selectedIndex) { index in
+                            guard let index,
+                                  viewModel.results.indices.contains(index) else { return }
+                            let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                            withAnimation(.easeInOut(duration: duration)) {
+                                proxy.scrollTo(viewModel.results[index].id, anchor: .center)
+                            }
+                            viewModel.shouldAnimateSelection = false
+                        }
+                    }
+
+                    Divider()
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+
+                    PreviewPane(
+                        item: viewModel.highlightedItem,
+                        currentTargetLanguage: viewModel.currentTranslateTarget,
+                        languageOptions: TranslatePreferences.languageOptions,
+                        onTargetLanguageChange: { viewModel.setTranslateTarget($0) }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(12)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                .transition(.identity)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            if viewModel.results.isEmpty {
+                                EmptyStateView()
+                                    .padding(.top, 40)
+                            } else {
+                                ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                    ResultRow(
+                                        item: item,
+                                        isSelected: viewModel.selectedIndex == index,
+                                        searchText: viewModel.searchText,
+                                        showsLiquidSelection: showsLiquidSelection
+                                    )
+                                    .id(item.id)
+                                    .onTapGesture {
+                                        viewModel.selectIndex(index)
+                                        if !isLiquidTuningMode {
+                                            viewModel.submitPrimaryAction()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
+                            selectionBackgroundLayer(for: anchor)
+                        }
+                        .padding(12)
+                    }
+                    .onChange(of: viewModel.selectedIndex) { index in
+                        guard let index,
+                              viewModel.results.indices.contains(index) else { return }
+                        let duration = viewModel.shouldAnimateSelection ? 0.12 : 0
+                        withAnimation(.easeInOut(duration: duration)) {
+                            proxy.scrollTo(viewModel.results[index].id, anchor: .center)
+                        }
+                        viewModel.shouldAnimateSelection = false
+                    }
+                }
+                .transition(.identity)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.showsPreviewPane)
+        .frame(width: targetWidth, height: contentHeight)
+    }
+
+    private let compactHeight: CGFloat = 56
 
     private var showsLiquidSelection: Bool {
         materialStyle == .liquid
@@ -1072,5 +1108,24 @@ private final class AppIconCache {
         let image = NSWorkspace.shared.icon(forFile: path)
         cache.setObject(image, forKey: path as NSString)
         return image
+    }
+}
+
+// MARK: - Animatable clip modifier (clamps spring overshoot to prevent search bar clipping)
+
+private struct ClampedFrame: AnimatableModifier {
+    var targetHeight: CGFloat
+    let minHeight: CGFloat
+    let width: CGFloat
+
+    var animatableData: CGFloat {
+        get { targetHeight }
+        set { targetHeight = max(minHeight, newValue) }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .frame(width: width, height: targetHeight, alignment: .top)
+            .clipped()
     }
 }

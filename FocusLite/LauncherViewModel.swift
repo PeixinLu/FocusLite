@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 @MainActor
 final class LauncherViewModel: ObservableObject {
@@ -15,6 +16,21 @@ final class LauncherViewModel: ObservableObject {
     @Published var selectedIndex: Int?
     @Published var shouldAnimateSelection = false
     @Published var toastMessage: String?
+
+    /// 搜索框是否处于展开状态：有输入内容 或 已进入某个 scoped 模式
+    @Published var isExpanded = false
+
+    /// 由 GeometryReader 上报的当前视图实际渲染尺寸，供窗口跟随
+    @Published var currentViewSize = CGSize(width: 640, height: 56)
+
+    /// 当前是否显示预览窗格（剪贴板 / Snippets / 翻译 / 调参）
+    var showsPreviewPane: Bool {
+        guard case .prefixed(let providerID) = searchState.scope else { return false }
+        return providerID == ClipboardProvider.providerID ||
+               providerID == SnippetsProvider.providerID ||
+               providerID == TranslateProvider.providerID ||
+               providerID == StyleProvider.providerID
+    }
 
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
@@ -61,15 +77,14 @@ final class LauncherViewModel: ObservableObject {
         selectedIndex = nil
         shouldAnimateSelection = false
         quickTargetLanguage = nil
+        isExpanded = false
+        currentViewSize = CGSize(width: 640, height: 56)
     }
 
     func updateInput(_ text: String) {
         guard !isUpdatingText else { return }
-        isUpdatingText = true
         let update = SearchStateReducer.handleInputChange(state: searchState, newText: text)
-        searchState = update.state
-        searchText = update.textFieldValue
-        isUpdatingText = false
+        applyUpdate(update)
         performSearch()
         shouldAnimateSelection = false
     }
@@ -446,6 +461,19 @@ final class LauncherViewModel: ObservableObject {
         searchState = update.state
         searchText = update.textFieldValue
         isUpdatingText = false
+        updateExpandedState()
+    }
+
+    /// 根据当前 searchText / searchState 更新 isExpanded，变化时带官方动画曲线
+    private func updateExpandedState() {
+        let shouldExpand: Bool = {
+            if case .prefixed = searchState.scope { return true }
+            return !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }()
+        guard shouldExpand != isExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isExpanded = shouldExpand
+        }
     }
 
     private func activatePrefix(providerID: String, carryQuery: String? = nil) {
