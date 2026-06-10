@@ -20,6 +20,8 @@ enum TranslationProxy {
             return await translateWithBing(request: request).text
         case .deepseekAPI:
             return await translateWithDeepSeek(request: request).text
+        case .appleNative:
+            return nil
         }
     }
 
@@ -51,6 +53,8 @@ enum TranslationProxy {
         case .deepseekAPI:
             let response = await translateWithDeepSeek(request: request)
             return TranslationServiceTestResult(success: response.text != nil, message: response.message)
+        case .appleNative:
+            return TranslationServiceTestResult(success: false, message: "Apple 系统翻译无需密钥配置")
         }
     }
 

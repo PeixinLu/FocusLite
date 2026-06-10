@@ -34,6 +34,7 @@ enum TranslatePreferences {
     private static let showTranslationBubbleKey = "translate.showTranslationBubble"
     private static let hotKeyTextKey = "translate.hotKeyText"
     static let translationBubblePinnedKey = "translate.bubblePinned"
+    private static let defaultTargetLanguageKey = "translate.defaultTargetLanguage"
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 
@@ -124,6 +125,16 @@ enum TranslatePreferences {
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: hotKeyTextKey) }
     }
 
+    /// 翻译结果的默认目标语言，默认英语
+    static var defaultTargetLanguage: String {
+        get { UserDefaults.standard.string(forKey: defaultTargetLanguageKey) ?? "en" }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            UserDefaults.standard.set(trimmed, forKey: defaultTargetLanguageKey)
+        }
+    }
+
     static var enabledServices: [String] {
         get {
             if let values = UserDefaults.standard.array(forKey: servicesKey) as? [String], !values.isEmpty {
@@ -131,6 +142,7 @@ enum TranslatePreferences {
                 return cleaned
             }
             return [
+                TranslateServiceID.appleNative.rawValue,
                 TranslateServiceID.deepseekAPI.rawValue,
                 TranslateServiceID.youdaoAPI.rawValue,
                 TranslateServiceID.baiduAPI.rawValue,
@@ -211,13 +223,41 @@ enum TranslatePreferences {
     }
 
     static func activeProjects() -> [TranslateProject] {
-        let enabled = Set(enabledServices)
-        return projects().filter { project in
-            guard enabled.contains(project.serviceID),
-                  let id = TranslateServiceID(rawValue: project.serviceID) else {
-                return false
-            }
-            return isConfigured(serviceID: id)
+        let enabled = enabledServices.compactMap { TranslateServiceID(rawValue: $0) }
+        let targetLang = defaultTargetLanguage
+
+        // 反向推导源语言：目标语的对立语言
+        let sourceLang: String
+        switch targetLang {
+        case "en":
+            sourceLang = "zh-Hans"
+        case "zh-Hans", "zh":
+            sourceLang = "en"
+        default:
+            sourceLang = "zh-Hans"
+        }
+
+        return enabled.compactMap { serviceID -> TranslateProject? in
+            guard isConfigured(serviceID: serviceID) else { return nil }
+            // 稳定 UUID，确保 TranslationCoordinator 排序一致
+            let stableID = UUID(uuidString: uuidString(for: serviceID)) ?? UUID()
+            return TranslateProject(
+                id: stableID,
+                serviceID: serviceID.rawValue,
+                primaryLanguage: sourceLang,
+                secondaryLanguage: targetLang
+            )
+        }
+    }
+
+    private static func uuidString(for serviceID: TranslateServiceID) -> String {
+        switch serviceID {
+        case .appleNative: return "D0000001-0000-4000-8000-000000000001"
+        case .deepseekAPI: return "D0000001-0000-4000-8000-000000000002"
+        case .youdaoAPI:   return "D0000001-0000-4000-8000-000000000003"
+        case .baiduAPI:    return "D0000001-0000-4000-8000-000000000004"
+        case .googleAPI:   return "D0000001-0000-4000-8000-000000000005"
+        case .bingAPI:     return "D0000001-0000-4000-8000-000000000006"
         }
     }
 
@@ -301,6 +341,23 @@ enum TranslatePreferences {
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: deepseekModel) }
     }
 
+    static func serviceDisplayName(for id: TranslateServiceID) -> String {
+        switch id {
+        case .youdaoAPI:
+            return "有道 API"
+        case .baiduAPI:
+            return "百度 API"
+        case .googleAPI:
+            return "Google API"
+        case .bingAPI:
+            return "微软翻译 API"
+        case .deepseekAPI:
+            return "DeepSeek API"
+        case .appleNative:
+            return AppleNativeTranslationFallback.serviceName
+        }
+    }
+
     static func isConfigured(serviceID: TranslateServiceID) -> Bool {
         switch serviceID {
         case .youdaoAPI:
@@ -313,6 +370,8 @@ enum TranslatePreferences {
             return !bingAPIKeyValue.isEmpty
         case .deepseekAPI:
             return !deepseekAPIKeyValue.isEmpty
+        case .appleNative:
+            return true  // 系统翻译无需密钥，始终可用
         }
     }
 }

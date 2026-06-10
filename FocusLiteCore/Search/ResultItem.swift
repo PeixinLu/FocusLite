@@ -51,6 +51,7 @@ enum ResultAction: Hashable, Sendable {
     case runApp(bundleID: String)
     case copyImage(data: Data, type: String)
     case copyFiles([String])
+    case setQuickTargetLanguage(String)
 }
 
 enum ResultCategory: Int, Hashable, Sendable {

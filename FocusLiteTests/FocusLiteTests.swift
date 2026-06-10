@@ -71,6 +71,45 @@ final class FocusLiteTests: XCTestCase {
 
         XCTAssertEqual(result.compactDirectionLabel, "中->英")
     }
+
+    func testAppleNativeFallbackProjectUsesChineseEnglishDirectionsOnlyWhenNoProjectsAreAvailable() {
+        let chineseFallback = AppleNativeTranslationFallback.project(
+            detected: DetectedLanguage(code: "zh-Hans", isMixed: false),
+            existingProjects: []
+        )
+        XCTAssertEqual(chineseFallback?.serviceID, TranslateServiceID.appleNative.rawValue)
+        XCTAssertEqual(chineseFallback?.primaryLanguage, "zh-Hans")
+        XCTAssertEqual(chineseFallback?.secondaryLanguage, "en")
+
+        let englishFallback = AppleNativeTranslationFallback.project(
+            detected: DetectedLanguage(code: "en", isMixed: false),
+            existingProjects: []
+        )
+        XCTAssertEqual(englishFallback?.primaryLanguage, "en")
+        XCTAssertEqual(englishFallback?.secondaryLanguage, "zh-Hans")
+
+        let configuredProject = TranslatePreferences.defaultProject(for: .deepseekAPI)
+        XCTAssertNil(AppleNativeTranslationFallback.project(
+            detected: DetectedLanguage(code: "zh-Hans", isMixed: false),
+            existingProjects: [configuredProject]
+        ))
+    }
+
+    func testTranslationResponseApplicabilityRejectsStaleTargetLanguage() {
+        XCTAssertFalse(LauncherViewModel.shouldApplyTranslationResponse(
+            capturedQuery: "hello",
+            capturedTargetLanguage: "fr",
+            currentQuery: "hello",
+            currentTargetLanguage: "en"
+        ))
+
+        XCTAssertTrue(LauncherViewModel.shouldApplyTranslationResponse(
+            capturedQuery: "hello",
+            capturedTargetLanguage: "en",
+            currentQuery: "hello",
+            currentTargetLanguage: "en"
+        ))
+    }
 }
 
 private struct TestProvider: ResultProvider {

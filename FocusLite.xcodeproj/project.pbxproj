@@ -69,6 +69,7 @@
 		1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */; };
 		1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */; };
 		1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042A /* APITranslationService.swift */; };
+		1A2B3C4D5E6F00000000033A /* AppleNativeTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F00000000042B /* AppleNativeTranslationService.swift */; };
 		1A2B3C4D5E6F000000000522 /* GeneralPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */; };
 		1A2B3C4D5E6F000000000523 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */; };
 		1A2B3C4D5E6F000000000541 /* AppSearchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F000000000540 /* AppSearchPreferences.swift */; };
@@ -172,6 +173,7 @@
 		1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateProvider.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProxy.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F00000000042A /* APITranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APITranslationService.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F00000000042B /* AppleNativeTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleNativeTranslationService.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000430 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000520 /* GeneralPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferences.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F000000000521 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
@@ -432,6 +434,7 @@
 				1A2B3C4D5E6F000000000424 /* TranslationCoordinator.swift */,
 				1A2B3C4D5E6F000000000429 /* TranslationProxy.swift */,
 				1A2B3C4D5E6F00000000042A /* APITranslationService.swift */,
+				1A2B3C4D5E6F00000000042B /* AppleNativeTranslationService.swift */,
 				1A2B3C4D5E6F000000000428 /* TranslateProvider.swift */,
 			);
 			path = Translate;
@@ -643,6 +646,7 @@
 				1A2B3C4D5E6F000000000334 /* TranslationCoordinator.swift in Sources */,
 				1A2B3C4D5E6F000000000338 /* TranslationProxy.swift in Sources */,
 				1A2B3C4D5E6F000000000339 /* APITranslationService.swift in Sources */,
+				1A2B3C4D5E6F00000000033A /* AppleNativeTranslationService.swift in Sources */,
 				1A2B3C4D5E6F000000000337 /* TranslateProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000574 /* LiquidTuningProvider.swift in Sources */,
 				1A2B3C4D5E6F000000000562 /* AppearanceSettingsView.swift in Sources */,

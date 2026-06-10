@@ -20,6 +20,7 @@ final class LauncherViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
     private var translationObserver: NSObjectProtocol?
+    private var quickTargetLanguage: String?
 
     var onExit: ((ExitBehavior) -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
@@ -59,6 +60,7 @@ final class LauncherViewModel: ObservableObject {
         results = []
         selectedIndex = nil
         shouldAnimateSelection = false
+        quickTargetLanguage = nil
     }
 
     func updateInput(_ text: String) {
@@ -158,6 +160,11 @@ final class LauncherViewModel: ObservableObject {
         case .copyFiles(let paths):
             copyFilesToPasteboard(paths)
             showToast("已复制文件")
+        case .setQuickTargetLanguage(let lang):
+            quickTargetLanguage = lang
+            showToast("已切换目标语言: \(TranslatePreferences.displayName(for: lang))")
+            performSearch()
+            return
         case .none:
             if item.providerID == WebSearchProvider.providerID {
                 showToast("请输入内容后再搜索")
@@ -374,6 +381,46 @@ final class LauncherViewModel: ObservableObject {
                 let trimmed = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     setResults(translateItems(from: []))
+                    // 有快速目标语言时直接调用 coordinator
+                    if let target = quickTargetLanguage {
+                        let capturedQuery = trimmed
+                        let capturedTarget = target
+                        searchTask = Task.detached {
+                            let results = await TranslationCoordinator.shared.translate(
+                                text: capturedQuery, targetLanguage: capturedTarget
+                            )
+                            if Task.isCancelled {
+                                return
+                            }
+                            await MainActor.run { [weak self] in
+                                guard let self else { return }
+                                guard case .prefixed(let currentProviderID) = self.searchState.scope,
+                                      currentProviderID == TranslateProvider.providerID,
+                                      Self.shouldApplyTranslationResponse(
+                                          capturedQuery: capturedQuery,
+                                          capturedTargetLanguage: capturedTarget,
+                                          currentQuery: self.searchState.query,
+                                          currentTargetLanguage: self.currentTranslateTarget
+                                      ) else {
+                                    return
+                                }
+                                if results.isEmpty {
+                                    self.setResults([ResultItem(
+                                        title: "该目标语言暂不支持翻译",
+                                        subtitle: "请前往系统设置下载语言包，或启用 API 翻译服务",
+                                        icon: .system("exclamationmark.triangle"),
+                                        score: 0.1,
+                                        action: .none,
+                                        providerID: TranslateProvider.providerID,
+                                        category: .standard
+                                    )])
+                                } else {
+                                    self.setResults(self.translateItems(from: results))
+                                }
+                            }
+                        }
+                        return
+                    }
                 }
             }
             let currentState = searchState
@@ -411,6 +458,29 @@ final class LauncherViewModel: ObservableObject {
         }
         applyUpdate(update)
         focusToken = UUID()
+        performSearch()
+    }
+
+    /// 当前翻译目标语言（临时快速切换 或 默认设置）
+    var currentTranslateTarget: String {
+        quickTargetLanguage ?? TranslatePreferences.defaultTargetLanguage
+    }
+
+    nonisolated static func shouldApplyTranslationResponse(
+        capturedQuery: String,
+        capturedTargetLanguage: String,
+        currentQuery: String,
+        currentTargetLanguage: String
+    ) -> Bool {
+        capturedQuery.trimmingCharacters(in: .whitespacesAndNewlines) ==
+            currentQuery.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            capturedTargetLanguage == currentTargetLanguage
+    }
+
+    /// 预览窗格切换翻译目标语言
+    func setTranslateTarget(_ lang: String) {
+        quickTargetLanguage = lang
+        showToast("目标语言: \(TranslatePreferences.displayName(for: lang))")
         performSearch()
     }
 
@@ -472,22 +542,33 @@ final class LauncherViewModel: ObservableObject {
             return
         }
         guard !query.isEmpty, query == currentQuery else { return }
+
+        // 过滤掉过期通知：目标语言不匹配当前设置
+        let expectedTarget = quickTargetLanguage ?? TranslatePreferences.defaultTargetLanguage
+        if let notifyTarget = info[TranslationCoordinator.targetLanguageKey] as? String,
+           notifyTarget != expectedTarget {
+            return
+        }
+
+        // 翻译已完成但无结果 → 所有服务均不支持该目标语言
+        if results.isEmpty, !TranslatePreferences.activeProjects().isEmpty {
+            setResults([ResultItem(
+                title: "该目标语言暂不支持翻译",
+                subtitle: "可尝试切换其他目标语言或启用 API 翻译服务",
+                icon: .system("exclamationmark.triangle"),
+                score: 0.1,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )])
+            return
+        }
+
         setResults(translateItems(from: results))
     }
 
     private func serviceDisplayName(for id: TranslateServiceID?) -> String {
         guard let id else { return "未知服务" }
-        switch id {
-        case .youdaoAPI:
-            return "有道 API"
-        case .baiduAPI:
-            return "百度 API"
-        case .googleAPI:
-            return "Google API"
-        case .bingAPI:
-            return "微软翻译 API"
-        case .deepseekAPI:
-            return "DeepSeek API"
-        }
+        return TranslatePreferences.serviceDisplayName(for: id)
     }
 }

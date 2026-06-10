@@ -34,7 +34,7 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var deepseekModel: String
 
     @Published var testStatus: [String: TranslateServiceTestStatus] = [:]
-    @Published var projects: [TranslateProject]
+    @Published var defaultTargetLanguage: String
 
     init() {
         mixedPolicy = TranslatePreferences.mixedTextPolicy
@@ -56,7 +56,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         deepseekAPIKey = TranslatePreferences.deepseekAPIKeyValue
         deepseekEndpoint = TranslatePreferences.deepseekEndpointValue
         deepseekModel = TranslatePreferences.deepseekModelValue
-        projects = TranslatePreferences.projects()
+        defaultTargetLanguage = TranslatePreferences.defaultTargetLanguage
     }
 
     func applyChanges() {
@@ -78,8 +78,7 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.deepseekAPIKeyValue = deepseekAPIKey
         TranslatePreferences.deepseekEndpointValue = deepseekEndpoint
         TranslatePreferences.deepseekModelValue = deepseekModel
-        TranslatePreferences.saveProjects(projects)
-        projects = TranslatePreferences.projects()
+        TranslatePreferences.defaultTargetLanguage = defaultTargetLanguage
     }
 
     func toggleService(_ id: String, isOn: Bool) {
@@ -87,44 +86,13 @@ final class TranslateSettingsViewModel: ObservableObject {
             if !enabledServices.contains(id) {
                 enabledServices.append(id)
             }
-            if let serviceID = TranslateServiceID(rawValue: id) {
-                ensureDefaultProject(for: serviceID)
-            }
         } else {
             enabledServices.removeAll { $0 == id }
         }
     }
 
-    func addProject() {
-        guard let serviceID = defaultServiceIDForNewProject() else { return }
-        projects.append(TranslatePreferences.defaultProject(for: serviceID))
-        applyChanges()
-    }
-
-    func removeProject(_ project: TranslateProject) {
-        projects.removeAll { $0.id == project.id }
-        applyChanges()
-    }
-
     func languageDisplayName(_ code: String) -> String {
         TranslatePreferences.displayName(for: code)
-    }
-
-    func availableServiceIDs() -> [TranslateServiceID] {
-        let enabled = Set(enabledServices)
-        return TranslateServiceID.allCases.filter { enabled.contains($0.rawValue) }
-    }
-
-    private func ensureDefaultProject(for serviceID: TranslateServiceID) {
-        guard !projects.contains(where: { $0.serviceID == serviceID.rawValue }) else { return }
-        projects.append(TranslatePreferences.defaultProject(for: serviceID))
-    }
-
-    private func defaultServiceIDForNewProject() -> TranslateServiceID? {
-        if let raw = enabledServices.first, let id = TranslateServiceID(rawValue: raw) {
-            return id
-        }
-        return nil
     }
 
     func ensureAccessibilityForAutoPaste() -> Bool {
@@ -160,7 +128,6 @@ final class TranslateSettingsViewModel: ObservableObject {
 struct TranslateSettingsView: View {
     @StateObject var viewModel: TranslateSettingsViewModel
     let onSaved: (() -> Void)?
-    @State private var draggingProjectID: UUID?
     @Environment(\.scenePhase) private var scenePhase
 
     init(viewModel: TranslateSettingsViewModel, onSaved: (() -> Void)? = nil) {
@@ -168,8 +135,66 @@ struct TranslateSettingsView: View {
         self.onSaved = onSaved
     }
 
+    @State private var appleNativeStatus: String?
+    @State private var appleNativeInstalled = false
+
+    private func checkAppleNativeStatus() async {
+        let target = viewModel.defaultTargetLanguage
+        let source = target == "zh-Hans" || target == "zh" ? "en" : "zh-Hans"
+        let installed = await AppleNativeTranslationService.isInstalled(
+            sourceLanguage: source, targetLanguage: target
+        )
+        await MainActor.run {
+            appleNativeInstalled = installed
+            if installed {
+                let targetName = TranslatePreferences.displayName(for: target)
+                appleNativeStatus = "\(targetName)语言包已就绪 ✅"
+            } else {
+                appleNativeStatus = "未下载语言包"
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: SettingsLayout.sectionSpacing) {
+            // Apple 系统翻译 — 推荐首选
+            SettingsSection(
+                "Apple 系统翻译",
+                note: "推荐 · 无需配置密钥，macOS 26+ 离线可用，数据不离开设备"
+            ) {
+                HStack {
+                    Toggle("Apple 系统翻译", isOn: Binding(
+                        get: { viewModel.enabledServices.contains(TranslateServiceID.appleNative.rawValue) },
+                        set: { isOn in
+                            viewModel.toggleService(TranslateServiceID.appleNative.rawValue, isOn: isOn)
+                            applyAndNotify()
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    Spacer()
+                    if let status = appleNativeStatus {
+                        Text(status)
+                            .font(.system(size: 11))
+                            .foregroundColor(appleNativeInstalled ? .green : .orange)
+                    }
+                }
+                if !appleNativeInstalled, appleNativeStatus != nil {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("翻译语言包未下载，请在系统设置中下载后使用")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Button("打开系统翻译语言设置...") {
+                            NSWorkspace.shared.open(
+                                URL(string: "x-apple.systempreferences:com.apple.Localization")!
+                            )
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.link)
+                    }
+                    .padding(.top, 2)
+                }
+            }
+
             SettingsSection(
                 "翻译前缀",
                 note: "快捷键需包含 ⌘/⌥/⌃ 中至少一个。示例：⌥+Space 或 ⌥+K。"
@@ -223,102 +248,17 @@ struct TranslateSettingsView: View {
                 }
             }
 
-            SettingsSection("翻译项目", note: "每个项目对应一对语言互译，方向自动识别。项目过多会增加候选项负担。") {
-                VStack(alignment: .leading, spacing: 10) {
-                    if viewModel.projects.isEmpty {
-                        Text("暂无翻译项目")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach($viewModel.projects, id: \.id) { $project in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "line.3.horizontal")
-                                        .foregroundColor(.secondary)
-                                    Text(serviceDisplayName(for: project.serviceID))
-                                        .font(.system(size: 12, weight: .semibold))
-                                    Spacer()
-                                    Button {
-                                        viewModel.removeProject(projectValue(project))
-                                        onSaved?()
-                                    } label: {
-                                        Image(systemName: "trash")
-                                    }
-                                    .buttonStyle(.borderless)
-                                }
-                                HStack(spacing: 8) {
-                                    Picker("服务", selection: $project.serviceID) {
-                                        ForEach(serviceOptions(for: projectValue(project)), id: \.rawValue) { id in
-                                            Text(serviceDisplayName(for: id.rawValue)).tag(id.rawValue)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 120)
-                                    .onChange(of: project.serviceID) { _ in
-                                        applyAndNotify()
-                                    }
-
-                                    Picker("主语言", selection: $project.primaryLanguage) {
-                                        ForEach(languageOptions(including: project.primaryLanguage), id: \.code) { option in
-                                            Text(option.name).tag(option.code)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 120)
-                                    .onChange(of: project.primaryLanguage) { _ in
-                                        applyAndNotify()
-                                    }
-
-                                    Text("↔")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.secondary)
-
-                                    Picker("副语言", selection: $project.secondaryLanguage) {
-                                        ForEach(languageOptions(including: project.secondaryLanguage), id: \.code) { option in
-                                            Text(option.name).tag(option.code)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 120)
-                                    .onChange(of: project.secondaryLanguage) { _ in
-                                        applyAndNotify()
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                            )
-                            .onDrag {
-                                let id = project.id
-                                draggingProjectID = id
-                                return NSItemProvider(object: id.uuidString as NSString)
-                            }
-                            .onDrop(
-                                of: [UTType.text],
-                                delegate: ProjectOrderDropDelegate(
-                                    itemID: project.id,
-                                    items: $viewModel.projects,
-                                    draggingItem: $draggingProjectID,
-                                    onReordered: applyAndNotify
-                                )
-                            )
+            SettingsSection("默认目标语言", note: "翻译结果默认转换到此语言。输入语言由系统自动识别，方向自动匹配。") {
+                SettingsFieldRow(title: "目标语言") {
+                    Picker("目标语言", selection: $viewModel.defaultTargetLanguage) {
+                        ForEach(TranslatePreferences.languageOptions, id: \.code) { option in
+                            Text(option.name).tag(option.code)
                         }
                     }
-
-                    HStack(spacing: 8) {
-                        Button("新增项目") {
-                            viewModel.addProject()
-                            onSaved?()
-                        }
-                        .disabled(viewModel.availableServiceIDs().isEmpty)
-                        Spacer()
+                    .labelsHidden()
+                    .frame(width: 160)
+                    .onChange(of: viewModel.defaultTargetLanguage) { _ in
+                        applyAndNotify()
                     }
                 }
             }
@@ -462,6 +402,12 @@ struct TranslateSettingsView: View {
         .onAppear {
             refreshPermissionStatus()
         }
+        .task {
+            await checkAppleNativeStatus()
+        }
+        .onChange(of: viewModel.defaultTargetLanguage) { _ in
+            Task { await checkAppleNativeStatus() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatus()
         }
@@ -480,7 +426,8 @@ struct TranslateSettingsView: View {
         apiKeyURL: String? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        SettingsSection(note: note) {
+        let isEnabled = viewModel.enabledServices.contains(id.rawValue)
+        return SettingsSection(note: note) {
             HStack {
                 Toggle(title, isOn: serviceBinding(id))
                     .toggleStyle(.switch)
@@ -495,9 +442,14 @@ struct TranslateSettingsView: View {
                 }
                 .disabled(isTesting(id))
             }
-            content()
-            testStatusView(id)
+            if isEnabled {
+                content()
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                testStatusView(id)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: isEnabled)
     }
 
     private func serviceBinding(_ id: TranslateServiceID) -> Binding<Bool> {
@@ -547,18 +499,7 @@ struct TranslateSettingsView: View {
 
     private func displayName(for rawValue: String) -> String {
         guard let id = TranslateServiceID(rawValue: rawValue) else { return rawValue }
-        switch id {
-        case .youdaoAPI:
-            return "有道 API"
-        case .baiduAPI:
-            return "百度 API"
-        case .googleAPI:
-            return "Google API"
-        case .bingAPI:
-            return "微软翻译 API"
-        case .deepseekAPI:
-            return "DeepSeek API"
-        }
+        return TranslatePreferences.serviceDisplayName(for: id)
     }
 
     private func serviceDisplayName(for rawValue: String) -> String {
@@ -569,60 +510,4 @@ struct TranslateSettingsView: View {
         serviceDisplayName(for: rawValue.wrappedValue)
     }
 
-    private func serviceOptions(for project: TranslateProject) -> [TranslateServiceID] {
-        var options = viewModel.availableServiceIDs()
-        if let current = TranslateServiceID(rawValue: project.serviceID),
-           !options.contains(current) {
-            options.append(current)
-        }
-        return options
-    }
-
-    private func languageOptions(including code: String) -> [TranslateLanguageOption] {
-        let options = TranslatePreferences.languageOptions
-        if options.contains(where: { $0.code == code }) {
-            return options
-        }
-        return options + [TranslateLanguageOption(code: code, name: code)]
-    }
-
-    private func languageOptions(including code: Binding<String>) -> [TranslateLanguageOption] {
-        languageOptions(including: code.wrappedValue)
-    }
-
-    private func projectValue(_ project: TranslateProject) -> TranslateProject {
-        project
-    }
-
-    private func projectValue(_ project: Binding<TranslateProject>) -> TranslateProject {
-        project.wrappedValue
-    }
-}
-
-private struct ProjectOrderDropDelegate: DropDelegate {
-    let itemID: UUID
-    @Binding var items: [TranslateProject]
-    @Binding var draggingItem: UUID?
-    let onReordered: () -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let dragging = draggingItem, dragging != itemID else { return }
-        guard let fromIndex = items.firstIndex(where: { $0.id == dragging }),
-              let toIndex = items.firstIndex(where: { $0.id == itemID }) else { return }
-        if items[toIndex].id == dragging { return }
-
-        withAnimation(.easeInOut(duration: 0.12)) {
-            items.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
-        }
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggingItem = nil
-        onReordered()
-        return true
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
 }

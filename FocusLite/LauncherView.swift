@@ -164,7 +164,12 @@ struct LauncherView: View {
 
                     Divider()
 
-                    PreviewPane(item: viewModel.highlightedItem)
+                    PreviewPane(
+                        item: viewModel.highlightedItem,
+                        currentTargetLanguage: viewModel.currentTranslateTarget,
+                        languageOptions: TranslatePreferences.languageOptions,
+                        onTargetLanguageChange: { viewModel.setTranslateTarget($0) }
+                    )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(12)
                 }
@@ -882,6 +887,9 @@ private extension LiquidTuningGroup {
 
 private struct PreviewPane: View {
     let item: ResultItem?
+    let currentTargetLanguage: String
+    let languageOptions: [TranslateLanguageOption]
+    var onTargetLanguageChange: ((String) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -981,6 +989,24 @@ private struct PreviewPane: View {
                     .foregroundColor(.secondary)
             }
         } else if item.providerID == TranslateProvider.providerID {
+            // 目标语言切换
+            HStack(spacing: 6) {
+                Text("翻译为")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Picker("目标语言", selection: Binding(
+                    get: { currentTargetLanguage },
+                    set: { onTargetLanguageChange?($0) }
+                )) {
+                    ForEach(languageOptions, id: \.code) { option in
+                        Text(option.name).tag(option.code)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 130)
+            }
+            .padding(.vertical, 4)
+
             // 翻译结果预览
             ScrollView {
                 Text(item.title)
