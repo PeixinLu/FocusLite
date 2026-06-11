@@ -108,7 +108,7 @@ struct AppearanceSettingsView: View {
                         Picker("液态玻璃风格", selection: $glassStyleRaw) {
                             Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
                             Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
-                            Text(AppearancePreferences.GlassStyle.fade.displayName).tag(AppearancePreferences.GlassStyle.fade.rawValue)
+                            Text(AppearancePreferences.GlassStyle.sunglasses.displayName).tag(AppearancePreferences.GlassStyle.sunglasses.rawValue)
                         }
                         .pickerStyle(.segmented)
 

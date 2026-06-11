@@ -54,6 +54,12 @@ struct LiquidGlassBackground: View {
     let glassStyle: AppearancePreferences.GlassStyle
     let glassTint: NSColor?
     let animationDuration: Double
+    var sunglassesTopSolid: CGFloat = AppearancePreferences.defaultSunglassesTopSolid
+    var sunglassesTopFade: CGFloat = AppearancePreferences.defaultSunglassesTopFade
+    var sunglassesMidTopAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidTopAlpha
+    var sunglassesMidBottomAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidBottomAlpha
+    var sunglassesBottomFade: CGFloat = AppearancePreferences.defaultSunglassesBottomFade
+    var sunglassesCornerInfluence: CGFloat = AppearancePreferences.defaultSunglassesCornerInfluence
 
     var body: some View {
         ZStack {
@@ -104,17 +110,36 @@ struct LiquidGlassBackground: View {
 
     @ViewBuilder
     private var fadeGradientOverlay: some View {
-        if style == .liquid, glassStyle == .fade {
-            LinearGradient(
-                stops: glassStyle.fadeOverlayStops.map { stop in
-                    Gradient.Stop(
-                        color: Color.black.opacity(stop.opacity),
-                        location: stop.location
+        if style == .liquid, glassStyle == .sunglasses {
+            if #available(macOS 15, *) {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.black)
+                    .colorEffect(
+                        ShaderLibrary.sunglassesFade(
+                            .boundingRect,
+                            .float(Float(cornerRadius)),
+                            .float(Float(sunglassesTopSolid)),
+                            .float(Float(sunglassesTopFade)),
+                            .float(Float(sunglassesMidTopAlpha)),
+                            .float(Float(sunglassesMidBottomAlpha)),
+                            .float(Float(sunglassesBottomFade)),
+                            .float(Float(sunglassesCornerInfluence))
+                        )
                     )
-                },
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            } else {
+                // Fallback for macOS <15: simple top-to-bottom fade
+                LinearGradient(
+                    stops: [
+                        Gradient.Stop(color: .black, location: 0.0),
+                        Gradient.Stop(color: .black.opacity(0.9), location: 0.15),
+                        Gradient.Stop(color: .black.opacity(0.6), location: 0.3),
+                        Gradient.Stop(color: .black.opacity(0.15), location: 0.85),
+                        Gradient.Stop(color: .clear, location: 1.0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
         }
     }
 }
@@ -167,7 +192,7 @@ extension AppearancePreferences.GlassStyle {
         switch self {
         case .regular:
             return .regular
-        case .clear, .fade:
+        case .clear, .sunglasses:
             return .clear
         }
     }

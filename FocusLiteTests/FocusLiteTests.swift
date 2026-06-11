@@ -17,22 +17,12 @@ final class FocusLiteTests: XCTestCase {
         XCTAssertEqual(results.map(\.title), ["C", "B", "A"])
     }
 
-    func testFadeGlassStyleUsesClearGlassWithTopToBottomOverlayStops() {
-        let style = AppearancePreferences.GlassStyle.fade
+    func testSunglassesGlassStyleUsesClearGlassWithLightForeground() {
+        let style = AppearancePreferences.GlassStyle.sunglasses
 
-        XCTAssertEqual(style.rawValue, "fade")
-        XCTAssertEqual(style.displayName, "渐隐")
+        XCTAssertEqual(style.rawValue, "sunglasses")
+        XCTAssertEqual(style.displayName, "太阳眼镜")
         XCTAssertEqual(style.baseGlassStyle, .clear)
-        XCTAssertEqual(style.fadeOverlayStops, [
-            AppearancePreferences.FadeOverlayStop(location: 0.0, opacity: 0.96),
-            AppearancePreferences.FadeOverlayStop(location: 0.25, opacity: 0.94),
-            AppearancePreferences.FadeOverlayStop(location: 0.5, opacity: 0.9),
-            AppearancePreferences.FadeOverlayStop(location: 0.68, opacity: 0.82),
-            AppearancePreferences.FadeOverlayStop(location: 0.8, opacity: 0.62),
-            AppearancePreferences.FadeOverlayStop(location: 0.9, opacity: 0.34),
-            AppearancePreferences.FadeOverlayStop(location: 0.96, opacity: 0.16),
-            AppearancePreferences.FadeOverlayStop(location: 1.0, opacity: 0.06)
-        ])
         XCTAssertTrue(style.usesLightForeground)
         XCTAssertFalse(AppearancePreferences.GlassStyle.regular.usesLightForeground)
         XCTAssertFalse(AppearancePreferences.GlassStyle.clear.usesLightForeground)

@@ -27,6 +27,22 @@ struct LauncherView: View {
     private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = AppearancePreferences.defaultCornerRadius
+    @AppStorage(AppearancePreferences.sunglassesTopSolidKey)
+    private var sunglassesTopSolid = AppearancePreferences.defaultSunglassesTopSolid
+    @AppStorage(AppearancePreferences.sunglassesTopFadeKey)
+    private var sunglassesTopFade = AppearancePreferences.defaultSunglassesTopFade
+    @AppStorage(AppearancePreferences.sunglassesMidTopAlphaKey)
+    private var sunglassesMidTopAlpha = AppearancePreferences.defaultSunglassesMidTopAlpha
+    @AppStorage(AppearancePreferences.sunglassesMidBottomAlphaKey)
+    private var sunglassesMidBottomAlpha = AppearancePreferences.defaultSunglassesMidBottomAlpha
+    @AppStorage(AppearancePreferences.sunglassesBottomFadeKey)
+    private var sunglassesBottomFade = AppearancePreferences.defaultSunglassesBottomFade
+    @AppStorage(AppearancePreferences.sunglassesCornerInfluenceKey)
+    private var sunglassesCornerInfluence = AppearancePreferences.defaultSunglassesCornerInfluence
+    @AppStorage(AppearancePreferences.sunglassesThemeKey)
+    private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
+    @AppStorage(AppearancePreferences.sunglassesHDRKey)
+    private var sunglassesHDR = AppearancePreferences.defaultSunglassesHDR
     private var rowCornerRadius: CGFloat {
         max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
     }
@@ -76,13 +92,45 @@ struct LauncherView: View {
     }
 
     private var rowAccentTint: NSColor {
-        let base = NSColor(Color.accentColor)
+        let base = NSColor(effectiveAccent)
         let alpha: CGFloat = rowGlassStyle.baseGlassStyle == .clear ? 0.28 : 0.24
         return base.withAlphaComponent(alpha)
     }
 
     private var launcherColorScheme: ColorScheme {
         materialStyle == .liquid && glassStyle.usesLightForeground ? .dark : colorScheme
+    }
+
+    private var sunglassesTheme: AppearancePreferences.SunglassesTheme {
+        AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw) ?? .warmAmber
+    }
+
+    /// Accent color used throughout the launcher — theme override when set
+    private var effectiveAccent: Color {
+        if let nsColor = sunglassesTheme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
+
+    /// HDR-bright text for search field (EDR display only, SDR clips to 1.0)
+    private var searchTextColor: Color {
+        if glassStyle == .sunglasses, sunglassesHDR {
+            return Color(white: 1.3)
+        }
+        return .primary
+    }
+
+    /// Cursor tint: theme color × HDR brightness if enabled
+    private var cursorTint: Color {
+        guard glassStyle == .sunglasses, let c = sunglassesTheme.rgba else { return effectiveAccent }
+        if sunglassesHDR {
+            return Color(nsColor: NSColor(calibratedRed: c.r * 1.7,
+                                          green: c.g * 1.7,
+                                          blue: c.b * 1.7,
+                                          alpha: 1.0))
+        }
+        return Color(nsColor: sunglassesTheme.nsColor!)
     }
 
     var body: some View {
@@ -109,7 +157,13 @@ struct LauncherView: View {
                 style: materialStyle,
                 glassStyle: glassStyle,
                 glassTint: glassTint,
-                animationDuration: animationDuration
+                animationDuration: animationDuration,
+                sunglassesTopSolid: sunglassesTopSolid,
+                sunglassesTopFade: sunglassesTopFade,
+                sunglassesMidTopAlpha: sunglassesMidTopAlpha,
+                sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
+                sunglassesBottomFade: sunglassesBottomFade,
+                sunglassesCornerInfluence: sunglassesCornerInfluence
             )
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isExpanded)
@@ -158,13 +212,16 @@ struct LauncherView: View {
                     title: prefix.title,
                     subtitle: prefix.subtitle,
                     useLiquidStyle: materialStyle == .liquid,
-                    tint: Color.accentColor
+                    tint: effectiveAccent
                 )
             }
 
             TextField("Search", text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 20, weight: .medium))
+                .foregroundColor(searchTextColor)
+                .tint(cursorTint)
+                .shadow(color: glassStyle == .sunglasses ? cursorTint.opacity(0.45) : .clear, radius: 7, y: 0)
                 .frame(maxWidth: .infinity)
                 .focused($isSearchFocused)
                 .onChange(of: viewModel.searchText) { newValue in
@@ -370,12 +427,56 @@ private struct ResultRow: View {
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
     private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
-    
+    @AppStorage(AppearancePreferences.glassStyleKey)
+    private var mainGlassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
+    @AppStorage(AppearancePreferences.sunglassesThemeKey)
+    private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
+    @AppStorage(AppearancePreferences.sunglassesHDRKey)
+    private var sunglassesHDR = AppearancePreferences.defaultSunglassesHDR
+
     // Liquid Glass 微调参数（候选项也使用）
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = 16.0
     @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
     private var animationDuration = 0.18
+
+    private var mainGlassStyle: AppearancePreferences.GlassStyle {
+        AppearancePreferences.GlassStyle(rawValue: mainGlassStyleRaw) ?? .regular
+    }
+
+    private var effectiveAccent: Color {
+        if let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+           let nsColor = theme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
+
+    /// Title color for selected item — HDR-bright white in sunglasses mode
+    private var selectedTitleColor: Color {
+        if mainGlassStyle == .sunglasses, sunglassesHDR {
+            return Color(white: 1.6)
+        }
+        return .primary
+    }
+
+    /// Icon color for selected item — HDR-scaled theme or accent
+    private var selectedIconColor: Color {
+        guard mainGlassStyle == .sunglasses, sunglassesHDR,
+              let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+              let c = theme.rgba else {
+            return effectiveAccent
+        }
+        return Color(nsColor: NSColor(calibratedRed: c.r * 1.5,
+                                       green: c.g * 1.5,
+                                       blue: c.b * 1.5,
+                                       alpha: 1.0))
+    }
+
+    /// Whether to use HDR-enhanced colors for the selected row
+    private var useHDRSelectedColors: Bool {
+        mainGlassStyle == .sunglasses && sunglassesHDR
+    }
 
     private var isLiquidClear: Bool {
         materialStyle == .liquid && rowGlassStyle.baseGlassStyle == .clear
@@ -401,6 +502,7 @@ private struct ResultRow: View {
                 HStack(spacing: 6) {
                     Text(item.title)
                         .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isSelected ? selectedTitleColor : .primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     if item.isPrefix {
@@ -410,14 +512,14 @@ private struct ResultRow: View {
                             .padding(.horizontal, 6)
                             .background(
                                 Capsule()
-                                    .fill(Color.accentColor.opacity(0.12))
+                                    .fill(effectiveAccent.opacity(0.12))
                             )
                     }
                 }
                 if let subtitle = item.subtitle {
                     Text(subtitle)
                         .font(.system(size: 12))
-                        .foregroundColor(item.isPrefix ? .accentColor : .secondary)
+                        .foregroundColor(item.isPrefix ? effectiveAccent : .secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -454,7 +556,7 @@ private struct ResultRow: View {
             Image(systemName: name)
                 .font(.system(size: 16, weight: .semibold))
                 .frame(width: 28, height: 28)
-                .foregroundColor(.accentColor)
+                .foregroundColor(isSelected ? selectedIconColor : effectiveAccent)
         case .bundle(let name):
             if let image = NSImage(named: name) {
                 Image(nsImage: image)
@@ -534,7 +636,7 @@ private struct ResultRow: View {
         }
         if isSelected {
             let opacity: Double = isLiquidClear ? 0.26 : 0.15
-            return Color.accentColor.opacity(opacity)
+            return effectiveAccent.opacity(opacity)
         }
         if materialStyle == .classic {
             return Color(nsColor: .controlBackgroundColor).opacity(0.25)
@@ -545,7 +647,7 @@ private struct ResultRow: View {
 
     private var hoverFillColor: Color {
         let opacity: Double = isLiquidClear ? 0.08 : 0.06
-        return Color.accentColor.opacity(opacity)
+        return effectiveAccent.opacity(opacity)
     }
 
 }
@@ -564,12 +666,30 @@ private struct LiquidTuningPreview: View {
     @State private var clearTintRaw = AppearancePreferences.glassTintClear
     @State private var cornerRadius = AppearancePreferences.liquidGlassCornerRadius
     @State private var animationDuration = AppearancePreferences.liquidGlassAnimationDuration
+    @State private var sunglassesTopSolid = AppearancePreferences.sunglassesTopSolid
+    @State private var sunglassesTopFade = AppearancePreferences.sunglassesTopFade
+    @State private var sunglassesMidTopAlpha = AppearancePreferences.sunglassesMidTopAlpha
+    @State private var sunglassesMidBottomAlpha = AppearancePreferences.sunglassesMidBottomAlpha
+    @State private var sunglassesBottomFade = AppearancePreferences.sunglassesBottomFade
+    @State private var sunglassesCornerInfluence = AppearancePreferences.sunglassesCornerInfluence
+    @State private var sunglassesThemeRaw = AppearancePreferences.sunglassesTheme.rawValue
+    @State private var sunglassesHDR = AppearancePreferences.sunglassesHDR
+    @State private var showSunglassesTuning = false
+
+    private var effectiveAccent: Color {
+        if let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+           let nsColor = theme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             groupContent
             Spacer()
         }
+        .tint(effectiveAccent)
         .padding(8)
     }
 
@@ -684,16 +804,96 @@ private struct LiquidTuningPreview: View {
                     glassStyleRaw = newValue
                     if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
                         AppearancePreferences.glassStyle = style
+                        // auto theme: sunglasses → warmAmber, others → default
+                        let target: AppearancePreferences.SunglassesTheme =
+                            style == .sunglasses ? .warmAmber : .default
+                        AppearancePreferences.sunglassesTheme = target
+                        sunglassesThemeRaw = target.rawValue
                     }
                 }
             )) {
                 Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
                 Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
-                Text(AppearancePreferences.GlassStyle.fade.displayName).tag(AppearancePreferences.GlassStyle.fade.rawValue)
+                Text(AppearancePreferences.GlassStyle.sunglasses.displayName).tag(AppearancePreferences.GlassStyle.sunglasses.rawValue)
             }
             .pickerStyle(.segmented)
 
             VStack(alignment: .leading, spacing: 10) {
+                if glassStyle == .sunglasses {
+                    DisclosureGroup("微调（展开）", isExpanded: $showSunglassesTuning) {
+                        TuningSlider(
+                            title: "顶部纯黑高度",
+                            value: debouncedBinding(
+                                state: $sunglassesTopSolid,
+                                key: "sgTopSolid",
+                                apply: { AppearancePreferences.sunglassesTopSolid = $0 }
+                            ),
+                            range: 1...60,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "上段过渡高度",
+                            value: debouncedBinding(
+                                state: $sunglassesTopFade,
+                                key: "sgTopFade",
+                                apply: { AppearancePreferences.sunglassesTopFade = $0 }
+                            ),
+                            range: 1...100,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "上段目标黑度",
+                            value: debouncedBinding(
+                                state: $sunglassesMidTopAlpha,
+                                key: "sgMidTopA",
+                                apply: { AppearancePreferences.sunglassesMidTopAlpha = $0 }
+                            ),
+                            range: 0.50...1.00,
+                            step: 0.05,
+                            unit: ""
+                        )
+                        TuningSlider(
+                            title: "下段起始黑度",
+                            value: debouncedBinding(
+                                state: $sunglassesMidBottomAlpha,
+                                key: "sgMidBotA",
+                                apply: { AppearancePreferences.sunglassesMidBottomAlpha = $0 }
+                            ),
+                            range: 0.05...0.50,
+                            step: 0.05,
+                            unit: ""
+                        )
+                        TuningSlider(
+                            title: "底段过渡高度",
+                            value: debouncedBinding(
+                                state: $sunglassesBottomFade,
+                                key: "sgBotFade",
+                                apply: { AppearancePreferences.sunglassesBottomFade = $0 }
+                            ),
+                            range: 1...60,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "角落弯曲强度",
+                            value: debouncedBinding(
+                                state: $sunglassesCornerInfluence,
+                                key: "sgCornerInf",
+                                apply: { AppearancePreferences.sunglassesCornerInfluence = $0 }
+                            ),
+                            range: 0.0...1.0,
+                            step: 0.1,
+                            unit: ""
+                        )
+                        Toggle("HDR 文字高亮", isOn: $sunglassesHDR)
+                            .onChange(of: sunglassesHDR) { newValue in
+                                AppearancePreferences.sunglassesHDR = newValue
+                            }
+                    }
+                }
+
                 Toggle(isOn: tintEnabledBinding) {
                     HStack {
                         Text("色调")
@@ -807,6 +1007,18 @@ private struct LiquidTuningPreview: View {
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
+
+            Picker("主题色", selection: $sunglassesThemeRaw) {
+                ForEach(AppearancePreferences.SunglassesTheme.allCases) { theme in
+                    Text(theme.displayName).tag(theme.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: sunglassesThemeRaw) { newValue in
+                if let theme = AppearancePreferences.SunglassesTheme(rawValue: newValue) {
+                    AppearancePreferences.sunglassesTheme = theme
+                }
+            }
         }
     }
 
@@ -871,13 +1083,18 @@ private struct TuningSlider: View {
     let range: ClosedRange<Double>
     let step: Double
     let unit: String
+    var displayTransform: ((Double) -> Double)? = nil
+
+    private var displayValue: Double {
+        displayTransform?(value) ?? value
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
                 Spacer()
-                Text(String(format: "%.2f", value) + unit)
+                Text(String(format: displayTransform != nil ? "%.0f" : "%.2f", displayValue) + unit)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(.secondary)
             }

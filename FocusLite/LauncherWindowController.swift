@@ -155,6 +155,9 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         hostingView.wantsLayer = true
         hostingView.layer?.cornerRadius = 16
         hostingView.layer?.masksToBounds = true
+        if #available(macOS 14, *) {
+            hostingView.layer?.wantsExtendedDynamicRangeContent = true
+        }
         window.contentView = hostingView
         window.makeFirstResponder(hostingView)
 
