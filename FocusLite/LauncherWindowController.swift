@@ -91,6 +91,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     func hide(restoreBehavior: LauncherViewModel.ExitBehavior = .restoreOrigin) {
         stopKeyMonitor()
         window?.orderOut(nil)
+        viewModel.resetSearch()
         guard restoreBehavior == .restoreOrigin, !wasInterrupted else { return }
         restoreFocusOrigin()
     }
