@@ -57,6 +57,17 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
         createWindowIfNeeded()
         if resetSearch {
             viewModel.resetSearch()
+        } else {
+            // Hotkey-prefix path: disable animation so window opens at final size
+            let hasContent: Bool = {
+                if case .prefixed = viewModel.searchState.scope { return true }
+                return !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }()
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                viewModel.isExpanded = hasContent
+            }
         }
         captureFocusOrigin()
         wasInterrupted = false
