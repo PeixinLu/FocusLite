@@ -58,7 +58,7 @@ struct TranslationBubbleView: View {
     }
 
     private var bubbleColorScheme: ColorScheme {
-        materialStyle == .liquid && glassStyle.usesLightForeground ? .dark : colorScheme
+        materialStyle == .sunglasses ? .dark : colorScheme
     }
 
     private var bubbleCornerRadius: CGFloat { min(CGFloat(cornerRadiusKey), 16) }

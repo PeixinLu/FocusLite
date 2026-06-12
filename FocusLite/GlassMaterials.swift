@@ -1,6 +1,37 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Private NSGlassEffectView API helpers
+
+/// Call the private `set_variant:` method on NSGlassEffectView.
+/// Variant is the specific glass recipe within a style class (0-19+).
+func setGlassVariant(_ view: NSView, _ value: Int) {
+    let selector = NSSelectorFromString("set_variant:")
+    guard view.responds(to: selector) else { return }
+    typealias Fn = @convention(c) (AnyObject, Selector, Int) -> Void
+    let imp = view.method(for: selector)
+    let fn = unsafeBitCast(imp, to: Fn.self)
+    fn(view, selector, value)
+}
+
+func setGlassScrimState(_ view: NSView, _ value: Bool) {
+    let selector = NSSelectorFromString("set_scrimState:")
+    guard view.responds(to: selector) else { return }
+    typealias Fn = @convention(c) (AnyObject, Selector, Bool) -> Void
+    let imp = view.method(for: selector)
+    let fn = unsafeBitCast(imp, to: Fn.self)
+    fn(view, selector, value)
+}
+
+func setGlassSubduedState(_ view: NSView, _ value: Bool) {
+    let selector = NSSelectorFromString("set_subduedState:")
+    guard view.responds(to: selector) else { return }
+    typealias Fn = @convention(c) (AnyObject, Selector, Bool) -> Void
+    let imp = view.method(for: selector)
+    let fn = unsafeBitCast(imp, to: Fn.self)
+    fn(view, selector, value)
+}
+
 // MARK: - Shared Glass / Liquid Glass rendering views
 
 /// NSVisualEffectView wrapper for pre-macOS 26 fallback.
@@ -25,17 +56,21 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 /// NSGlassEffectView wrapper for macOS 26+ Liquid Glass.
+/// Stable styles (regular/clear) use .style; experimental styles use .clear + set_variant:.
 @available(macOS 26, *)
 struct GlassBackgroundView: NSViewRepresentable {
     let cornerRadius: CGFloat
     let style: AppearancePreferences.GlassStyle
     let tintColor: NSColor?
+    var scrimState: Bool = false
+    var subduedState: Bool = false
 
     func makeNSView(context: Context) -> NSGlassEffectView {
         let view = NSGlassEffectView()
         view.cornerRadius = cornerRadius
         view.style = style.nsStyle
         view.tintColor = tintColor
+        applyPrivateAPIs(view)
         return view
     }
 
@@ -43,6 +78,15 @@ struct GlassBackgroundView: NSViewRepresentable {
         nsView.cornerRadius = cornerRadius
         nsView.style = style.nsStyle
         nsView.tintColor = tintColor
+        applyPrivateAPIs(nsView)
+    }
+
+    private func applyPrivateAPIs(_ view: NSGlassEffectView) {
+        if style.variantValue != 0 {
+            setGlassVariant(view, style.variantValue)
+        }
+        setGlassScrimState(view, scrimState)
+        setGlassSubduedState(view, subduedState)
     }
 }
 
@@ -60,6 +104,8 @@ struct LiquidGlassBackground: View {
     var sunglassesMidBottomAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidBottomAlpha
     var sunglassesBottomFade: CGFloat = AppearancePreferences.defaultSunglassesBottomFade
     var sunglassesCornerInfluence: CGFloat = AppearancePreferences.defaultSunglassesCornerInfluence
+    var scrimState: Bool = false
+    var subduedState: Bool = false
 
     var body: some View {
         ZStack {
@@ -67,7 +113,7 @@ struct LiquidGlassBackground: View {
             fadeGradientOverlay
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style == .liquid)
+        .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style.isLiquid)
     }
 
     @ViewBuilder
@@ -79,12 +125,14 @@ struct LiquidGlassBackground: View {
                 blendingMode: .behindWindow,
                 state: .active
             )
-        case .liquid:
+        case .liquid, .sunglasses:
             if #available(macOS 26, *) {
                 GlassBackgroundView(
                     cornerRadius: cornerRadius,
-                    style: glassStyle.baseGlassStyle,
-                    tintColor: glassTint
+                    style: glassStyle,
+                    tintColor: glassTint,
+                    scrimState: scrimState,
+                    subduedState: subduedState
                 )
             } else {
                 VisualEffectView(
@@ -110,7 +158,7 @@ struct LiquidGlassBackground: View {
 
     @ViewBuilder
     private var fadeGradientOverlay: some View {
-        if style == .liquid, glassStyle == .sunglasses {
+        if style == .sunglasses {
             if #available(macOS 15, *) {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Color.black)
@@ -188,11 +236,13 @@ func colorFromRGBA(_ raw: String) -> NSColor? {
 
 @available(macOS 26, *)
 extension AppearancePreferences.GlassStyle {
+    /// Maps to the public NSGlassEffectView.Style. Experimental styles all use .clear base;
+    /// the difference is driven by set_variant:.
     var nsStyle: NSGlassEffectView.Style {
         switch self {
         case .regular:
             return .regular
-        case .clear, .sunglasses:
+        default:
             return .clear
         }
     }

@@ -12,12 +12,16 @@ enum AppearancePreferences {
     static let glassTintModeClearKey = "appearance.glassTintMode.clear"
     static let liquidGlassAnimationDurationKey = "appearance.liquidGlass.animationDuration"
     static let liquidGlassCornerRadiusKey = "appearance.liquidGlass.cornerRadius"
+    static let glassVariantKey = "appearance.glassVariant"
+    static let glassScrimStateKey = "appearance.glassScrimState"
+    static let glassSubduedStateKey = "appearance.glassSubduedState"
     static let sunglassesTopSolidHeightKey = "appearance.sunglasses.topSolidHeight"
     private static let modernGlassOSVersion = OperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)
 
-    enum MaterialStyle: String, CaseIterable, Identifiable {
+enum MaterialStyle: String, CaseIterable, Identifiable {
         case classic
         case liquid
+        case sunglasses
         case pure
 
         var id: String { rawValue }
@@ -26,7 +30,16 @@ enum AppearancePreferences {
             switch self {
             case .classic: return "macOS经典"
             case .liquid: return "液态玻璃"
+            case .sunglasses: return "太阳眼镜"
             case .pure: return "纯色"
+            }
+        }
+
+        /// Whether this style uses the Liquid Glass rendering path
+        var isLiquid: Bool {
+            switch self {
+            case .liquid, .sunglasses: return true
+            case .classic, .pure: return false
             }
         }
     }
@@ -34,7 +47,29 @@ enum AppearancePreferences {
     enum GlassStyle: String, CaseIterable, Identifiable {
         case regular
         case clear
-        case sunglasses
+        // Experimental — mapped via set_variant: instead of style
+        case dock               // variant 2
+        case appIcons           // variant 3
+        case widgets            // variant 4
+        case text               // variant 5
+        case avPlayer           // variant 6
+        case faceTime           // variant 7
+        case controlCenter      // variant 8
+        case notificationCenter // variant 9
+        case monogram           // variant 10
+        case bubbles            // variant 11
+        case identity           // variant 12
+        case focusBorder        // variant 13
+        case focusPlatter       // variant 14
+        case keyboard           // variant 15
+        case sidebar            // variant 16
+        case abuttedSidebar     // variant 17
+        case inspector          // variant 18
+        case control            // variant 19
+        case loupe              // variant 20
+        case slider             // variant 21
+        case camera             // variant 22
+        case cartouchePopover   // variant 23
 
         var id: String { rawValue }
 
@@ -42,21 +77,73 @@ enum AppearancePreferences {
             switch self {
             case .regular: return "常规"
             case .clear: return "通透"
-            case .sunglasses: return "太阳眼镜"
+            case .dock: return "Dock"
+            case .appIcons: return "AppIcons"
+            case .widgets: return "Widgets"
+            case .text: return "Text"
+            case .avPlayer: return "AvPlayer"
+            case .faceTime: return "FaceTime"
+            case .controlCenter: return "ControlCenter"
+            case .notificationCenter: return "NotificationCenter"
+            case .monogram: return "Monogram"
+            case .bubbles: return "Bubbles"
+            case .identity: return "Identity"
+            case .focusBorder: return "FocusBorder"
+            case .focusPlatter: return "FocusPlatter"
+            case .keyboard: return "Keyboard"
+            case .sidebar: return "Sidebar"
+            case .abuttedSidebar: return "AbuttedSidebar"
+            case .inspector: return "Inspector"
+            case .control: return "Control"
+            case .loupe: return "Loupe"
+            case .slider: return "Slider"
+            case .camera: return "Camera"
+            case .cartouchePopover: return "CartouchePopover"
             }
         }
 
+        /// Underlying NSGlassEffectView.Style. Experimental styles all use .clear base + variant.
         var baseGlassStyle: GlassStyle {
             switch self {
             case .regular:
                 return .regular
-            case .clear, .sunglasses:
+            default:
                 return .clear
             }
         }
 
-        var usesLightForeground: Bool {
-            self == .sunglasses
+        /// Variant value for set_variant: private API. 0 = use style directly; 3-24 = variant on clear base.
+        var variantValue: Int {
+            switch self {
+            case .regular, .clear:     return 0
+            case .dock:                return 3
+            case .appIcons:            return 4
+            case .widgets:             return 5
+            case .text:                return 6
+            case .avPlayer:            return 7
+            case .faceTime:            return 8
+            case .controlCenter:       return 9
+            case .notificationCenter:  return 10
+            case .monogram:            return 11
+            case .bubbles:             return 12
+            case .identity:            return 13
+            case .focusBorder:         return 14
+            case .focusPlatter:        return 15
+            case .keyboard:            return 16
+            case .sidebar:             return 17
+            case .abuttedSidebar:      return 18
+            case .inspector:           return 19
+            case .control:             return 20
+            case .loupe:               return 21
+            case .slider:              return 22
+            case .camera:              return 23
+            case .cartouchePopover:    return 24
+            }
+        }
+
+        /// Whether the experimental styles dropdown shows this style
+        var isExperimental: Bool {
+            variantValue != 0
         }
     }
 
@@ -177,7 +264,9 @@ enum AppearancePreferences {
         switch style.baseGlassStyle {
         case .regular:
             return glassTintModeRegular == .off ? .off : glassTintModeRegular
-        case .clear, .sunglasses:
+        case .clear:
+            return glassTintModeClear == .off ? .systemDefault : glassTintModeClear
+        default:
             return glassTintModeClear == .off ? .systemDefault : glassTintModeClear
         }
     }
@@ -186,7 +275,9 @@ enum AppearancePreferences {
         switch style.baseGlassStyle {
         case .regular:
             glassTintModeRegular = mode
-        case .clear, .sunglasses:
+        case .clear:
+            glassTintModeClear = mode
+        default:
             glassTintModeClear = mode
         }
     }
@@ -215,7 +306,7 @@ enum AppearancePreferences {
         switch style.baseGlassStyle {
         case .regular:
             return glassTintRegular
-        case .clear, .sunglasses:
+        default:
             return glassTintClear
         }
     }
@@ -224,7 +315,7 @@ enum AppearancePreferences {
         switch style.baseGlassStyle {
         case .regular:
             glassTintRegular = value
-        case .clear, .sunglasses:
+        default:
             glassTintClear = value
         }
     }
@@ -323,5 +414,34 @@ enum AppearancePreferences {
     static func defaultTintColor(isDarkMode: Bool) -> NSColor {
         let base = isDarkMode ? NSColor.black : NSColor.white
         return base.withAlphaComponent(0.618)
+    }
+
+    // MARK: - Experimental: private NSGlassEffectView APIs
+
+    static var defaultGlassVariant: Int { 0 }
+
+    static var glassVariant: Int {
+        get { UserDefaults.standard.integer(forKey: glassVariantKey) }
+        set { UserDefaults.standard.set(newValue, forKey: glassVariantKey) }
+    }
+
+    static var scrimState: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: glassScrimStateKey) != nil {
+                return UserDefaults.standard.bool(forKey: glassScrimStateKey)
+            }
+            return false
+        }
+        set { UserDefaults.standard.set(newValue, forKey: glassScrimStateKey) }
+    }
+
+    static var subduedState: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: glassSubduedStateKey) != nil {
+                return UserDefaults.standard.bool(forKey: glassSubduedStateKey)
+            }
+            return false
+        }
+        set { UserDefaults.standard.set(newValue, forKey: glassSubduedStateKey) }
     }
 }

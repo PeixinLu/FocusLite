@@ -43,6 +43,10 @@ struct LauncherView: View {
     private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
     @AppStorage(AppearancePreferences.sunglassesHDRKey)
     private var sunglassesHDR = AppearancePreferences.defaultSunglassesHDR
+    @AppStorage(AppearancePreferences.glassScrimStateKey)
+    private var glassScrimState = false
+    @AppStorage(AppearancePreferences.glassSubduedStateKey)
+    private var glassSubduedState = false
     private var rowCornerRadius: CGFloat {
         max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
     }
@@ -98,7 +102,7 @@ struct LauncherView: View {
     }
 
     private var launcherColorScheme: ColorScheme {
-        materialStyle == .liquid && glassStyle.usesLightForeground ? .dark : colorScheme
+        materialStyle == .sunglasses ? .dark : colorScheme
     }
 
     private var sunglassesTheme: AppearancePreferences.SunglassesTheme {
@@ -115,7 +119,7 @@ struct LauncherView: View {
 
     /// HDR-bright text for search field (EDR display only, SDR clips to 1.0)
     private var searchTextColor: Color {
-        if glassStyle == .sunglasses, sunglassesHDR {
+        if materialStyle == .sunglasses, sunglassesHDR {
             return Color(white: 1.3)
         }
         return .primary
@@ -123,7 +127,7 @@ struct LauncherView: View {
 
     /// Cursor tint: theme color × HDR brightness if enabled
     private var cursorTint: Color {
-        guard glassStyle == .sunglasses, let c = sunglassesTheme.rgba else { return effectiveAccent }
+        guard materialStyle == .sunglasses, let c = sunglassesTheme.rgba else { return effectiveAccent }
         if sunglassesHDR {
             return Color(nsColor: NSColor(calibratedRed: c.r * 1.7,
                                           green: c.g * 1.7,
@@ -163,7 +167,9 @@ struct LauncherView: View {
                 sunglassesMidTopAlpha: sunglassesMidTopAlpha,
                 sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
                 sunglassesBottomFade: sunglassesBottomFade,
-                sunglassesCornerInfluence: sunglassesCornerInfluence
+                sunglassesCornerInfluence: sunglassesCornerInfluence,
+                scrimState: glassScrimState,
+                subduedState: glassSubduedState
             )
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isExpanded)
@@ -221,7 +227,7 @@ struct LauncherView: View {
                 .font(.system(size: 20, weight: .medium))
                 .foregroundColor(searchTextColor)
                 .tint(cursorTint)
-                .shadow(color: glassStyle == .sunglasses ? cursorTint.opacity(0.45) : .clear, radius: 7, y: 0)
+                .shadow(color: materialStyle == .sunglasses ? cursorTint.opacity(0.45) : .clear, radius: 7, y: 0)
                 .frame(maxWidth: .infinity)
                 .focused($isSearchFocused)
                 .onChange(of: viewModel.searchText) { newValue in
@@ -349,7 +355,7 @@ struct LauncherView: View {
     private let compactHeight: CGFloat = 56
 
     private var showsLiquidSelection: Bool {
-        materialStyle == .liquid
+        materialStyle.isLiquid
     }
 
     private var isLiquidTuningMode: Bool {
@@ -427,8 +433,6 @@ private struct ResultRow: View {
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
     private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
-    @AppStorage(AppearancePreferences.glassStyleKey)
-    private var mainGlassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.sunglassesThemeKey)
     private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
     @AppStorage(AppearancePreferences.sunglassesHDRKey)
@@ -440,10 +444,6 @@ private struct ResultRow: View {
     @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
     private var animationDuration = 0.18
 
-    private var mainGlassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: mainGlassStyleRaw) ?? .regular
-    }
-
     private var effectiveAccent: Color {
         if let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
            let nsColor = theme.nsColor {
@@ -454,7 +454,7 @@ private struct ResultRow: View {
 
     /// Title color for selected item — HDR-bright white in sunglasses mode
     private var selectedTitleColor: Color {
-        if mainGlassStyle == .sunglasses, sunglassesHDR {
+        if materialStyle == .sunglasses, sunglassesHDR {
             return Color(white: 1.6)
         }
         return .primary
@@ -462,7 +462,7 @@ private struct ResultRow: View {
 
     /// Icon color for selected item — HDR-scaled theme or accent
     private var selectedIconColor: Color {
-        guard mainGlassStyle == .sunglasses, sunglassesHDR,
+        guard materialStyle == .sunglasses, sunglassesHDR,
               let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
               let c = theme.rgba else {
             return effectiveAccent
@@ -475,11 +475,11 @@ private struct ResultRow: View {
 
     /// Whether to use HDR-enhanced colors for the selected row
     private var useHDRSelectedColors: Bool {
-        mainGlassStyle == .sunglasses && sunglassesHDR
+        materialStyle == .sunglasses && sunglassesHDR
     }
 
     private var isLiquidClear: Bool {
-        materialStyle == .liquid && rowGlassStyle.baseGlassStyle == .clear
+        materialStyle.isLiquid && rowGlassStyle.baseGlassStyle == .clear
     }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
@@ -674,6 +674,10 @@ private struct LiquidTuningPreview: View {
     @State private var sunglassesCornerInfluence = AppearancePreferences.sunglassesCornerInfluence
     @State private var sunglassesThemeRaw = AppearancePreferences.sunglassesTheme.rawValue
     @State private var sunglassesHDR = AppearancePreferences.sunglassesHDR
+    @AppStorage(AppearancePreferences.glassScrimStateKey)
+    private var glassScrimState = false
+    @AppStorage(AppearancePreferences.glassSubduedStateKey)
+    private var glassSubduedState = false
     @State private var showSunglassesTuning = false
 
     private var effectiveAccent: Color {
@@ -785,7 +789,7 @@ private struct LiquidTuningPreview: View {
                     if let style = AppearancePreferences.MaterialStyle(rawValue: newValue) {
                         AppearancePreferences.materialStyle = style
                     }
-                    if materialStyle != .liquid {
+                    if !materialStyle.isLiquid {
                         AppearancePreferences.setGlassTintMode(.off, for: .regular)
                         AppearancePreferences.setGlassTintMode(.systemDefault, for: .clear)
                     }
@@ -793,33 +797,36 @@ private struct LiquidTuningPreview: View {
             )) {
                 Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
                 Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                Text(AppearancePreferences.MaterialStyle.sunglasses.displayName).tag(AppearancePreferences.MaterialStyle.sunglasses.rawValue)
                 Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
             }
             .pickerStyle(.segmented)
 
-            if materialStyle == .liquid {
+            if materialStyle.isLiquid {
                 Picker("液态玻璃风格", selection: Binding(
                     get: { glassStyleRaw },
                 set: { newValue in
                     glassStyleRaw = newValue
                     if let style = AppearancePreferences.GlassStyle(rawValue: newValue) {
                         AppearancePreferences.glassStyle = style
-                        // auto theme: sunglasses → warmAmber, others → default
-                        let target: AppearancePreferences.SunglassesTheme =
-                            style == .sunglasses ? .warmAmber : .default
-                        AppearancePreferences.sunglassesTheme = target
-                        sunglassesThemeRaw = target.rawValue
                     }
                 }
             )) {
-                Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
-                Text(AppearancePreferences.GlassStyle.sunglasses.displayName).tag(AppearancePreferences.GlassStyle.sunglasses.rawValue)
+                ForEach(AppearancePreferences.GlassStyle.allCases) { style in
+                    Text(style.displayName).tag(style.rawValue)
+                }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
+
+                // scrim / subdued
+                Divider()
+                Toggle("Scrim", isOn: $glassScrimState)
+                    .font(.system(size: 12))
+                Toggle("Subdued", isOn: $glassSubduedState)
+                    .font(.system(size: 12))
 
             VStack(alignment: .leading, spacing: 10) {
-                if glassStyle == .sunglasses {
+                if materialStyle == .sunglasses {
                     DisclosureGroup("微调（展开）", isExpanded: $showSunglassesTuning) {
                         TuningSlider(
                             title: "顶部纯黑高度",
@@ -988,7 +995,7 @@ private struct LiquidTuningPreview: View {
 
     private var rowsControls: some View {
         Group {
-            if materialStyle == .liquid {
+            if materialStyle.isLiquid {
                 Picker("液态玻璃风格", selection: Binding(
                     get: { rowGlassStyleRaw },
                     set: { newValue in
