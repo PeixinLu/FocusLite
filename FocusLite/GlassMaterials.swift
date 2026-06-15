@@ -90,6 +90,164 @@ struct GlassBackgroundView: NSViewRepresentable {
     }
 }
 
+/// NSGlassEffectView wrapper that places SwiftUI content inside `contentView`.
+@available(macOS 26, *)
+struct GlassContentView<Content: View>: NSViewRepresentable {
+    let cornerRadius: CGFloat
+    let style: AppearancePreferences.GlassStyle
+    let tintColor: NSColor?
+    var scrimState: Bool = false
+    var subduedState: Bool = false
+    let content: Content
+
+    init(
+        cornerRadius: CGFloat,
+        style: AppearancePreferences.GlassStyle,
+        tintColor: NSColor?,
+        scrimState: Bool = false,
+        subduedState: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.cornerRadius = cornerRadius
+        self.style = style
+        self.tintColor = tintColor
+        self.scrimState = scrimState
+        self.subduedState = subduedState
+        self.content = content()
+    }
+
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        view.cornerRadius = cornerRadius
+        view.style = style.nsStyle
+        view.tintColor = tintColor
+        applyPrivateAPIs(view)
+
+        let hostingView = NSHostingView(rootView: content)
+        hostingView.frame = view.bounds
+        hostingView.autoresizingMask = [.width, .height]
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+        view.contentView = hostingView
+        return view
+    }
+
+    func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
+        nsView.cornerRadius = cornerRadius
+        nsView.style = style.nsStyle
+        nsView.tintColor = tintColor
+        applyPrivateAPIs(nsView)
+
+        if let hostingView = nsView.contentView as? NSHostingView<Content> {
+            hostingView.rootView = content
+        } else {
+            let hostingView = NSHostingView(rootView: content)
+            hostingView.frame = nsView.bounds
+            hostingView.autoresizingMask = [.width, .height]
+            hostingView.wantsLayer = true
+            hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+            nsView.contentView = hostingView
+        }
+    }
+
+    private func applyPrivateAPIs(_ view: NSGlassEffectView) {
+        if style.variantValue != 0 {
+            setGlassVariant(view, style.variantValue)
+        }
+        setGlassScrimState(view, scrimState)
+        setGlassSubduedState(view, subduedState)
+    }
+}
+
+/// Experimental launcher container that lets NSGlassEffectView own its content.
+struct LiquidGlassContentContainer<Content: View>: View {
+    let cornerRadius: CGFloat
+    let isHighlighted: Bool
+    let style: AppearancePreferences.MaterialStyle
+    let glassStyle: AppearancePreferences.GlassStyle
+    let glassTint: NSColor?
+    let animationDuration: Double
+    var sunglassesTopSolid: CGFloat = AppearancePreferences.defaultSunglassesTopSolid
+    var sunglassesTopFade: CGFloat = AppearancePreferences.defaultSunglassesTopFade
+    var sunglassesMidTopAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidTopAlpha
+    var sunglassesMidBottomAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidBottomAlpha
+    var sunglassesBottomFade: CGFloat = AppearancePreferences.defaultSunglassesBottomFade
+    var sunglassesCornerInfluence: CGFloat = AppearancePreferences.defaultSunglassesCornerInfluence
+    var scrimState: Bool = false
+    var subduedState: Bool = false
+    let content: Content
+
+    init(
+        cornerRadius: CGFloat,
+        isHighlighted: Bool,
+        style: AppearancePreferences.MaterialStyle,
+        glassStyle: AppearancePreferences.GlassStyle,
+        glassTint: NSColor?,
+        animationDuration: Double,
+        sunglassesTopSolid: CGFloat = AppearancePreferences.defaultSunglassesTopSolid,
+        sunglassesTopFade: CGFloat = AppearancePreferences.defaultSunglassesTopFade,
+        sunglassesMidTopAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidTopAlpha,
+        sunglassesMidBottomAlpha: CGFloat = AppearancePreferences.defaultSunglassesMidBottomAlpha,
+        sunglassesBottomFade: CGFloat = AppearancePreferences.defaultSunglassesBottomFade,
+        sunglassesCornerInfluence: CGFloat = AppearancePreferences.defaultSunglassesCornerInfluence,
+        scrimState: Bool = false,
+        subduedState: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.cornerRadius = cornerRadius
+        self.isHighlighted = isHighlighted
+        self.style = style
+        self.glassStyle = glassStyle
+        self.glassTint = glassTint
+        self.animationDuration = animationDuration
+        self.sunglassesTopSolid = sunglassesTopSolid
+        self.sunglassesTopFade = sunglassesTopFade
+        self.sunglassesMidTopAlpha = sunglassesMidTopAlpha
+        self.sunglassesMidBottomAlpha = sunglassesMidBottomAlpha
+        self.sunglassesBottomFade = sunglassesBottomFade
+        self.sunglassesCornerInfluence = sunglassesCornerInfluence
+        self.scrimState = scrimState
+        self.subduedState = subduedState
+        self.content = content()
+    }
+
+    var body: some View {
+        if style == .liquid, #available(macOS 26, *) {
+            GlassContentView(
+                cornerRadius: cornerRadius,
+                style: glassStyle,
+                tintColor: glassTint,
+                scrimState: scrimState,
+                subduedState: subduedState
+            ) {
+                content
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .animation(.easeInOut(duration: animationDuration), value: isHighlighted && style.isLiquid)
+        } else {
+            content
+                .background(
+                    LiquidGlassBackground(
+                        cornerRadius: cornerRadius,
+                        isHighlighted: isHighlighted,
+                        style: style,
+                        glassStyle: glassStyle,
+                        glassTint: glassTint,
+                        animationDuration: animationDuration,
+                        sunglassesTopSolid: sunglassesTopSolid,
+                        sunglassesTopFade: sunglassesTopFade,
+                        sunglassesMidTopAlpha: sunglassesMidTopAlpha,
+                        sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
+                        sunglassesBottomFade: sunglassesBottomFade,
+                        sunglassesCornerInfluence: sunglassesCornerInfluence,
+                        scrimState: scrimState,
+                        subduedState: subduedState
+                    )
+                )
+        }
+    }
+}
+
 /// Full liquid glass / classic / pure background used for the launcher window.
 struct LiquidGlassBackground: View {
     let cornerRadius: CGFloat

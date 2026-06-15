@@ -143,35 +143,34 @@ struct LauncherView: View {
         let resultsContentHeight: CGFloat = expandedHeight - compactHeight
         let resultsClipHeight: CGFloat = viewModel.isExpanded ? resultsContentHeight : 0
 
-        VStack(spacing: 0) {
-            // 搜索框 — 固定锚点，不参与动画，始终可见不被遮挡
-            searchBar
+        LiquidGlassContentContainer(
+            cornerRadius: cornerRadius,
+            isHighlighted: isHovered || isSearchFocused,
+            style: materialStyle,
+            glassStyle: glassStyle,
+            glassTint: glassTint,
+            animationDuration: animationDuration,
+            sunglassesTopSolid: sunglassesTopSolid,
+            sunglassesTopFade: sunglassesTopFade,
+            sunglassesMidTopAlpha: sunglassesMidTopAlpha,
+            sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
+            sunglassesBottomFade: sunglassesBottomFade,
+            sunglassesCornerInfluence: sunglassesCornerInfluence,
+            scrimState: glassScrimState,
+            subduedState: glassSubduedState
+        ) {
+            VStack(spacing: 0) {
+                // 搜索框 — 固定锚点，不参与动画，始终可见不被遮挡
+                searchBar
 
-            // 结果区 — 向下展开、向上收缩，clip 只影响结果
-            ZStack(alignment: .top) {
-                resultsContent(targetWidth: targetWidth, contentHeight: resultsContentHeight)
+                // 结果区 — 向下展开、向上收缩，clip 只影响结果
+                ZStack(alignment: .top) {
+                    resultsContent(targetWidth: targetWidth, contentHeight: resultsContentHeight)
+                }
+                .modifier(ClampedFrame(targetHeight: resultsClipHeight, minHeight: 0, width: targetWidth))
             }
-            .modifier(ClampedFrame(targetHeight: resultsClipHeight, minHeight: 0, width: targetWidth))
+            .frame(width: targetWidth)
         }
-        .frame(width: targetWidth)
-        .background(
-            LiquidGlassBackground(
-                cornerRadius: cornerRadius,
-                isHighlighted: isHovered || isSearchFocused,
-                style: materialStyle,
-                glassStyle: glassStyle,
-                glassTint: glassTint,
-                animationDuration: animationDuration,
-                sunglassesTopSolid: sunglassesTopSolid,
-                sunglassesTopFade: sunglassesTopFade,
-                sunglassesMidTopAlpha: sunglassesMidTopAlpha,
-                sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
-                sunglassesBottomFade: sunglassesBottomFade,
-                sunglassesCornerInfluence: sunglassesCornerInfluence,
-                scrimState: glassScrimState,
-                subduedState: glassSubduedState
-            )
-        )
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isExpanded)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.showsPreviewPane)
         .overlay(
