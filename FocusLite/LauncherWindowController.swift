@@ -140,7 +140,7 @@ final class LauncherWindowController: NSObject, NSWindowDelegate {
     private func createWindowIfNeeded() {
         guard window == nil else { return }
 
-        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 56)
+        let contentRect = NSRect(x: 0, y: 0, width: 640, height: 64)
         let window = LauncherWindow(
             contentRect: contentRect,
             styleMask: [.borderless],

@@ -21,7 +21,7 @@ final class LauncherViewModel: ObservableObject {
     @Published var isExpanded = false
 
     /// 由 GeometryReader 上报的当前视图实际渲染尺寸，供窗口跟随
-    @Published var currentViewSize = CGSize(width: 640, height: 56)
+    @Published var currentViewSize = CGSize(width: 640, height: 64)
 
     /// 当前是否显示预览窗格（剪贴板 / Snippets / 翻译 / 调参）
     var showsPreviewPane: Bool {
@@ -78,7 +78,7 @@ final class LauncherViewModel: ObservableObject {
         shouldAnimateSelection = false
         quickTargetLanguage = nil
         isExpanded = false
-        currentViewSize = CGSize(width: 640, height: 56)
+        currentViewSize = CGSize(width: 640, height: 64)
     }
 
     func updateInput(_ text: String) {

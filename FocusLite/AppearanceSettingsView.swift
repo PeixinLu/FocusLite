@@ -207,7 +207,7 @@ struct AppearanceSettingsView: View {
                         LabeledSlider(
                             title: "搜索框圆角大小",
                             value: $cornerRadius,
-                            range: 8...24,
+                            range: 4...40,
                             step: 1,
                             unit: "pt"
                         )

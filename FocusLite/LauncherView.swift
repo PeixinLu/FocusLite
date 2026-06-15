@@ -240,6 +240,7 @@ struct LauncherView: View {
             settingsButton
         }
         .padding(16)
+        .frame(height: compactHeight)
     }
 
     /// 结果区（分割线 + 列表/预览），始终以完整高度渲染，由 clip 控制可见范围
@@ -352,7 +353,7 @@ struct LauncherView: View {
         .frame(width: targetWidth, height: contentHeight)
     }
 
-    private let compactHeight: CGFloat = 56
+    private let compactHeight: CGFloat = 64
 
     private var showsLiquidSelection: Bool {
         materialStyle.isLiquid
@@ -986,7 +987,7 @@ private struct LiquidTuningPreview: View {
                     key: "cornerRadius",
                     apply: { AppearancePreferences.liquidGlassCornerRadius = $0 }
                 ),
-                range: 8...24,
+                range: 4...40,
                 step: 1,
                 unit: "pt"
             )
