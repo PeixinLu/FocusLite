@@ -17,15 +17,15 @@ final class FocusLiteTests: XCTestCase {
         XCTAssertEqual(results.map(\.title), ["C", "B", "A"])
     }
 
-    func testSunglassesGlassStyleUsesClearGlassWithLightForeground() {
-        let style = AppearancePreferences.GlassStyle.sunglasses
+    func testSunglassesMaterialStyleUsesLiquidRenderingPath() {
+        let style = AppearancePreferences.MaterialStyle.sunglasses
 
         XCTAssertEqual(style.rawValue, "sunglasses")
         XCTAssertEqual(style.displayName, "太阳眼镜")
-        XCTAssertEqual(style.baseGlassStyle, .clear)
-        XCTAssertTrue(style.usesLightForeground)
-        XCTAssertFalse(AppearancePreferences.GlassStyle.regular.usesLightForeground)
-        XCTAssertFalse(AppearancePreferences.GlassStyle.clear.usesLightForeground)
+        XCTAssertTrue(style.isLiquid)
+        XCTAssertFalse(AppearancePreferences.MaterialStyle.classic.isLiquid)
+        XCTAssertEqual(AppearancePreferences.GlassStyle.regular.baseGlassStyle, .regular)
+        XCTAssertEqual(AppearancePreferences.GlassStyle.clear.baseGlassStyle, .clear)
     }
 
     func testTranslationBubblePersistenceControlsAutomaticDismissal() {
