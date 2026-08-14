@@ -35,6 +35,7 @@ final class LauncherViewModel: ObservableObject {
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
+    private var isPerformingClipboardAction = false
     private var translationObserver: NSObjectProtocol?
     private var quickTargetLanguage: String?
 
@@ -180,6 +181,9 @@ final class LauncherViewModel: ObservableObject {
             showToast("已切换目标语言: \(TranslatePreferences.displayName(for: lang))")
             performSearch()
             return
+        case .clipboardEntry(let id, let behavior):
+            performClipboardEntryAction(id: id, behavior: behavior)
+            return
         case .none:
             if item.providerID == WebSearchProvider.providerID {
                 showToast("请输入内容后再搜索")
@@ -227,6 +231,21 @@ final class LauncherViewModel: ObservableObject {
 
     func activateClipboardSearch() {
         activatePrefix(providerID: ClipboardProvider.providerID)
+    }
+
+    func clearClipboardHistory() {
+        results = []
+        selectedIndex = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let removedCount = await ClipboardStore.shared.clearHistory()
+            self.performSearch()
+            self.showToast(removedCount == 0 ? "剪贴板已为空" : "已清除剪贴板")
+        }
+    }
+
+    nonisolated static func shouldActivateClipboardResult(wasSelected: Bool) -> Bool {
+        wasSelected
     }
 
     func activateCustomPrefix(_ entry: PrefixEntry, carryQuery: String? = nil) {
@@ -282,6 +301,40 @@ final class LauncherViewModel: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    private func performClipboardEntryAction(id: UUID, behavior: ClipboardEntryActionBehavior) {
+        guard !isPerformingClipboardAction else { return }
+        isPerformingClipboardAction = true
+        showToast("正在读取剪贴板内容…")
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isPerformingClipboardAction = false }
+            guard let content = await ClipboardStore.shared.resolvedContent(for: id) else {
+                self.showToast("剪贴板原始内容已不可用")
+                return
+            }
+
+            switch content {
+            case .text(let text):
+                self.copyToPasteboard(text)
+                if behavior == .paste {
+                    if self.onPaste?(text) == true { return }
+                    self.showToast("已复制，开启辅助功能权限可自动粘贴")
+                } else {
+                    self.showToast("已复制")
+                }
+            case .image(let data, let type):
+                self.copyImageToPasteboard(data, type: type)
+                self.showToast("已复制图片")
+            case .files(let paths):
+                self.copyFilesToPasteboard(paths)
+                self.showToast("已复制文件")
+            }
+
+            self.onExit?(.restoreOrigin)
+            self.shouldAnimateSelection = false
+        }
     }
 
     private func showToast(_ message: String) {
@@ -440,6 +493,15 @@ final class LauncherViewModel: ObservableObject {
             }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
+                if providerID == ClipboardProvider.providerID,
+                   !currentState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    do {
+                        try await Task.sleep(nanoseconds: 90_000_000)
+                    } catch {
+                        return
+                    }
+                }
+                if Task.isCancelled { return }
                 let items = await searchEngine.search(
                     query: currentState.query,
                     isScoped: true,

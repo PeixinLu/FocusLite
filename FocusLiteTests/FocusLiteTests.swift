@@ -100,6 +100,237 @@ final class FocusLiteTests: XCTestCase {
             currentTargetLanguage: "en"
         ))
     }
+
+    func testClipboardTitleStopsAtConfiguredLengthAndCollapsesWhitespace() {
+        let text = "  hello\n\tworld  " + String(repeating: "x", count: 1_000_000)
+
+        let title = ClipboardTextProcessor.makeTitle(from: text)
+
+        XCTAssertTrue(title.hasPrefix("hello world "))
+        XCTAssertTrue(title.hasSuffix("…"))
+        XCTAssertLessThanOrEqual(title.count, ClipboardTextPolicy.titleCharacterLimit + 1)
+    }
+
+    func testClipboardMetadataBoundsPreviewAndSearchIndex() {
+        let headMarker = "HEAD-MARKER"
+        let tailMarker = "TAIL-MARKER"
+        let text = headMarker
+            + String(repeating: "a", count: ClipboardTextPolicy.searchHeadByteLimit + 8_192)
+            + tailMarker
+
+        let item = ClipboardTextProcessor.makeItem(text: text, storage: .inline(text))
+
+        XCTAssertTrue(item.isPreviewTruncated)
+        XCTAssertLessThanOrEqual(item.previewText.utf8.count, ClipboardTextPolicy.previewByteLimit)
+        XCTAssertTrue(item.searchText.contains("head marker"))
+        XCTAssertTrue(item.searchText.contains("tail marker"))
+        XCTAssertLessThanOrEqual(
+            item.searchText.utf8.count,
+            ClipboardTextPolicy.searchHeadByteLimit + ClipboardTextPolicy.searchTailByteLimit + 1
+        )
+    }
+
+    func testLegacyClipboardJSONDecodesIntoTextMetadata() throws {
+        let id = UUID()
+        let text = "legacy clipboard text"
+        let json: [[String: Any]] = [[
+            "id": id.uuidString,
+            "content": ["kind": "text", "text": text],
+            "createdAt": Date().timeIntervalSinceReferenceDate,
+            "contentHash": "legacy-hash"
+        ]]
+        let data = try JSONSerialization.data(withJSONObject: json)
+
+        let entries = try JSONDecoder().decode([ClipboardEntry].self, from: data)
+
+        XCTAssertEqual(entries.first?.id, id)
+        guard case .text(let item) = entries.first?.content,
+              case .inline(let decodedText) = item.storage else {
+            XCTFail("Expected migrated inline text metadata")
+            return
+        }
+        XCTAssertEqual(decodedText, text)
+        XCTAssertEqual(item.previewText, text)
+        XCTAssertEqual(item.title, text)
+    }
+
+    func testClipboardStoreExternalizesLargeTextAndLoadsItOnDemand() async throws {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(baseDirectory: directory)
+        let text = "large\n" + String(repeating: "内容", count: ClipboardTextPolicy.inlineStorageByteLimit)
+
+        await store.addText(text, sourceBundleID: "test.bundle", sourceAppName: "Tests")
+        let entries = await store.snapshot()
+
+        guard let entry = entries.first,
+              case .text(let item) = entry.content,
+              case .file(let filename) = item.storage else {
+            XCTFail("Expected externally stored text")
+            return
+        }
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("clipboard_text").appendingPathComponent(filename).path
+        ))
+        guard case .text(let loadedText) = await store.resolvedContent(for: entry.id) else {
+            XCTFail("Expected resolved clipboard text")
+            return
+        }
+        XCTAssertEqual(loadedText, text)
+    }
+
+    func testClipboardStoreClearHistoryRemovesManagedTextFiles() async throws {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(baseDirectory: directory)
+        let text = String(repeating: "clear me", count: ClipboardTextPolicy.inlineStorageByteLimit)
+        await store.addText(text, sourceBundleID: nil, sourceAppName: nil)
+
+        let removedCount = await store.clearHistory()
+        let entries = await store.snapshot()
+        let textDirectory = directory.appendingPathComponent("clipboard_text", isDirectory: true)
+        let remainingFiles = try FileManager.default.contentsOfDirectory(atPath: textDirectory.path)
+
+        XCTAssertEqual(removedCount, 1)
+        XCTAssertTrue(entries.isEmpty)
+        XCTAssertTrue(remainingFiles.isEmpty)
+    }
+
+    func testClipboardStoreMigratesLegacyLargeTextAndRemovesOrphanFiles() async throws {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let textDirectory = directory.appendingPathComponent("clipboard_text", isDirectory: true)
+        try FileManager.default.createDirectory(at: textDirectory, withIntermediateDirectories: true)
+        let orphanURL = textDirectory.appendingPathComponent("orphan.txt")
+        try "orphan".write(to: orphanURL, atomically: true, encoding: .utf8)
+
+        let id = UUID()
+        let text = String(repeating: "z", count: ClipboardTextPolicy.inlineStorageByteLimit + 1)
+        let json: [[String: Any]] = [[
+            "id": id.uuidString,
+            "content": ["kind": "text", "text": text],
+            "createdAt": Date().timeIntervalSinceReferenceDate,
+            "contentHash": "legacy-large-hash"
+        ]]
+        try JSONSerialization.data(withJSONObject: json)
+            .write(to: directory.appendingPathComponent("clipboard_history.json"), options: [.atomic])
+
+        let store = ClipboardStore(baseDirectory: directory)
+        let entries = await store.snapshot()
+
+        guard case .text(let item) = entries.first?.content,
+              case .file(let filename) = item.storage else {
+            XCTFail("Expected legacy text to migrate to a file")
+            return
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: orphanURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: textDirectory.appendingPathComponent(filename).path
+        ))
+        let migratedText = await store.text(for: id)
+        XCTAssertEqual(migratedText, text)
+    }
+
+    func testClipboardStoreRewritesLegacySmallTextMetadataOnLoad() async throws {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let historyURL = directory.appendingPathComponent("clipboard_history.json")
+        let text = "small legacy text"
+        let json: [[String: Any]] = [[
+            "id": UUID().uuidString,
+            "content": ["kind": "text", "text": text],
+            "createdAt": Date().timeIntervalSinceReferenceDate,
+            "contentHash": "legacy-small-hash"
+        ]]
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: json).write(to: historyURL, options: [.atomic])
+
+        let store = ClipboardStore(baseDirectory: directory)
+        _ = await store.snapshot()
+
+        let rewritten = try JSONSerialization.jsonObject(with: Data(contentsOf: historyURL))
+        let entries = try XCTUnwrap(rewritten as? [[String: Any]])
+        let content = try XCTUnwrap(entries.first?["content"] as? [String: Any])
+        XCTAssertNil(content["text"])
+        XCTAssertNotNil(content["textItem"])
+    }
+
+    func testClipboardMetadataGenerationPerformance() {
+        let text = String(repeating: "long clipboard line with searchable content\n", count: 25_000)
+
+        measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
+            _ = ClipboardTextProcessor.makeItem(text: text, storage: .file("fixture.txt"))
+        }
+    }
+
+    func testClipboardProviderKeepsFullBodyOutOfResultItem() async {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(baseDirectory: directory)
+        let text = String(repeating: "body ", count: 10_000)
+        await store.addText(text, sourceBundleID: "com.apple.TextEdit", sourceAppName: "TextEdit")
+
+        let results = await ClipboardProvider(store: store).results(for: "", isScoped: true)
+
+        guard let result = results.first,
+              case .clipboardEntry(let id, _) = result.action,
+              case .clipboardText(let preview) = result.preview else {
+            XCTFail("Expected an ID-based clipboard result")
+            return
+        }
+        XCTAssertEqual(id, preview.entryID)
+        XCTAssertLessThan(preview.text.utf8.count, text.utf8.count)
+        XCTAssertEqual(result.clipboardMetadata?.sourceAppName, "TextEdit")
+        XCTAssertEqual(result.clipboardMetadata?.sourceBundleID, "com.apple.TextEdit")
+        XCTAssertEqual(result.clipboardMetadata?.typeText, "文本")
+        XCTAssertNotEqual(result.clipboardMetadata?.sizeText, "大小未知")
+    }
+
+    func testClipboardProviderUsesFourFileCategoryIcons() async {
+        let directory = makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(baseDirectory: directory)
+        let fixtures: [(String, ItemIcon)] = [
+            ("notes.txt", .system("doc.text")),
+            ("clip.mp4", .system("film")),
+            ("picture.png", .system("photo")),
+            ("installer.pkg", .system("doc"))
+        ]
+
+        for (name, _) in fixtures {
+            await store.add(
+                content: .files([FilePreviewItem(path: "/tmp/\(name)", name: name, byteCount: 1)]),
+                sourceBundleID: "com.apple.finder",
+                sourceAppName: "Finder"
+            )
+        }
+
+        let results = await ClipboardProvider(store: store).results(for: "", isScoped: true)
+        let iconsByTitle = Dictionary(uniqueKeysWithValues: results.compactMap { result -> (String, ItemIcon)? in
+            guard let icon = result.icon else { return nil }
+            return (result.title, icon)
+        })
+        for (name, expectedIcon) in fixtures {
+            XCTAssertEqual(iconsByTitle[name], expectedIcon)
+        }
+    }
+
+    func testClipboardClickActivationRules() {
+        XCTAssertFalse(LauncherViewModel.shouldActivateClipboardResult(wasSelected: false))
+        XCTAssertTrue(LauncherViewModel.shouldActivateClipboardResult(wasSelected: true))
+
+        let firstClickActivates = LauncherViewModel.shouldActivateClipboardResult(wasSelected: false)
+        let secondClickActivates = LauncherViewModel.shouldActivateClipboardResult(wasSelected: true)
+        XCTAssertFalse(firstClickActivates)
+        XCTAssertTrue(secondClickActivates)
+    }
+
+    private func makeTemporaryDirectory() -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("FocusLiteTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
 }
 
 private struct TestProvider: ResultProvider {
