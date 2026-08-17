@@ -1,6 +1,10 @@
 import Cocoa
 import SwiftUI
 
+private extension CGRect {
+    var area: CGFloat { max(0, width) * max(0, height) }
+}
+
 /// Manages the floating translation bubble window — non-activating, auto-dismissing,
 /// positioned near the selected text.
 enum TranslationBubblePersistence {
@@ -21,6 +25,63 @@ private struct TranslationDirectionOverride: Equatable {
     let targetLanguage: String
 }
 
+/// 气泡定位所需的稳定锚点。精确选区不可用时，使用快捷键触发瞬间的鼠标位置。
+struct TranslationBubbleAnchor {
+    let selectionRect: NSRect?
+    let pointerLocation: NSPoint
+}
+
+enum TranslationBubblePlacement {
+    /// 依次尝试下、上、右、左；若都无法完整显示，则选择可见面积最大的候选并裁剪。
+    static func bestFrame(size: NSSize, anchorRect: NSRect, visibleFrame: NSRect) -> NSRect {
+        let gap: CGFloat = 8
+        let margin: CGFloat = 8
+        let usableFrame = visibleFrame.insetBy(dx: margin, dy: margin)
+        let candidates = [
+            NSRect(
+                x: anchorRect.midX - size.width / 2,
+                y: anchorRect.minY - size.height - gap,
+                width: size.width,
+                height: size.height
+            ),
+            NSRect(
+                x: anchorRect.midX - size.width / 2,
+                y: anchorRect.maxY + gap,
+                width: size.width,
+                height: size.height
+            ),
+            NSRect(
+                x: anchorRect.maxX + gap,
+                y: anchorRect.midY - size.height / 2,
+                width: size.width,
+                height: size.height
+            ),
+            NSRect(
+                x: anchorRect.minX - size.width - gap,
+                y: anchorRect.midY - size.height / 2,
+                width: size.width,
+                height: size.height
+            )
+        ]
+
+        if let fittingCandidate = candidates.first(where: { usableFrame.contains($0) }) {
+            return fittingCandidate
+        }
+
+        let bestCandidate = candidates.max {
+            $0.intersection(usableFrame).area < $1.intersection(usableFrame).area
+        } ?? candidates[0]
+        let maxX = max(usableFrame.minX, usableFrame.maxX - size.width)
+        let maxY = max(usableFrame.minY, usableFrame.maxY - size.height)
+        return NSRect(
+            x: min(max(bestCandidate.minX, usableFrame.minX), maxX),
+            y: min(max(bestCandidate.minY, usableFrame.minY), maxY),
+            width: size.width,
+            height: size.height
+        )
+    }
+}
+
 @MainActor
 final class TranslationBubbleController: NSObject {
     private var window: NSWindow?
@@ -37,6 +98,7 @@ final class TranslationBubbleController: NSObject {
     private var persistence = TranslationBubblePersistence(isPinned: TranslatePreferences.translationBubblePinned)
     private var directionOverride: TranslationDirectionOverride?
     private var selectedTargetLanguage: String?
+    private var currentAnchor: TranslationBubbleAnchor?
 
     var onDismiss: (() -> Void)?
     var onOpenInLauncher: ((String) -> Void)?
@@ -45,7 +107,7 @@ final class TranslationBubbleController: NSObject {
 
     // MARK: - Show / Dismiss
 
-    func show(with text: String, near screenRect: NSRect?) {
+    func show(with text: String, near anchor: TranslationBubbleAnchor) {
         let shouldKeepPinnedPosition = window?.isVisible == true && persistence == .pinned
         if !shouldKeepPinnedPosition {
             closeWindow(notify: false)
@@ -59,12 +121,13 @@ final class TranslationBubbleController: NSObject {
         focusOrigin = NSWorkspace.shared.frontmostApplication
         directionOverride = nil
         selectedTargetLanguage = nil
+        currentAnchor = anchor
 
         if shouldKeepPinnedPosition {
             updateContentView()
         } else {
             createWindow()
-            positionWindow(near: screenRect)
+            positionWindow(near: anchor)
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -87,6 +150,7 @@ final class TranslationBubbleController: NSObject {
         isLoading = false
         translationTask?.cancel()
         translationTask = nil
+        currentAnchor = nil
         if notify {
             onDismiss?()
         }
@@ -175,6 +239,9 @@ final class TranslationBubbleController: NSObject {
 
     private func updateContentView() {
         rebuildContentView()
+        if persistence == .transient, let currentAnchor {
+            positionWindow(near: currentAnchor)
+        }
     }
 
     private var collectionBehavior: NSWindow.CollectionBehavior {
@@ -194,43 +261,32 @@ final class TranslationBubbleController: NSObject {
 
     // MARK: - Positioning
 
-    private func positionWindow(near screenRect: NSRect?) {
+    private func positionWindow(near anchor: TranslationBubbleAnchor) {
         guard let window = window else { return }
 
         let bubbleSize = window.frame.size
-        let screen = NSScreen.main ?? NSScreen.screens.first
+        let screen = targetScreen(for: anchor)
         let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let anchorRect = anchor.selectionRect ?? NSRect(origin: anchor.pointerLocation, size: .zero)
+        let frame = TranslationBubblePlacement.bestFrame(
+            size: bubbleSize,
+            anchorRect: anchorRect,
+            visibleFrame: visibleFrame
+        )
+        window.setFrame(frame, display: false)
+    }
 
-        let anchorPoint: NSPoint
-
-        if let rect = screenRect {
-            // 定位在选中元素下方，水平居中
-            let centerX = rect.midX - bubbleSize.width / 2
-            let belowY = rect.minY - bubbleSize.height - 8
-
-            if belowY - bubbleSize.height > visibleFrame.minY {
-                anchorPoint = NSPoint(x: centerX, y: belowY)
-            } else {
-                // 下方空间不够，放到上方
-                let aboveY = rect.maxY + 8
-                anchorPoint = NSPoint(x: centerX, y: aboveY)
+    private func targetScreen(for anchor: TranslationBubbleAnchor) -> NSScreen? {
+        if let rect = anchor.selectionRect {
+            let bestScreen = NSScreen.screens.max { lhs, rhs in
+                lhs.frame.intersection(rect).area < rhs.frame.intersection(rect).area
             }
-        } else {
-            // 降级：定位在鼠标附近
-            let mouseLoc = NSEvent.mouseLocation
-            anchorPoint = NSPoint(
-                x: mouseLoc.x - bubbleSize.width / 2,
-                y: mouseLoc.y - bubbleSize.height - 20
-            )
+            if let bestScreen, bestScreen.frame.intersection(rect).area > 0 {
+                return bestScreen
+            }
         }
-
-        // 钳制到可见区域
-        let clampedX = max(visibleFrame.minX + 8,
-                           min(anchorPoint.x, visibleFrame.maxX - bubbleSize.width - 8))
-        let clampedY = max(visibleFrame.minY + 8,
-                           min(anchorPoint.y, visibleFrame.maxY - bubbleSize.height - 8))
-
-        window.setFrame(NSRect(origin: NSPoint(x: clampedX, y: clampedY), size: bubbleSize), display: false)
+        return NSScreen.screens.first { NSMouseInRect(anchor.pointerLocation, $0.frame, false) }
+            ?? NSScreen.screens.first
     }
 
     // MARK: - Translation

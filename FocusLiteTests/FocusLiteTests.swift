@@ -60,6 +60,37 @@ final class FocusLiteTests: XCTestCase {
         XCTAssertFalse(TranslationBubblePersistence.pinned.allowsAutomaticDismissal)
     }
 
+    func testTranslationBubblePlacementPrefersBelowSelection() {
+        let frame = TranslationBubblePlacement.bestFrame(
+            size: NSSize(width: 300, height: 100),
+            anchorRect: NSRect(x: 490, y: 500, width: 20, height: 20),
+            visibleFrame: NSRect(x: 0, y: 0, width: 1_000, height: 800)
+        )
+
+        XCTAssertEqual(frame, NSRect(x: 350, y: 392, width: 300, height: 100))
+    }
+
+    func testTranslationBubblePlacementUsesAboveWhenBelowDoesNotFit() {
+        let frame = TranslationBubblePlacement.bestFrame(
+            size: NSSize(width: 300, height: 100),
+            anchorRect: NSRect(x: 490, y: 50, width: 20, height: 20),
+            visibleFrame: NSRect(x: 0, y: 0, width: 1_000, height: 800)
+        )
+
+        XCTAssertEqual(frame, NSRect(x: 350, y: 78, width: 300, height: 100))
+    }
+
+    func testTranslationBubblePlacementClampsOversizedCandidatesIntoVisibleFrame() {
+        let visibleFrame = NSRect(x: 0, y: 0, width: 400, height: 300)
+        let frame = TranslationBubblePlacement.bestFrame(
+            size: NSSize(width: 300, height: 200),
+            anchorRect: NSRect(x: 190, y: 140, width: 20, height: 20),
+            visibleFrame: visibleFrame
+        )
+
+        XCTAssertTrue(visibleFrame.insetBy(dx: 8, dy: 8).contains(frame))
+    }
+
     func testTranslationBubblePinnedPreferencePersists() {
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: TranslatePreferences.translationBubblePinnedKey)
