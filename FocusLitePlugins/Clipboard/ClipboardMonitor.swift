@@ -8,7 +8,6 @@ final class ClipboardMonitor {
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
 
     private let pollIntervalNanos: UInt64 = 300_000_000
-    private let maxTextBytes = 1_048_576
     private let maxImageBytes = 20_971_520
 
     init(store: ClipboardStore = .shared) {
@@ -46,7 +45,7 @@ final class ClipboardMonitor {
             return
         }
 
-        let hasText = (pasteboard.string(forType: .string) ?? "").isEmpty == false
+        let hasText = pasteboard.availableType(from: [.string]) != nil
         let hasRasterImage = hasRasterImageData()
         let fileURLs = fileURLsFromPasteboard()
         let hasImageFileURL = hasImageFileURL(fileURLs)
@@ -66,7 +65,10 @@ final class ClipboardMonitor {
 
         guard let text = pasteboard.string(forType: .string) else { return }
         guard !text.isEmpty else { return }
-        guard Data(text.utf8).count <= maxTextBytes else { return }
+        guard text.utf8.count <= ClipboardTextPolicy.maximumCapturedTextBytes else {
+            Log.info("Skipped clipboard text larger than \(ClipboardTextPolicy.maximumCapturedTextBytes) bytes")
+            return
+        }
 
         let frontmost = NSWorkspace.shared.frontmostApplication
         let bundleID = frontmost?.bundleIdentifier
@@ -76,13 +78,14 @@ final class ClipboardMonitor {
 
         let appName = frontmost?.localizedName
         Task {
-            await store.add(content: .text(text), sourceBundleID: bundleID, sourceAppName: appName)
+            await store.addText(text, sourceBundleID: bundleID, sourceAppName: appName)
         }
     }
 
     private func handleFiles(_ urls: [URL]) {
         let items = urls.prefix(20).map { url in
-            FilePreviewItem(path: url.path, name: url.lastPathComponent)
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+            return FilePreviewItem(path: url.path, name: url.lastPathComponent, byteCount: values?.fileSize)
         }
         guard !items.isEmpty else { return }
 

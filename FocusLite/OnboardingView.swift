@@ -414,10 +414,10 @@ struct OnboardingView: View {
     }
 
     private var glassTint: NSColor? {
-        let mode = glassStyle == .regular
+        let mode = glassStyle.baseGlassStyle == .regular
             ? AppearancePreferences.TintMode(rawValue: regularTintModeRaw) ?? AppearancePreferences.defaultTintMode(for: .regular)
             : AppearancePreferences.TintMode(rawValue: clearTintModeRaw) ?? AppearancePreferences.defaultTintMode(for: .clear)
-        let tintRaw = glassStyle == .regular ? regularTintRaw : clearTintRaw
+        let tintRaw = glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         switch mode {
         case .off:
             return nil

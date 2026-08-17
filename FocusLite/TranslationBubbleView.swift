@@ -7,8 +7,14 @@ struct TranslationBubbleView: View {
     let sourceText: String
     let translationResult: TranslationResult?
     let isLoading: Bool
+    let isPinned: Bool
+    let currentTargetLanguage: String
+    let languageOptions: [TranslateLanguageOption]
 
     var onCopy: ((String) -> Void)?
+    var onTogglePinned: (() -> Void)?
+    var onSwapDirection: (() -> Void)?
+    var onTargetLanguageChange: ((String) -> Void)?
     var onOpenInLauncher: (() -> Void)?
     var onPrepareSettings: (() -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -39,8 +45,8 @@ struct TranslationBubbleView: View {
     }
 
     private var glassTint: NSColor? {
-        let mode = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
-        let tintRaw = glassStyle == .regular ? regularTintRaw : clearTintRaw
+        let mode = glassStyle.baseGlassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+        let tintRaw = glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         let modeEnum = AppearancePreferences.TintMode(rawValue: mode) ?? .systemDefault
         switch modeEnum {
         case .off: return nil
@@ -52,6 +58,10 @@ struct TranslationBubbleView: View {
     private var defaultTintColor: NSColor {
         let base = colorScheme == .dark ? NSColor.black : NSColor.white
         return base.withAlphaComponent(0.618)
+    }
+
+    private var bubbleColorScheme: ColorScheme {
+        materialStyle == .sunglasses ? .dark : colorScheme
     }
 
     private var bubbleCornerRadius: CGFloat { min(CGFloat(cornerRadiusKey), 16) }
@@ -66,6 +76,9 @@ struct TranslationBubbleView: View {
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                if let translationResult {
+                    directionButton(for: translationResult)
+                }
                 closeButton
             }
 
@@ -89,6 +102,7 @@ struct TranslationBubbleView: View {
                 animationDuration: 0.18
             )
         )
+        .environment(\.colorScheme, bubbleColorScheme)
     }
 
     // MARK: - Controls
@@ -101,6 +115,24 @@ struct TranslationBubbleView: View {
         }
         .buttonStyle(.plain)
         .help("关闭 (Esc)")
+    }
+
+    private func directionButton(for result: TranslationResult) -> some View {
+        Button(action: { onSwapDirection?() }) {
+            Text(result.compactDirectionLabel)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 5)
+                .frame(height: 18)
+                .background(
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                )
+        }
+        .buttonStyle(.plain)
+        .help("切换翻译方向")
     }
 
     // MARK: - Loading
@@ -131,15 +163,52 @@ struct TranslationBubbleView: View {
 
     private func actionBar(for result: TranslationResult) -> some View {
         HStack(spacing: 6) {
+            targetLanguageMenu(sourceLanguage: result.sourceLanguage)
             Spacer()
             iconButton(systemName: "doc.on.doc", help: "复制") {
                 onCopy?(result.translatedText)
             }
+            pinButton
             iconButton(systemName: "magnifyingglass", help: "打开翻译搜索框") {
                 onOpenInLauncher?()
             }
             settingsButton
         }
+    }
+
+    private func targetLanguageMenu(sourceLanguage: String) -> some View {
+        Menu {
+            ForEach(languageOptions, id: \.code) { option in
+                Button(option.name) {
+                    onTargetLanguageChange?(option.code)
+                }
+                .disabled(
+                    TranslatePreferences.normalizedLanguageCode(option.code) ==
+                        TranslatePreferences.normalizedLanguageCode(sourceLanguage)
+                )
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text("译为")
+                Text(TranslatePreferences.displayName(for: currentTargetLanguage))
+            }
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("更改目标语言")
+    }
+
+    private var pinButton: some View {
+        Button(action: { onTogglePinned?() }) {
+            Image(systemName: isPinned ? "pin.fill" : "pin")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isPinned ? .accentColor : .secondary)
+                .frame(width: 24, height: 22)
+        }
+        .buttonStyle(.plain)
+        .help(isPinned ? "取消置顶" : "置顶")
     }
 
     @ViewBuilder

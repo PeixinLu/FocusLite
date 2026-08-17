@@ -426,20 +426,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] in
             // Carbon Event 线程：立即尝试 AX 捕获（此时前台 App 未切换）
             let axText: String?
-            let screenRect: NSRect?
+            let bubbleAnchor: TranslationBubbleAnchor?
+            // Carbon 热键由主事件分发器回调，此处保存触发瞬间的 Cocoa 全局坐标。
+            // 不使用 CGEvent.location，后者采用与 NSScreen 不同的纵轴方向。
+            let pointerLocation = NSEvent.mouseLocation
 
             if TranslatePreferences.autoCaptureSelectedText {
                 if TranslatePreferences.showTranslationBubble {
                     let selection = Self.captureSelectionWithPosition()
                     axText = selection?.text
-                    screenRect = selection?.screenRect
+                    bubbleAnchor = TranslationBubbleAnchor(
+                        selectionRect: selection?.screenRect,
+                        pointerLocation: pointerLocation
+                    )
                 } else {
                     axText = Self.captureSelectedText()
-                    screenRect = nil
+                    bubbleAnchor = nil
                 }
             } else {
                 axText = nil
-                screenRect = nil
+                bubbleAnchor = nil
             }
 
             DispatchQueue.main.async {
@@ -453,7 +459,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
                 // 分支：气泡 vs 主窗口
                 if TranslatePreferences.showTranslationBubble, let text = finalText, !text.isEmpty {
-                    self.showTranslationBubble(with: text, near: screenRect)
+                    let anchor = bubbleAnchor ?? TranslationBubbleAnchor(
+                        selectionRect: nil,
+                        pointerLocation: pointerLocation
+                    )
+                    self.showTranslationBubble(with: text, near: anchor)
                 } else {
                     guard let entry = PrefixRegistry.entries().first(where: { $0.providerID == TranslateProvider.providerID }) else { return }
                     self.launcherViewModel?.resetSearch()
@@ -474,10 +484,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Translation Bubble
 
     @MainActor
-    private func showTranslationBubble(with text: String, near screenRect: NSRect?) {
+    private func showTranslationBubble(with text: String, near anchor: TranslationBubbleAnchor) {
         let controller = translationBubbleController ?? makeTranslationBubbleController()
         translationBubbleController = controller
-        controller.show(with: text, near: screenRect)
+        controller.show(with: text, near: anchor)
     }
 
     @MainActor
@@ -527,8 +537,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let focused = focusedElement {
             let focusedAX = focused as! AXUIElement
             // 先查自身
-            if let text = copySelectedText(from: focusedAX) {
-                return text
+            if let capture = copySelectedTextCapture(from: focusedAX) {
+                return capture.text
             }
             // 再递归搜索 focused element 的子元素树（Web/Electron App 的选中文本在深层子元素上）
             if let text = findSelectedText(in: focusedAX, depth: 0, maxDepth: 5) {
@@ -540,8 +550,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var focusedWindow: CFTypeRef?
         if AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow) == .success,
            let window = focusedWindow {
-            if let text = copySelectedText(from: window as! AXUIElement) {
-                return text
+            if let capture = copySelectedTextCapture(from: window as! AXUIElement) {
+                return capture.text
             }
             if let text = findSelectedText(in: window as! AXUIElement, depth: 0, maxDepth: 5) {
                 return text
@@ -552,19 +562,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return nil
     }
 
-    /// 从 AX element 自身读取 selected text
-    private static func copySelectedText(from element: AXUIElement) -> String? {
+    /// 同时保留真正提供选区的 AX element，避免递归命中后退回父容器定位。
+    private static func copySelectedTextCapture(from element: AXUIElement) -> AXSelectedTextCapture? {
         var selectedText: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedText)
         guard result == .success, let text = selectedText as? String else { return nil }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         Log.info("captureSelectedText: AX success, length=\(trimmed.count)")
-        return String(trimmed.prefix(500))
+        return AXSelectedTextCapture(text: String(trimmed.prefix(500)), element: element)
     }
 
     /// 递归搜索子元素中的选中文本
     private static func findSelectedText(in element: AXUIElement, depth: Int, maxDepth: Int) -> String? {
+        findSelectedTextCapture(in: element, depth: depth, maxDepth: maxDepth)?.text
+    }
+
+    /// 递归搜索选区，并返回实际命中的文本元素。
+    private static func findSelectedTextCapture(
+        in element: AXUIElement,
+        depth: Int,
+        maxDepth: Int
+    ) -> AXSelectedTextCapture? {
         guard depth < maxDepth else { return nil }
 
         var children: CFTypeRef?
@@ -572,11 +591,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let childrenArray = children as? [AXUIElement] else { return nil }
 
         for child in childrenArray {
-            if let text = copySelectedText(from: child) {
-                return text
+            if let capture = copySelectedTextCapture(from: child) {
+                return capture
             }
-            if let text = findSelectedText(in: child, depth: depth + 1, maxDepth: maxDepth) {
-                return text
+            if let capture = findSelectedTextCapture(in: child, depth: depth + 1, maxDepth: maxDepth) {
+                return capture
             }
         }
         return nil
@@ -660,12 +679,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let focusedAX = focused as! AXUIElement
 
-        // 尝试从 focused element 自身或子元素获取文本 + 位置
-        if let text = copySelectedText(from: focusedAX) {
-            return CapturedSelection(text: text, screenRect: screenRect(of: focusedAX))
-        }
-        if let text = findSelectedText(in: focusedAX, depth: 0, maxDepth: 5) {
-            return CapturedSelection(text: text, screenRect: screenRect(of: focusedAX))
+        // 优先使用实际提供选区的元素，并尽可能定位到选区末端字符。
+        if let capture = selectedTextCapture(in: focusedAX) {
+            return capturedSelection(from: capture)
         }
 
         // 尝试 focused window
@@ -673,39 +689,100 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow) == .success,
            let window = focusedWindow {
             let windowAX = window as! AXUIElement
-            if let text = copySelectedText(from: windowAX) {
-                return CapturedSelection(text: text, screenRect: screenRect(of: windowAX))
-            }
-            if let text = findSelectedText(in: windowAX, depth: 0, maxDepth: 5) {
-                return CapturedSelection(text: text, screenRect: screenRect(of: windowAX))
+            if let capture = selectedTextCapture(in: windowAX) {
+                return capturedSelection(from: capture)
             }
         }
 
         return nil
     }
 
-    /// 读取 AX element 的屏幕坐标（kAXPosition + kAXSize），转换为 Cocoa 坐标系。
-    private static func screenRect(of element: AXUIElement) -> NSRect? {
-        var positionValue: CFTypeRef?
-        var sizeValue: CFTypeRef?
-
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue) == .success else {
-            return nil
-        }
-
-        var point = CGPoint.zero
-        var size = CGSize.zero
-        guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &point),
-              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else {
-            return nil
-        }
-
-        // AX 坐标系原点在屏幕左上角，需翻转为 Cocoa 坐标系（左下角原点）
-        guard let screen = NSScreen.main else { return nil }
-        let flippedY = screen.frame.maxY - point.y - size.height
-        return NSRect(x: point.x, y: flippedY, width: size.width, height: size.height)
+    private static func selectedTextCapture(in element: AXUIElement) -> AXSelectedTextCapture? {
+        copySelectedTextCapture(from: element)
+            ?? findSelectedTextCapture(in: element, depth: 0, maxDepth: 5)
     }
+
+    private static func capturedSelection(from capture: AXSelectedTextCapture) -> CapturedSelection {
+        let rect = selectedTextScreenRect(of: capture.element)
+        if rect == nil {
+            Log.debug("captureSelectionWithPosition: precise AX bounds unavailable, using pointer anchor")
+        }
+        return CapturedSelection(text: capture.text, screenRect: rect)
+    }
+
+    /// 获取选区末端字符的边界；多行选区不会再以整个编辑器或大选区中心作为锚点。
+    private static func selectedTextScreenRect(of element: AXUIElement) -> NSRect? {
+        var rangeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &rangeValue
+        ) == .success,
+        let rangeValue,
+        CFGetTypeID(rangeValue) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        var selectedRange = CFRange()
+        guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &selectedRange),
+              selectedRange.location >= 0,
+              selectedRange.length > 0 else {
+            return nil
+        }
+
+        let endpointRange = CFRange(
+            location: selectedRange.location + selectedRange.length - 1,
+            length: 1
+        )
+        if let rect = boundsForRange(endpointRange, in: element) {
+            return cocoaScreenRect(fromAXRect: rect)
+        }
+
+        // 某些应用不接受单字符范围，退回整个选区范围。
+        if let rect = boundsForRange(selectedRange, in: element) {
+            return cocoaScreenRect(fromAXRect: rect)
+        }
+        return nil
+    }
+
+    private static func boundsForRange(_ range: CFRange, in element: AXUIElement) -> CGRect? {
+        var mutableRange = range
+        guard let parameter = AXValueCreate(.cfRange, &mutableRange) else { return nil }
+
+        var boundsValue: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(
+            element,
+            kAXBoundsForRangeParameterizedAttribute as CFString,
+            parameter,
+            &boundsValue
+        ) == .success,
+        let boundsValue,
+        CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsValue as! AXValue, .cgRect, &rect),
+              rect.width.isFinite,
+              rect.height.isFinite,
+              !rect.isEmpty else {
+            return nil
+        }
+        return rect
+    }
+
+    /// AX 使用主显示器左上角原点；NSScreen 使用主显示器左下角原点。
+    /// `NSScreen.screens.first` 是带菜单栏的主显示器，不会随当前活跃窗口改变。
+    private static func cocoaScreenRect(fromAXRect rect: CGRect) -> NSRect? {
+        guard let primaryScreen = NSScreen.screens.first else { return nil }
+        let flippedY = primaryScreen.frame.maxY - rect.maxY
+        return NSRect(x: rect.minX, y: flippedY, width: rect.width, height: rect.height)
+    }
+}
+
+private struct AXSelectedTextCapture {
+    let text: String
+    let element: AXUIElement
 }
 
 /// 捕获到的选中文本及其屏幕矩形。

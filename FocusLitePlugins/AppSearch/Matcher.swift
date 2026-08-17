@@ -44,8 +44,12 @@ enum Matcher {
 
     static func match(query: String, index: AppNameIndex) -> MatchResult? {
         let info = QueryInfoBuilder.build(query)
+        return match(info: info, index: index)
+    }
+
+    static func match(info: QueryInfo, index: AppNameIndex) -> MatchResult? {
         guard !info.normalized.isEmpty else { return nil }
-        
+
         // 过滤低质量查询（大量重复字符）
         if QueryInfoBuilder.isLowQualityQuery(info.normalized) {
             return nil

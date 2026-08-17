@@ -8,7 +8,7 @@ struct AppearanceSettingsView: View {
     @AppStorage(AppearancePreferences.glassStyleKey)
     private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
-    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
     private var regularTintModeRaw = AppearancePreferences.defaultTintMode(for: .regular).rawValue
     @AppStorage(AppearancePreferences.glassTintModeClearKey)
@@ -22,6 +22,10 @@ struct AppearanceSettingsView: View {
     private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = AppearancePreferences.defaultCornerRadius
+    @AppStorage(AppearancePreferences.glassScrimStateKey)
+    private var glassScrimState = false
+    @AppStorage(AppearancePreferences.glassSubduedStateKey)
+    private var glassSubduedState = false
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
         AppearancePreferences.MaterialStyle(rawValue: materialStyleRaw) ?? .liquid
@@ -33,12 +37,12 @@ struct AppearanceSettingsView: View {
 
     private var activeTintMode: AppearancePreferences.TintMode {
         get {
-            let raw = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+            let raw = glassStyle.baseGlassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
             return AppearancePreferences.TintMode(rawValue: raw)
             ?? AppearancePreferences.defaultTintMode(for: glassStyle)
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintModeRaw = newValue.rawValue
             } else {
                 clearTintModeRaw = newValue.rawValue
@@ -66,10 +70,10 @@ struct AppearanceSettingsView: View {
 
     private var activeTintRaw: String {
         get {
-            glassStyle == .regular ? regularTintRaw : clearTintRaw
+            glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintRaw = newValue
             } else {
                 clearTintRaw = newValue
@@ -96,29 +100,39 @@ struct AppearanceSettingsView: View {
                 Picker("材质", selection: $materialStyleRaw) {
                     Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
                     Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                    Text(AppearancePreferences.MaterialStyle.sunglasses.displayName).tag(AppearancePreferences.MaterialStyle.sunglasses.rawValue)
                     Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
                 }
                 .pickerStyle(.segmented)
             }
 
-            // Liquid Glass 基础设置
-            if materialStyle == .liquid {
+            // Liquid Glass / Sunglasses 设置
+            if materialStyle.isLiquid {
                 SettingsSection("搜索框外观") {
                     VStack(alignment: .leading, spacing: 12) {
                         Picker("液态玻璃风格", selection: $glassStyleRaw) {
-                            Text(AppearancePreferences.GlassStyle.regular.displayName).tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                            Text(AppearancePreferences.GlassStyle.clear.displayName).tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                            ForEach(AppearancePreferences.GlassStyle.allCases) { style in
+                                Text(style.displayName).tag(style.rawValue)
+                            }
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
 
                         Divider()
-                        
+
+                        // scrim / subdued
+                        Toggle("Scrim", isOn: $glassScrimState)
+                            .font(.system(size: 12))
+                        Toggle("Subdued", isOn: $glassSubduedState)
+                            .font(.system(size: 12))
+
+                        Divider()
+
                         VStack(alignment: .leading, spacing: 10) {
                             Toggle(isOn: tintEnabledBinding) {
                                 HStack {
                                     Text("色调")
                                     Spacer()
-                                    Text(glassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
+                                    Text(glassStyle.baseGlassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
                                         .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                 }
@@ -193,7 +207,7 @@ struct AppearanceSettingsView: View {
                         LabeledSlider(
                             title: "搜索框圆角大小",
                             value: $cornerRadius,
-                            range: 8...24,
+                            range: 4...40,
                             step: 1,
                             unit: "pt"
                         )
@@ -217,8 +231,8 @@ struct AppearanceSettingsView: View {
                         step: 0.01,
                         unit: "s"
                     )
-                    .disabled(materialStyle != .liquid)
-                    if materialStyle != .liquid {
+                    .disabled(!materialStyle.isLiquid)
+                    if !materialStyle.isLiquid {
                         Text("液态玻璃模式下可调整过渡速度。")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
@@ -227,7 +241,7 @@ struct AppearanceSettingsView: View {
             }
 
             // 提示信息
-            SettingsSection(note: "经典：轻度模糊。液态玻璃：macOS 26+ 原生效果，动态折射与高光。纯净：不透明背景。") {
+            SettingsSection(note: "经典：轻度模糊。液态玻璃：macOS 26+ 原生效果，动态折射与高光。太阳眼镜：液态玻璃 + 渐变遮罩。纯净：不透明背景。") {
                 Text("选中的材质会应用到搜索面板背景。")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)

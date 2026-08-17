@@ -12,7 +12,7 @@ struct LauncherView: View {
     @AppStorage(AppearancePreferences.glassStyleKey)
     private var glassStyleRaw = AppearancePreferences.defaultGlassStyle.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
-    private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
+    private var rowGlassStyleRaw = AppearancePreferences.rowGlassStyle.rawValue
     @AppStorage(AppearancePreferences.glassTintModeRegularKey)
     private var regularTintModeRaw = AppearancePreferences.defaultTintMode(for: .regular).rawValue
     @AppStorage(AppearancePreferences.glassTintModeClearKey)
@@ -27,6 +27,26 @@ struct LauncherView: View {
     private var animationDuration = AppearancePreferences.defaultAnimationDuration
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = AppearancePreferences.defaultCornerRadius
+    @AppStorage(AppearancePreferences.sunglassesTopSolidKey)
+    private var sunglassesTopSolid = AppearancePreferences.defaultSunglassesTopSolid
+    @AppStorage(AppearancePreferences.sunglassesTopFadeKey)
+    private var sunglassesTopFade = AppearancePreferences.defaultSunglassesTopFade
+    @AppStorage(AppearancePreferences.sunglassesMidTopAlphaKey)
+    private var sunglassesMidTopAlpha = AppearancePreferences.defaultSunglassesMidTopAlpha
+    @AppStorage(AppearancePreferences.sunglassesMidBottomAlphaKey)
+    private var sunglassesMidBottomAlpha = AppearancePreferences.defaultSunglassesMidBottomAlpha
+    @AppStorage(AppearancePreferences.sunglassesBottomFadeKey)
+    private var sunglassesBottomFade = AppearancePreferences.defaultSunglassesBottomFade
+    @AppStorage(AppearancePreferences.sunglassesCornerInfluenceKey)
+    private var sunglassesCornerInfluence = AppearancePreferences.defaultSunglassesCornerInfluence
+    @AppStorage(AppearancePreferences.sunglassesThemeKey)
+    private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
+    @AppStorage(AppearancePreferences.sunglassesHDRKey)
+    private var sunglassesHDR = AppearancePreferences.defaultSunglassesHDR
+    @AppStorage(AppearancePreferences.glassScrimStateKey)
+    private var glassScrimState = false
+    @AppStorage(AppearancePreferences.glassSubduedStateKey)
+    private var glassSubduedState = false
     private var rowCornerRadius: CGFloat {
         max(8, min(CGFloat(cornerRadius) - 6, CGFloat(cornerRadius)))
     }
@@ -40,7 +60,7 @@ struct LauncherView: View {
     }
 
     private var rowGlassStyle: AppearancePreferences.GlassStyle {
-        AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle
+        (AppearancePreferences.GlassStyle(rawValue: rowGlassStyleRaw) ?? AppearancePreferences.defaultGlassStyle).baseGlassStyle
     }
 
     private var regularTintMode: AppearancePreferences.TintMode {
@@ -59,8 +79,8 @@ struct LauncherView: View {
     }
 
     private func resolvedTint(for style: AppearancePreferences.GlassStyle) -> NSColor? {
-        let mode = style == .regular ? regularTintMode : clearTintMode
-        let tintRaw = style == .regular ? regularTintRaw : clearTintRaw
+        let mode = style.baseGlassStyle == .regular ? regularTintMode : clearTintMode
+        let tintRaw = style.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw
         switch mode {
         case .off:
             return nil
@@ -76,46 +96,159 @@ struct LauncherView: View {
     }
 
     private var rowAccentTint: NSColor {
-        let base = NSColor(Color.accentColor)
-        let alpha: CGFloat = rowGlassStyle == .clear ? 0.28 : 0.24
+        let base = NSColor(effectiveAccent)
+        let alpha: CGFloat = rowGlassStyle.baseGlassStyle == .clear ? 0.28 : 0.24
         return base.withAlphaComponent(alpha)
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.secondary)
+    private var launcherColorScheme: ColorScheme {
+        materialStyle == .sunglasses ? .dark : colorScheme
+    }
 
-                if let prefix = viewModel.searchState.activePrefix {
-                    TagView(
-                        title: prefix.title,
-                        subtitle: prefix.subtitle,
-                        useLiquidStyle: materialStyle == .liquid,
-                        tint: Color.accentColor
-                    )
+    private var sunglassesTheme: AppearancePreferences.SunglassesTheme {
+        AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw) ?? .warmAmber
+    }
+
+    /// Accent color used throughout the launcher — theme override when set
+    private var effectiveAccent: Color {
+        if let nsColor = sunglassesTheme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
+
+    /// HDR-bright text for search field (EDR display only, SDR clips to 1.0)
+    private var searchTextColor: Color {
+        if materialStyle == .sunglasses, sunglassesHDR {
+            return Color(white: 1.3)
+        }
+        return .primary
+    }
+
+    /// Cursor tint: theme color × HDR brightness if enabled
+    private var cursorTint: Color {
+        guard materialStyle == .sunglasses, let c = sunglassesTheme.rgba else { return effectiveAccent }
+        if sunglassesHDR {
+            return Color(nsColor: NSColor(calibratedRed: c.r * 1.7,
+                                          green: c.g * 1.7,
+                                          blue: c.b * 1.7,
+                                          alpha: 1.0))
+        }
+        return Color(nsColor: sunglassesTheme.nsColor!)
+    }
+
+    var body: some View {
+        let targetWidth: CGFloat = viewModel.showsPreviewPane ? 820 : 640
+        let expandedHeight: CGFloat = viewModel.showsPreviewPane ? 460 : 420
+        let resultsContentHeight: CGFloat = expandedHeight - compactHeight
+        let resultsClipHeight: CGFloat = viewModel.isExpanded ? resultsContentHeight : 0
+
+        LiquidGlassContentContainer(
+            cornerRadius: cornerRadius,
+            isHighlighted: isHovered || isSearchFocused,
+            style: materialStyle,
+            glassStyle: glassStyle,
+            glassTint: glassTint,
+            animationDuration: animationDuration,
+            sunglassesTopSolid: sunglassesTopSolid,
+            sunglassesTopFade: sunglassesTopFade,
+            sunglassesMidTopAlpha: sunglassesMidTopAlpha,
+            sunglassesMidBottomAlpha: sunglassesMidBottomAlpha,
+            sunglassesBottomFade: sunglassesBottomFade,
+            sunglassesCornerInfluence: sunglassesCornerInfluence,
+            scrimState: glassScrimState,
+            subduedState: glassSubduedState
+        ) {
+            VStack(spacing: 0) {
+                // 搜索框 — 固定锚点，不参与动画，始终可见不被遮挡
+                searchBar
+
+                // 结果区 — 向下展开、向上收缩，clip 只影响结果
+                ZStack(alignment: .top) {
+                    resultsContent(targetWidth: targetWidth, contentHeight: resultsContentHeight)
+                }
+                .modifier(ClampedFrame(targetHeight: resultsClipHeight, minHeight: 0, width: targetWidth))
+            }
+            .frame(width: targetWidth)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isExpanded)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.showsPreviewPane)
+        .overlay(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        viewModel.currentViewSize = geometry.size
+                    }
+                    .onChange(of: geometry.size) { newSize in
+                        viewModel.currentViewSize = newSize
+                    }
+            }
+        )
+        .environment(\.colorScheme, launcherColorScheme)
+        .onAppear {
+            isSearchFocused = true
+        }
+        .onHover { isHovered = $0 }
+        .onChange(of: viewModel.focusToken) { _ in
+            isSearchFocused = true
+        }
+        .onExitCommand {
+            viewModel.handleEscapeKey()
+        }
+        .overlay(alignment: .topTrailing) {
+            if let message = viewModel.toastMessage {
+                ToastView(message: message)
+                    .padding(12)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+    }
+
+    /// 搜索栏 — 固定锚点，不参与动画
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            if let prefix = viewModel.searchState.activePrefix {
+                TagView(
+                    title: prefix.title,
+                    subtitle: prefix.subtitle,
+                    useLiquidStyle: materialStyle == .liquid,
+                    tint: effectiveAccent
+                )
+            }
+
+            TextField("Search", text: $viewModel.searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(searchTextColor)
+                .tint(cursorTint)
+                .shadow(color: materialStyle == .sunglasses ? cursorTint.opacity(0.45) : .clear, radius: 7, y: 0)
+                .frame(maxWidth: .infinity)
+                .focused($isSearchFocused)
+                .onChange(of: viewModel.searchText) { newValue in
+                    viewModel.updateInput(newValue)
+                }
+                .onSubmit {
+                    viewModel.submitPrimaryAction()
                 }
 
-                TextField("Search", text: $viewModel.searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 20, weight: .medium))
-                    .frame(maxWidth: .infinity)
-                    .focused($isSearchFocused)
-                    .onChange(of: viewModel.searchText) { newValue in
-                        viewModel.updateInput(newValue)
-                    }
-                    .onSubmit {
-                        viewModel.submitPrimaryAction()
-                    }
+            trailingMenu
+        }
+        .padding(16)
+        .frame(height: compactHeight)
+    }
 
-                settingsButton
-            }
-            .padding(16)
-
+    /// 结果区（分割线 + 列表/预览），始终以完整高度渲染，由 clip 控制可见范围
+    @ViewBuilder
+    private func resultsContent(targetWidth: CGFloat, contentHeight: CGFloat) -> some View {
+        VStack(spacing: 0) {
             Divider()
 
-            if showsPreviewPane {
+            if viewModel.showsPreviewPane {
                 HStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -125,19 +258,8 @@ struct LauncherView: View {
                                         .padding(.top, 40)
                                 } else {
                                     ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                        ResultRow(
-                                            item: item,
-                                            isSelected: viewModel.selectedIndex == index,
-                                            searchText: viewModel.searchText,
-                                            showsLiquidSelection: showsLiquidSelection
-                                        )
-                                            .id(item.id)
-                                            .onTapGesture {
-                                                viewModel.selectIndex(index)
-                                                if !isLiquidTuningMode {
-                                                    viewModel.submitPrimaryAction()
-                                                }
-                                            }
+                                        resultRow(item: item, index: index)
+                                        .id(item.id)
                                     }
                                 }
                             }
@@ -159,11 +281,19 @@ struct LauncherView: View {
                     }
 
                     Divider()
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
 
-                    PreviewPane(item: viewModel.highlightedItem)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(12)
+                    PreviewPane(
+                        item: viewModel.highlightedItem,
+                        currentTargetLanguage: viewModel.currentTranslateTarget,
+                        languageOptions: TranslatePreferences.languageOptions,
+                        onTargetLanguageChange: { viewModel.setTranslateTarget($0) }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(12)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
+                .transition(.identity)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -172,22 +302,11 @@ struct LauncherView: View {
                                 EmptyStateView()
                                     .padding(.top, 40)
                             } else {
-                            ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
-                                ResultRow(
-                                    item: item,
-                                    isSelected: viewModel.selectedIndex == index,
-                                    searchText: viewModel.searchText,
-                                    showsLiquidSelection: showsLiquidSelection
-                                )
-                                .id(item.id)
-                                .onTapGesture {
-                                    viewModel.selectIndex(index)
-                                    if !isLiquidTuningMode {
-                                        viewModel.submitPrimaryAction()
-                                    }
+                                ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
+                                    resultRow(item: item, index: index)
+                                    .id(item.id)
                                 }
                             }
-                        }
                         }
                         .backgroundPreferenceValue(SelectedRowBoundsPreferenceKey.self) { anchor in
                             selectionBackgroundLayer(for: anchor)
@@ -204,49 +323,17 @@ struct LauncherView: View {
                         viewModel.shouldAnimateSelection = false
                     }
                 }
+                .transition(.identity)
             }
         }
-        .background(
-            LiquidGlassBackground(
-                cornerRadius: cornerRadius,
-                isHighlighted: isHovered || isSearchFocused,
-                style: materialStyle,
-                glassStyle: glassStyle,
-                glassTint: glassTint,
-                animationDuration: animationDuration
-            )
-        )
-        .frame(width: showsPreviewPane ? 820 : 640, height: showsPreviewPane ? 460 : 420)
-        .onAppear {
-            isSearchFocused = true
-        }
-        .onHover { isHovered = $0 }
-        .onChange(of: viewModel.focusToken) { _ in
-            isSearchFocused = true
-        }
-        .onExitCommand {
-            viewModel.handleEscapeKey()
-        }
-        .overlay(alignment: .topTrailing) {
-            if let message = viewModel.toastMessage {
-                ToastView(message: message)
-                    .padding(12)
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.showsPreviewPane)
+        .frame(width: targetWidth, height: contentHeight)
     }
 
-    private var showsPreviewPane: Bool {
-        guard case .prefixed(let providerID) = viewModel.searchState.scope else { return false }
-        return providerID == ClipboardProvider.providerID || 
-               providerID == SnippetsProvider.providerID || 
-               providerID == TranslateProvider.providerID ||
-               providerID == StyleProvider.providerID
-    }
+    private let compactHeight: CGFloat = 64
 
     private var showsLiquidSelection: Bool {
-        materialStyle == .liquid
+        materialStyle.isLiquid
     }
 
     private var isLiquidTuningMode: Bool {
@@ -256,8 +343,42 @@ struct LauncherView: View {
         return false
     }
 
+    private var isClipboardMode: Bool {
+        if case .prefixed(let providerID) = viewModel.searchState.scope {
+            return providerID == ClipboardProvider.providerID
+        }
+        return false
+    }
+
     private var selectedGlassTint: NSColor? {
         rowAccentTint
+    }
+
+    @ViewBuilder
+    private func resultRow(item: ResultItem, index: Int) -> some View {
+        let row = ResultRow(
+            item: item,
+            isSelected: viewModel.selectedIndex == index,
+            searchText: viewModel.searchText,
+            showsLiquidSelection: showsLiquidSelection
+        )
+
+        if isClipboardMode {
+            row.onTapGesture {
+                let wasSelected = viewModel.selectedIndex == index
+                viewModel.selectIndex(index)
+                if LauncherViewModel.shouldActivateClipboardResult(wasSelected: wasSelected) {
+                    viewModel.submitPrimaryAction()
+                }
+            }
+        } else {
+            row.onTapGesture {
+                viewModel.selectIndex(index)
+                if !isLiquidTuningMode {
+                    viewModel.submitPrimaryAction()
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -277,6 +398,36 @@ struct LauncherView: View {
         }
     }
 
+    @ViewBuilder
+    private var trailingMenu: some View {
+        if isClipboardMode {
+            Menu {
+                Button {
+                    viewModel.openSettings(tab: .clipboard)
+                } label: {
+                    Label("设置", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+
+                Divider()
+
+                Button(role: .destructive) {
+                    viewModel.clearClipboardHistory()
+                } label: {
+                    Label("清除剪贴板", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("剪贴板菜单")
+        } else {
+            settingsButton
+        }
+    }
 
     @ViewBuilder
     private var settingsButton: some View {
@@ -324,15 +475,53 @@ private struct ResultRow: View {
     private var materialStyleRaw = AppearancePreferences.MaterialStyle.liquid.rawValue
     @AppStorage(AppearancePreferences.rowGlassStyleKey)
     private var rowGlassStyleRaw = AppearancePreferences.glassStyle.rawValue
-    
+    @AppStorage(AppearancePreferences.sunglassesThemeKey)
+    private var sunglassesThemeRaw = AppearancePreferences.defaultSunglassesTheme.rawValue
+    @AppStorage(AppearancePreferences.sunglassesHDRKey)
+    private var sunglassesHDR = AppearancePreferences.defaultSunglassesHDR
+
     // Liquid Glass 微调参数（候选项也使用）
     @AppStorage(AppearancePreferences.liquidGlassCornerRadiusKey)
     private var cornerRadius = 16.0
     @AppStorage(AppearancePreferences.liquidGlassAnimationDurationKey)
     private var animationDuration = 0.18
 
+    private var effectiveAccent: Color {
+        if let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+           let nsColor = theme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
+
+    /// Title color for selected item — HDR-bright white in sunglasses mode
+    private var selectedTitleColor: Color {
+        if materialStyle == .sunglasses, sunglassesHDR {
+            return Color(white: 1.6)
+        }
+        return .primary
+    }
+
+    /// Icon color for selected item — HDR-scaled theme or accent
+    private var selectedIconColor: Color {
+        guard materialStyle == .sunglasses, sunglassesHDR,
+              let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+              let c = theme.rgba else {
+            return effectiveAccent
+        }
+        return Color(nsColor: NSColor(calibratedRed: c.r * 1.5,
+                                       green: c.g * 1.5,
+                                       blue: c.b * 1.5,
+                                       alpha: 1.0))
+    }
+
+    /// Whether to use HDR-enhanced colors for the selected row
+    private var useHDRSelectedColors: Bool {
+        materialStyle == .sunglasses && sunglassesHDR
+    }
+
     private var isLiquidClear: Bool {
-        materialStyle == .liquid && rowGlassStyle == .clear
+        materialStyle.isLiquid && rowGlassStyle.baseGlassStyle == .clear
     }
 
     private var materialStyle: AppearancePreferences.MaterialStyle {
@@ -355,6 +544,7 @@ private struct ResultRow: View {
                 HStack(spacing: 6) {
                     Text(item.title)
                         .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isSelected ? selectedTitleColor : .primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     if item.isPrefix {
@@ -364,14 +554,16 @@ private struct ResultRow: View {
                             .padding(.horizontal, 6)
                             .background(
                                 Capsule()
-                                    .fill(Color.accentColor.opacity(0.12))
+                                    .fill(effectiveAccent.opacity(0.12))
                             )
                     }
                 }
-                if let subtitle = item.subtitle {
+                if let metadata = item.clipboardMetadata {
+                    ClipboardMetadataLine(metadata: metadata)
+                } else if let subtitle = item.subtitle {
                     Text(subtitle)
                         .font(.system(size: 12))
-                        .foregroundColor(item.isPrefix ? .accentColor : .secondary)
+                        .foregroundColor(item.isPrefix ? effectiveAccent : .secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -408,7 +600,7 @@ private struct ResultRow: View {
             Image(systemName: name)
                 .font(.system(size: 16, weight: .semibold))
                 .frame(width: 28, height: 28)
-                .foregroundColor(.accentColor)
+                .foregroundColor(isSelected ? selectedIconColor : effectiveAccent)
         case .bundle(let name):
             if let image = NSImage(named: name) {
                 Image(nsImage: image)
@@ -488,7 +680,7 @@ private struct ResultRow: View {
         }
         if isSelected {
             let opacity: Double = isLiquidClear ? 0.26 : 0.15
-            return Color.accentColor.opacity(opacity)
+            return effectiveAccent.opacity(opacity)
         }
         if materialStyle == .classic {
             return Color(nsColor: .controlBackgroundColor).opacity(0.25)
@@ -499,9 +691,51 @@ private struct ResultRow: View {
 
     private var hoverFillColor: Color {
         let opacity: Double = isLiquidClear ? 0.08 : 0.06
-        return Color.accentColor.opacity(opacity)
+        return effectiveAccent.opacity(opacity)
     }
 
+}
+
+private struct ClipboardMetadataLine: View {
+    let metadata: ClipboardResultMetadata
+
+    var body: some View {
+        HStack(spacing: 5) {
+            sourceApp
+            separator
+            Text(metadata.timeText)
+            separator
+            Text(metadata.typeText)
+            separator
+            Text(metadata.sizeText)
+        }
+        .font(.system(size: 12))
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        .truncationMode(.tail)
+    }
+
+    private var sourceApp: some View {
+        HStack(spacing: 4) {
+            if let bundleID = metadata.sourceBundleID,
+               let image = AppIconCache.shared.icon(forBundleIdentifier: bundleID) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 13, height: 13)
+            } else {
+                Image(systemName: "app.dashed")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(width: 13, height: 13)
+            }
+            Text(metadata.sourceAppName?.nonEmpty ?? "未知来源")
+        }
+    }
+
+    private var separator: some View {
+        Text("·")
+            .foregroundColor(Color(nsColor: .tertiaryLabelColor))
+    }
 }
 
 private struct LiquidTuningPreview: View {
@@ -518,12 +752,34 @@ private struct LiquidTuningPreview: View {
     @State private var clearTintRaw = AppearancePreferences.glassTintClear
     @State private var cornerRadius = AppearancePreferences.liquidGlassCornerRadius
     @State private var animationDuration = AppearancePreferences.liquidGlassAnimationDuration
+    @State private var sunglassesTopSolid = AppearancePreferences.sunglassesTopSolid
+    @State private var sunglassesTopFade = AppearancePreferences.sunglassesTopFade
+    @State private var sunglassesMidTopAlpha = AppearancePreferences.sunglassesMidTopAlpha
+    @State private var sunglassesMidBottomAlpha = AppearancePreferences.sunglassesMidBottomAlpha
+    @State private var sunglassesBottomFade = AppearancePreferences.sunglassesBottomFade
+    @State private var sunglassesCornerInfluence = AppearancePreferences.sunglassesCornerInfluence
+    @State private var sunglassesThemeRaw = AppearancePreferences.sunglassesTheme.rawValue
+    @State private var sunglassesHDR = AppearancePreferences.sunglassesHDR
+    @AppStorage(AppearancePreferences.glassScrimStateKey)
+    private var glassScrimState = false
+    @AppStorage(AppearancePreferences.glassSubduedStateKey)
+    private var glassSubduedState = false
+    @State private var showSunglassesTuning = false
+
+    private var effectiveAccent: Color {
+        if let theme = AppearancePreferences.SunglassesTheme(rawValue: sunglassesThemeRaw),
+           let nsColor = theme.nsColor {
+            return Color(nsColor: nsColor)
+        }
+        return Color.accentColor
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             groupContent
             Spacer()
         }
+        .tint(effectiveAccent)
         .padding(8)
     }
 
@@ -553,12 +809,12 @@ private struct LiquidTuningPreview: View {
 
     private var activeTintMode: AppearancePreferences.TintMode {
         get {
-            let raw = glassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
+            let raw = glassStyle.baseGlassStyle == .regular ? regularTintModeRaw : clearTintModeRaw
             return AppearancePreferences.TintMode(rawValue: raw)
             ?? AppearancePreferences.defaultTintMode(for: glassStyle)
         }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintModeRaw = newValue.rawValue
             } else {
                 clearTintModeRaw = newValue.rawValue
@@ -568,9 +824,9 @@ private struct LiquidTuningPreview: View {
     }
 
     private var activeTintRaw: String {
-        get { glassStyle == .regular ? regularTintRaw : clearTintRaw }
+        get { glassStyle.baseGlassStyle == .regular ? regularTintRaw : clearTintRaw }
         nonmutating set {
-            if glassStyle == .regular {
+            if glassStyle.baseGlassStyle == .regular {
                 regularTintRaw = newValue
             } else {
                 clearTintRaw = newValue
@@ -619,7 +875,7 @@ private struct LiquidTuningPreview: View {
                     if let style = AppearancePreferences.MaterialStyle(rawValue: newValue) {
                         AppearancePreferences.materialStyle = style
                     }
-                    if materialStyle != .liquid {
+                    if !materialStyle.isLiquid {
                         AppearancePreferences.setGlassTintMode(.off, for: .regular)
                         AppearancePreferences.setGlassTintMode(.systemDefault, for: .clear)
                     }
@@ -627,11 +883,12 @@ private struct LiquidTuningPreview: View {
             )) {
                 Text(AppearancePreferences.MaterialStyle.classic.displayName).tag(AppearancePreferences.MaterialStyle.classic.rawValue)
                 Text(AppearancePreferences.MaterialStyle.liquid.displayName).tag(AppearancePreferences.MaterialStyle.liquid.rawValue)
+                Text(AppearancePreferences.MaterialStyle.sunglasses.displayName).tag(AppearancePreferences.MaterialStyle.sunglasses.rawValue)
                 Text(AppearancePreferences.MaterialStyle.pure.displayName).tag(AppearancePreferences.MaterialStyle.pure.rawValue)
             }
             .pickerStyle(.segmented)
 
-            if materialStyle == .liquid {
+            if materialStyle.isLiquid {
                 Picker("液态玻璃风格", selection: Binding(
                     get: { glassStyleRaw },
                 set: { newValue in
@@ -641,17 +898,100 @@ private struct LiquidTuningPreview: View {
                     }
                 }
             )) {
-                Text("Regular").tag(AppearancePreferences.GlassStyle.regular.rawValue)
-                Text("Clear").tag(AppearancePreferences.GlassStyle.clear.rawValue)
+                ForEach(AppearancePreferences.GlassStyle.allCases) { style in
+                    Text(style.displayName).tag(style.rawValue)
+                }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
+
+                // scrim / subdued
+                Divider()
+                Toggle("Scrim", isOn: $glassScrimState)
+                    .font(.system(size: 12))
+                Toggle("Subdued", isOn: $glassSubduedState)
+                    .font(.system(size: 12))
 
             VStack(alignment: .leading, spacing: 10) {
+                if materialStyle == .sunglasses {
+                    DisclosureGroup("微调（展开）", isExpanded: $showSunglassesTuning) {
+                        TuningSlider(
+                            title: "顶部纯黑高度",
+                            value: debouncedBinding(
+                                state: $sunglassesTopSolid,
+                                key: "sgTopSolid",
+                                apply: { AppearancePreferences.sunglassesTopSolid = $0 }
+                            ),
+                            range: 1...60,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "上段过渡高度",
+                            value: debouncedBinding(
+                                state: $sunglassesTopFade,
+                                key: "sgTopFade",
+                                apply: { AppearancePreferences.sunglassesTopFade = $0 }
+                            ),
+                            range: 1...100,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "上段目标黑度",
+                            value: debouncedBinding(
+                                state: $sunglassesMidTopAlpha,
+                                key: "sgMidTopA",
+                                apply: { AppearancePreferences.sunglassesMidTopAlpha = $0 }
+                            ),
+                            range: 0.50...1.00,
+                            step: 0.05,
+                            unit: ""
+                        )
+                        TuningSlider(
+                            title: "下段起始黑度",
+                            value: debouncedBinding(
+                                state: $sunglassesMidBottomAlpha,
+                                key: "sgMidBotA",
+                                apply: { AppearancePreferences.sunglassesMidBottomAlpha = $0 }
+                            ),
+                            range: 0.05...0.50,
+                            step: 0.05,
+                            unit: ""
+                        )
+                        TuningSlider(
+                            title: "底段过渡高度",
+                            value: debouncedBinding(
+                                state: $sunglassesBottomFade,
+                                key: "sgBotFade",
+                                apply: { AppearancePreferences.sunglassesBottomFade = $0 }
+                            ),
+                            range: 1...60,
+                            step: 1,
+                            unit: " pt"
+                        )
+                        TuningSlider(
+                            title: "角落弯曲强度",
+                            value: debouncedBinding(
+                                state: $sunglassesCornerInfluence,
+                                key: "sgCornerInf",
+                                apply: { AppearancePreferences.sunglassesCornerInfluence = $0 }
+                            ),
+                            range: 0.0...1.0,
+                            step: 0.1,
+                            unit: ""
+                        )
+                        Toggle("HDR 文字高亮", isOn: $sunglassesHDR)
+                            .onChange(of: sunglassesHDR) { newValue in
+                                AppearancePreferences.sunglassesHDR = newValue
+                            }
+                    }
+                }
+
                 Toggle(isOn: tintEnabledBinding) {
                     HStack {
                         Text("色调")
                         Spacer()
-                        Text(glassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
+                        Text(glassStyle.baseGlassStyle == .regular ? "Regular 独立色调" : "Clear 独立色调")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -732,7 +1072,7 @@ private struct LiquidTuningPreview: View {
                     key: "cornerRadius",
                     apply: { AppearancePreferences.liquidGlassCornerRadius = $0 }
                 ),
-                range: 8...24,
+                range: 4...40,
                 step: 1,
                 unit: "pt"
             )
@@ -741,7 +1081,7 @@ private struct LiquidTuningPreview: View {
 
     private var rowsControls: some View {
         Group {
-            if materialStyle == .liquid {
+            if materialStyle.isLiquid {
                 Picker("液态玻璃风格", selection: Binding(
                     get: { rowGlassStyleRaw },
                     set: { newValue in
@@ -759,6 +1099,18 @@ private struct LiquidTuningPreview: View {
                 Text("候选项液态玻璃样式仅在材质为“液态玻璃”时可用。")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
+            }
+
+            Picker("主题色", selection: $sunglassesThemeRaw) {
+                ForEach(AppearancePreferences.SunglassesTheme.allCases) { theme in
+                    Text(theme.displayName).tag(theme.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: sunglassesThemeRaw) { newValue in
+                if let theme = AppearancePreferences.SunglassesTheme(rawValue: newValue) {
+                    AppearancePreferences.sunglassesTheme = theme
+                }
             }
         }
     }
@@ -824,13 +1176,18 @@ private struct TuningSlider: View {
     let range: ClosedRange<Double>
     let step: Double
     let unit: String
+    var displayTransform: ((Double) -> Double)? = nil
+
+    private var displayValue: Double {
+        displayTransform?(value) ?? value
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
                 Spacer()
-                Text(String(format: "%.2f", value) + unit)
+                Text(String(format: displayTransform != nil ? "%.0f" : "%.2f", displayValue) + unit)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(.secondary)
             }
@@ -876,6 +1233,9 @@ private extension LiquidTuningGroup {
 
 private struct PreviewPane: View {
     let item: ResultItem?
+    let currentTargetLanguage: String
+    let languageOptions: [TranslateLanguageOption]
+    var onTargetLanguageChange: ((String) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -884,7 +1244,9 @@ private struct PreviewPane: View {
                     .font(.system(size: 16, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                if let subtitle = item.subtitle {
+                if let metadata = item.clipboardMetadata {
+                    ClipboardMetadataLine(metadata: metadata)
+                } else if let subtitle = item.subtitle {
                     Text(subtitle)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
@@ -969,12 +1331,51 @@ private struct PreviewPane: View {
                         }
                     }
                 }
+            case .clipboardText(let preview):
+                ClipboardTextPreviewView(preview: preview)
+                    .id(preview.entryID)
+            case .clipboardImage(_, let path):
+                if let image = NSImage(contentsOfFile: path) {
+                    ScrollView {
+                        Image(nsImage: image)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+                            .padding(8)
+                    }
+                } else {
+                    Text("原始图片已不可用")
+                        .foregroundColor(.secondary)
+                }
+            case .clipboardFiles(_, let files):
+                ClipboardFilesPreview(files: files)
             case .none:
                 Text("No preview available")
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
         } else if item.providerID == TranslateProvider.providerID {
+            // 目标语言切换
+            HStack(spacing: 6) {
+                Text("翻译为")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Picker("目标语言", selection: Binding(
+                    get: { currentTargetLanguage },
+                    set: { onTargetLanguageChange?($0) }
+                )) {
+                    ForEach(languageOptions, id: \.code) { option in
+                        Text(option.name).tag(option.code)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 130)
+            }
+            .padding(.vertical, 4)
+
             // 翻译结果预览
             ScrollView {
                 Text(item.title)
@@ -994,6 +1395,201 @@ private struct PreviewPane: View {
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             Spacer()
+        }
+    }
+}
+
+private struct ClipboardTextPreviewView: View {
+    let preview: ClipboardTextPreview
+
+    @State private var fullText: String?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var loadTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(metadataText)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Spacer()
+                if fullText != nil {
+                    Button("返回摘要") {
+                        fullText = nil
+                        errorMessage = nil
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 12))
+                } else if preview.isTruncated {
+                    Button {
+                        loadFullText()
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text("查看完整内容")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 12, weight: .medium))
+                    .disabled(isLoading)
+                }
+            }
+
+            if let fullText {
+                LongClipboardTextView(entryID: preview.entryID, text: fullText)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
+                    )
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(preview.text)
+                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                        .lineLimit(24)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                    if preview.isTruncated {
+                        Text("仅显示摘要，复制操作仍会使用完整内容")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
+                )
+            }
+        }
+        .onDisappear {
+            loadTask?.cancel()
+            loadTask = nil
+        }
+    }
+
+    private var metadataText: String {
+        let size = ByteCountFormatter.string(fromByteCount: Int64(preview.byteCount), countStyle: .file)
+        return "\(size) · \(preview.lineCount) 行"
+    }
+
+    private func loadFullText() {
+        loadTask?.cancel()
+        isLoading = true
+        errorMessage = nil
+        loadTask = Task {
+            let text = await ClipboardStore.shared.text(for: preview.entryID)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                isLoading = false
+                if let text {
+                    fullText = text
+                } else {
+                    errorMessage = "完整内容文件已不可用"
+                }
+            }
+        }
+    }
+}
+
+private struct LongClipboardTextView: NSViewRepresentable {
+    let entryID: UUID
+    let text: String
+
+    final class Coordinator {
+        var loadedEntryID: UUID?
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = NSTextView(usingTextLayoutManager: true)
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.textColor = .labelColor
+        textView.backgroundColor = .clear
+        textView.drawsBackground = false
+        textView.textContainerInset = NSSize(width: 8, height: 8)
+        textView.minSize = .zero
+        textView.maxSize = NSSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.documentView = textView
+        textView.frame = scrollView.contentView.bounds
+        textView.string = text
+        context.coordinator.loadedEntryID = entryID
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard context.coordinator.loadedEntryID != entryID,
+              let textView = scrollView.documentView as? NSTextView else { return }
+        textView.string = text
+        context.coordinator.loadedEntryID = entryID
+        textView.scrollToBeginningOfDocument(nil)
+    }
+}
+
+private struct ClipboardFilesPreview: View {
+    let files: [FilePreviewItem]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(files, id: \.self) { file in
+                    HStack(spacing: 8) {
+                        if let icon = AppIconCache.shared.icon(for: file.path) {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                        } else {
+                            Image(systemName: "doc")
+                                .frame(width: 24, height: 24)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(file.name)
+                                .font(.system(size: 13, weight: .semibold))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text(file.path)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                    )
+                }
+            }
         }
     }
 }
@@ -1040,5 +1636,43 @@ private final class AppIconCache {
         let image = NSWorkspace.shared.icon(forFile: path)
         cache.setObject(image, forKey: path as NSString)
         return image
+    }
+
+    func icon(forBundleIdentifier bundleIdentifier: String) -> NSImage? {
+        let key = "bundle:\(bundleIdentifier)" as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            return nil
+        }
+        let image = NSWorkspace.shared.icon(forFile: url.path)
+        cache.setObject(image, forKey: key)
+        return image
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
+// MARK: - Animatable clip modifier (clamps spring overshoot to prevent search bar clipping)
+
+private struct ClampedFrame: AnimatableModifier {
+    var targetHeight: CGFloat
+    let minHeight: CGFloat
+    let width: CGFloat
+
+    var animatableData: CGFloat {
+        get { targetHeight }
+        set { targetHeight = max(minHeight, newValue) }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .frame(width: width, height: targetHeight, alignment: .top)
+            .clipped()
     }
 }

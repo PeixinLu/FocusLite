@@ -61,13 +61,13 @@ struct AppNameIndex: Codable, Hashable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         original = try container.decode(String.self, forKey: .original)
-        normalized = try container.decode(String.self, forKey: .normalized)
-        tokens = try container.decode([String].self, forKey: .tokens)
-        acronym = try container.decode(String.self, forKey: .acronym)
-        pinyinFull = try container.decodeIfPresent(String.self, forKey: .pinyinFull)
-        pinyinInitials = try container.decodeIfPresent(String.self, forKey: .pinyinInitials)
-        aliasStrong = try container.decodeIfPresent([String].self, forKey: .aliasStrong) ?? []
-        aliasWeak = try container.decodeIfPresent([String].self, forKey: .aliasWeak) ?? []
+        normalized = MatchingNormalizer.normalize(try container.decode(String.self, forKey: .normalized))
+        tokens = try container.decode([String].self, forKey: .tokens).map(MatchingNormalizer.normalize)
+        acronym = MatchingNormalizer.normalize(try container.decode(String.self, forKey: .acronym))
+        pinyinFull = try container.decodeIfPresent(String.self, forKey: .pinyinFull).map(MatchingNormalizer.normalize)
+        pinyinInitials = try container.decodeIfPresent(String.self, forKey: .pinyinInitials).map(MatchingNormalizer.normalize)
+        aliasStrong = try container.decodeIfPresent([String].self, forKey: .aliasStrong)?.map(MatchingNormalizer.normalize) ?? []
+        aliasWeak = try container.decodeIfPresent([String].self, forKey: .aliasWeak)?.map(MatchingNormalizer.normalize) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -194,7 +194,16 @@ enum MatchingNormalizer {
         let folded = input.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current)
         let lowercased = folded.lowercased()
         let scalars = lowercased.unicodeScalars.filter { isAllowedScalar($0) }
-        return String(String.UnicodeScalarView(scalars))
+        let filtered = String(String.UnicodeScalarView(scalars))
+        guard filtered.unicodeScalars.contains(where: { isCJKUnifiedIdeograph($0) }) else {
+            return filtered
+        }
+
+        let mutable = NSMutableString(string: filtered)
+        guard CFStringTransform(mutable, nil, "Traditional-Simplified" as CFString, false) else {
+            return filtered
+        }
+        return mutable as String
     }
 
     static func tokens(from input: String) -> [String] {

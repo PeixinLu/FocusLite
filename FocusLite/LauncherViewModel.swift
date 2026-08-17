@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 @MainActor
 final class LauncherViewModel: ObservableObject {
@@ -16,10 +17,27 @@ final class LauncherViewModel: ObservableObject {
     @Published var shouldAnimateSelection = false
     @Published var toastMessage: String?
 
+    /// 搜索框是否处于展开状态：有输入内容 或 已进入某个 scoped 模式
+    @Published var isExpanded = false
+
+    /// 由 GeometryReader 上报的当前视图实际渲染尺寸，供窗口跟随
+    @Published var currentViewSize = CGSize(width: 640, height: 64)
+
+    /// 当前是否显示预览窗格（剪贴板 / Snippets / 翻译 / 调参）
+    var showsPreviewPane: Bool {
+        guard case .prefixed(let providerID) = searchState.scope else { return false }
+        return providerID == ClipboardProvider.providerID ||
+               providerID == SnippetsProvider.providerID ||
+               providerID == TranslateProvider.providerID ||
+               providerID == StyleProvider.providerID
+    }
+
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
+    private var isPerformingClipboardAction = false
     private var translationObserver: NSObjectProtocol?
+    private var quickTargetLanguage: String?
 
     var onExit: ((ExitBehavior) -> Void)?
     var onOpenSettings: ((SettingsTab) -> Void)?
@@ -59,15 +77,15 @@ final class LauncherViewModel: ObservableObject {
         results = []
         selectedIndex = nil
         shouldAnimateSelection = false
+        quickTargetLanguage = nil
+        isExpanded = false
+        currentViewSize = CGSize(width: 640, height: 64)
     }
 
     func updateInput(_ text: String) {
         guard !isUpdatingText else { return }
-        isUpdatingText = true
         let update = SearchStateReducer.handleInputChange(state: searchState, newText: text)
-        searchState = update.state
-        searchText = update.textFieldValue
-        isUpdatingText = false
+        applyUpdate(update)
         performSearch()
         shouldAnimateSelection = false
     }
@@ -158,6 +176,14 @@ final class LauncherViewModel: ObservableObject {
         case .copyFiles(let paths):
             copyFilesToPasteboard(paths)
             showToast("已复制文件")
+        case .setQuickTargetLanguage(let lang):
+            quickTargetLanguage = lang
+            showToast("已切换目标语言: \(TranslatePreferences.displayName(for: lang))")
+            performSearch()
+            return
+        case .clipboardEntry(let id, let behavior):
+            performClipboardEntryAction(id: id, behavior: behavior)
+            return
         case .none:
             if item.providerID == WebSearchProvider.providerID {
                 showToast("请输入内容后再搜索")
@@ -205,6 +231,21 @@ final class LauncherViewModel: ObservableObject {
 
     func activateClipboardSearch() {
         activatePrefix(providerID: ClipboardProvider.providerID)
+    }
+
+    func clearClipboardHistory() {
+        results = []
+        selectedIndex = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let removedCount = await ClipboardStore.shared.clearHistory()
+            self.performSearch()
+            self.showToast(removedCount == 0 ? "剪贴板已为空" : "已清除剪贴板")
+        }
+    }
+
+    nonisolated static func shouldActivateClipboardResult(wasSelected: Bool) -> Bool {
+        wasSelected
     }
 
     func activateCustomPrefix(_ entry: PrefixEntry, carryQuery: String? = nil) {
@@ -260,6 +301,40 @@ final class LauncherViewModel: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    private func performClipboardEntryAction(id: UUID, behavior: ClipboardEntryActionBehavior) {
+        guard !isPerformingClipboardAction else { return }
+        isPerformingClipboardAction = true
+        showToast("正在读取剪贴板内容…")
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isPerformingClipboardAction = false }
+            guard let content = await ClipboardStore.shared.resolvedContent(for: id) else {
+                self.showToast("剪贴板原始内容已不可用")
+                return
+            }
+
+            switch content {
+            case .text(let text):
+                self.copyToPasteboard(text)
+                if behavior == .paste {
+                    if self.onPaste?(text) == true { return }
+                    self.showToast("已复制，开启辅助功能权限可自动粘贴")
+                } else {
+                    self.showToast("已复制")
+                }
+            case .image(let data, let type):
+                self.copyImageToPasteboard(data, type: type)
+                self.showToast("已复制图片")
+            case .files(let paths):
+                self.copyFilesToPasteboard(paths)
+                self.showToast("已复制文件")
+            }
+
+            self.onExit?(.restoreOrigin)
+            self.shouldAnimateSelection = false
+        }
     }
 
     private func showToast(_ message: String) {
@@ -374,10 +449,59 @@ final class LauncherViewModel: ObservableObject {
                 let trimmed = searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     setResults(translateItems(from: []))
+                    // 有快速目标语言时直接调用 coordinator
+                    if let target = quickTargetLanguage {
+                        let capturedQuery = trimmed
+                        let capturedTarget = target
+                        searchTask = Task.detached {
+                            let results = await TranslationCoordinator.shared.translate(
+                                text: capturedQuery, targetLanguage: capturedTarget
+                            )
+                            if Task.isCancelled {
+                                return
+                            }
+                            await MainActor.run { [weak self] in
+                                guard let self else { return }
+                                guard case .prefixed(let currentProviderID) = self.searchState.scope,
+                                      currentProviderID == TranslateProvider.providerID,
+                                      Self.shouldApplyTranslationResponse(
+                                          capturedQuery: capturedQuery,
+                                          capturedTargetLanguage: capturedTarget,
+                                          currentQuery: self.searchState.query,
+                                          currentTargetLanguage: self.currentTranslateTarget
+                                      ) else {
+                                    return
+                                }
+                                if results.isEmpty {
+                                    self.setResults([ResultItem(
+                                        title: "该目标语言暂不支持翻译",
+                                        subtitle: "请前往系统设置下载语言包，或启用 API 翻译服务",
+                                        icon: .system("exclamationmark.triangle"),
+                                        score: 0.1,
+                                        action: .none,
+                                        providerID: TranslateProvider.providerID,
+                                        category: .standard
+                                    )])
+                                } else {
+                                    self.setResults(self.translateItems(from: results))
+                                }
+                            }
+                        }
+                        return
+                    }
                 }
             }
             let currentState = searchState
             searchTask = Task.detached { [searchEngine] in
+                if providerID == ClipboardProvider.providerID,
+                   !currentState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    do {
+                        try await Task.sleep(nanoseconds: 90_000_000)
+                    } catch {
+                        return
+                    }
+                }
+                if Task.isCancelled { return }
                 let items = await searchEngine.search(
                     query: currentState.query,
                     isScoped: true,
@@ -399,6 +523,19 @@ final class LauncherViewModel: ObservableObject {
         searchState = update.state
         searchText = update.textFieldValue
         isUpdatingText = false
+        updateExpandedState()
+    }
+
+    /// 根据当前 searchText / searchState 更新 isExpanded，变化时带官方动画曲线
+    private func updateExpandedState() {
+        let shouldExpand: Bool = {
+            if case .prefixed = searchState.scope { return true }
+            return !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }()
+        guard shouldExpand != isExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isExpanded = shouldExpand
+        }
     }
 
     private func activatePrefix(providerID: String, carryQuery: String? = nil) {
@@ -411,6 +548,41 @@ final class LauncherViewModel: ObservableObject {
         }
         applyUpdate(update)
         focusToken = UUID()
+        performSearch()
+    }
+
+    /// 当前翻译目标语言（临时快速切换 或 默认设置）
+    var currentTranslateTarget: String {
+        if let quickTargetLanguage {
+            return quickTargetLanguage
+        }
+        if let detected = LanguageDetector.detect(searchState.query) {
+            return TranslatePreferences.automaticTargetLanguage(for: detected.code)
+        }
+        return TranslatePreferences.secondaryLanguage
+    }
+
+    nonisolated static func shouldApplyTranslationResponse(
+        capturedQuery: String,
+        capturedTargetLanguage: String,
+        currentQuery: String,
+        currentTargetLanguage: String
+    ) -> Bool {
+        capturedQuery.trimmingCharacters(in: .whitespacesAndNewlines) ==
+            currentQuery.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            capturedTargetLanguage == currentTargetLanguage
+    }
+
+    /// 预览窗格切换翻译目标语言
+    func setTranslateTarget(_ lang: String) {
+        if let detected = LanguageDetector.detect(searchState.query),
+           TranslatePreferences.normalizedLanguageCode(detected.code) ==
+            TranslatePreferences.normalizedLanguageCode(lang) {
+            showToast("原文已是\(TranslatePreferences.displayName(for: lang))")
+            return
+        }
+        quickTargetLanguage = lang
+        showToast("目标语言: \(TranslatePreferences.displayName(for: lang))")
         performSearch()
     }
 
@@ -448,9 +620,12 @@ final class LauncherViewModel: ObservableObject {
                 )
             }
             let serviceName = serviceDisplayName(for: TranslateServiceID(rawValue: project.serviceID))
+            let direction = LanguageDetector.detect(searchState.query).map {
+                TranslationDirection.resolve(for: project, detected: $0)
+            }
             return ResultItem(
                 title: "正在翻译…",
-                subtitle: "\(serviceName) · \(TranslatePreferences.displayName(for: project.primaryLanguage)) ↔ \(TranslatePreferences.displayName(for: project.secondaryLanguage))",
+                subtitle: "\(serviceName) · \(TranslatePreferences.displayName(for: direction?.source ?? project.primaryLanguage)) → \(TranslatePreferences.displayName(for: direction?.target ?? project.secondaryLanguage))",
                 icon: .system("arrow.triangle.2.circlepath"),
                 score: 0.2 - Double(index) * 0.01,
                 action: .none,
@@ -472,22 +647,33 @@ final class LauncherViewModel: ObservableObject {
             return
         }
         guard !query.isEmpty, query == currentQuery else { return }
+
+        // 过滤掉过期通知：目标语言不匹配当前设置
+        let expectedTarget = currentTranslateTarget
+        if let notifyTarget = info[TranslationCoordinator.targetLanguageKey] as? String,
+           notifyTarget != expectedTarget {
+            return
+        }
+
+        // 翻译已完成但无结果 → 所有服务均不支持该目标语言
+        if results.isEmpty, !TranslatePreferences.activeProjects().isEmpty {
+            setResults([ResultItem(
+                title: "该目标语言暂不支持翻译",
+                subtitle: "可尝试切换其他目标语言或启用 API 翻译服务",
+                icon: .system("exclamationmark.triangle"),
+                score: 0.1,
+                action: .none,
+                providerID: TranslateProvider.providerID,
+                category: .standard
+            )])
+            return
+        }
+
         setResults(translateItems(from: results))
     }
 
     private func serviceDisplayName(for id: TranslateServiceID?) -> String {
         guard let id else { return "未知服务" }
-        switch id {
-        case .youdaoAPI:
-            return "有道 API"
-        case .baiduAPI:
-            return "百度 API"
-        case .googleAPI:
-            return "Google API"
-        case .bingAPI:
-            return "微软翻译 API"
-        case .deepseekAPI:
-            return "DeepSeek API"
-        }
+        return TranslatePreferences.serviceDisplayName(for: id)
     }
 }

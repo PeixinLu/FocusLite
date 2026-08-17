@@ -10,7 +10,7 @@ actor AppIndex {
         let bundleID: String?
         let nameIndex: AppNameIndex
 
-        var id: String { bundleID ?? path }
+        var id: String { path }
     }
 
     private var apps: [AppEntry] = []
@@ -358,7 +358,7 @@ extension AppIndex.AppEntry {
         }
 
         if let packageType = bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String,
-           packageType != "APPL" && packageType != "FNDR" {
+           !isSupportedPackageType(packageType, bundleID: bundle.bundleIdentifier) {
             return true
         }
 
@@ -392,6 +392,15 @@ extension AppIndex.AppEntry {
         }
 
         return false
+    }
+
+    static func isSupportedPackageType(_ packageType: String, bundleID: String?) -> Bool {
+        if packageType == "APPL" || packageType == "FNDR" {
+            return true
+        }
+
+        // Passwords 是面向用户的系统应用，但 macOS 将它声明为 XPC 包。
+        return bundleID == "com.apple.Passwords"
     }
 
     private static func isLaunchpadApp(_ url: URL) -> Bool {

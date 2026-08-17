@@ -93,6 +93,14 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$PWD/artifacts/FocusLite.zip"
           ls -lh "$PWD/artifacts/FocusLite.zip"
 
+      - name: Prepare release notes
+        id: release_notes
+        run: |
+          set -euo pipefail
+          NOTES_PATH="release-notes/${{ steps.version.outputs.tag_name }}.md"
+          scripts/prepare-release-notes.sh "${{ steps.version.outputs.tag_name }}" artifacts
+          echo "notes_path=$NOTES_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Download Sparkle tools
         run: |
           set -euo pipefail
@@ -131,6 +139,8 @@ jobs:
           TAG_NAME="${{ steps.version.outputs.tag_name }}"
           ZIP_NAME="FocusLite.zip"
           DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/"
+          RELEASE_SITE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          RELEASE_NOTES_PREFIX="${RELEASE_SITE_URL}/releases/${TAG_NAME}/"
           echo "Using tag: $TAG_NAME"
           echo "Download prefix: $DOWNLOAD_PREFIX"
           if [[ "$DOWNLOAD_PREFIX" != *"/${TAG_NAME}/" ]]; then
@@ -138,11 +148,20 @@ jobs:
             exit 1
           fi
           cd artifacts
-          "$SPARKLE_BIN/generate_appcast" --ed-key-file ../sparkle_private_key.pem --download-url-prefix "$DOWNLOAD_PREFIX" .
+          "$SPARKLE_BIN/generate_appcast" \
+            --ed-key-file ../sparkle_private_key.pem \
+            --download-url-prefix "$DOWNLOAD_PREFIX" \
+            --release-notes-url-prefix "$RELEASE_NOTES_PREFIX" \
+            .
           rm -f ../sparkle_private_key.pem
-          ls -lh "$ZIP_NAME" appcast.xml
+          ls -lh "$ZIP_NAME" FocusLite.html appcast.xml
           if ! grep -q "releases/download/${TAG_NAME}/${ZIP_NAME}" appcast.xml; then
             echo "Appcast enclosure URL does not point to releases/download/${TAG_NAME}/${ZIP_NAME}" >&2
+            cat appcast.xml
+            exit 1
+          fi
+          if ! grep -q "<sparkle:releaseNotesLink>${RELEASE_NOTES_PREFIX}FocusLite.html</sparkle:releaseNotesLink>" appcast.xml; then
+            echo "Appcast does not contain the expected Sparkle release notes URL" >&2
             cat appcast.xml
             exit 1
           fi
@@ -153,9 +172,22 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body: "Automated release for ${{ github.ref_name }}"
+          body_path: ${{ steps.release_notes.outputs.notes_path }}
           files: |
             artifacts/FocusLite.zip
+
+      - name: Generate release history for the website
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/${{ github.repository }}/releases?per_page=100" > github-releases.json
+          ruby scripts/generate-release-history.rb \
+            github-releases.json \
+            artifacts \
+            "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          ruby -rjson -e 'data = JSON.parse(File.read("artifacts/releases.json")); abort "Current release missing" unless data.fetch("releases").any? { |release| release.fetch("tag") == ARGV.fetch(0) }' "${{ github.ref_name }}"
+          ls -lh artifacts/releases.json artifacts/changelog.html "artifacts/releases/${{ github.ref_name }}/FocusLite.html"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -168,3 +200,14 @@ jobs:
       - name: Deploy appcast to Pages
         id: deploy-pages
         uses: actions/deploy-pages@v4
+
+      - name: Trigger Cloudflare Pages website rebuild
+        env:
+          CF_PAGES_DEPLOY_HOOK_URL: ${{ secrets.CF_PAGES_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_PAGES_DEPLOY_HOOK_URL:-}" ]; then
+            echo "CF_PAGES_DEPLOY_HOOK_URL is not configured; skipping website rebuild."
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$CF_PAGES_DEPLOY_HOOK_URL"

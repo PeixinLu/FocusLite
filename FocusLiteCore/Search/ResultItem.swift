@@ -11,6 +11,7 @@ struct ResultItem: Identifiable, Hashable, Sendable {
     let category: ResultCategory
     let isPrefix: Bool
     let preview: ResultPreview?
+    let clipboardMetadata: ClipboardResultMetadata?
 
     init(
         id: UUID = UUID(),
@@ -22,7 +23,8 @@ struct ResultItem: Identifiable, Hashable, Sendable {
         providerID: String = "unknown",
         category: ResultCategory = .standard,
         isPrefix: Bool = false,
-        preview: ResultPreview? = nil
+        preview: ResultPreview? = nil,
+        clipboardMetadata: ClipboardResultMetadata? = nil
     ) {
         self.id = id
         self.title = title
@@ -34,7 +36,16 @@ struct ResultItem: Identifiable, Hashable, Sendable {
         self.category = category
         self.isPrefix = isPrefix
         self.preview = preview
+        self.clipboardMetadata = clipboardMetadata
     }
+}
+
+struct ClipboardResultMetadata: Hashable, Sendable {
+    let sourceBundleID: String?
+    let sourceAppName: String?
+    let timeText: String
+    let typeText: String
+    let sizeText: String
 }
 
 enum ItemIcon: Hashable, Sendable {
@@ -51,6 +62,13 @@ enum ResultAction: Hashable, Sendable {
     case runApp(bundleID: String)
     case copyImage(data: Data, type: String)
     case copyFiles([String])
+    case setQuickTargetLanguage(String)
+    case clipboardEntry(id: UUID, behavior: ClipboardEntryActionBehavior)
+}
+
+enum ClipboardEntryActionBehavior: Hashable, Sendable {
+    case copy
+    case paste
 }
 
 enum ResultCategory: Int, Hashable, Sendable {
@@ -62,9 +80,33 @@ enum ResultPreview: Hashable, Sendable {
     case text(String)
     case image(Data)
     case files([FilePreviewItem])
+    case clipboardText(ClipboardTextPreview)
+    case clipboardImage(entryID: UUID, path: String)
+    case clipboardFiles(entryID: UUID, files: [FilePreviewItem])
+}
+
+struct ClipboardTextPreview: Hashable, Sendable {
+    let entryID: UUID
+    let text: String
+    let byteCount: Int
+    let lineCount: Int
+    let isTruncated: Bool
+}
+
+enum ClipboardResolvedContent: Sendable {
+    case text(String)
+    case image(data: Data, type: String)
+    case files([String])
 }
 
 struct FilePreviewItem: Codable, Hashable, Sendable {
     let path: String
     let name: String
+    let byteCount: Int?
+
+    init(path: String, name: String, byteCount: Int? = nil) {
+        self.path = path
+        self.name = name
+        self.byteCount = byteCount
+    }
 }

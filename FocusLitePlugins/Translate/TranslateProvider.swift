@@ -22,19 +22,6 @@ struct TranslateProvider: ResultProvider {
             )]
         }
 
-        let projects = TranslatePreferences.activeProjects()
-        if projects.isEmpty {
-            return [ResultItem(
-                title: "No translation available",
-                subtitle: "未配置翻译服务",
-                icon: .system("exclamationmark.triangle"),
-                score: 0.1,
-                action: .none,
-                providerID: id,
-                category: .standard
-            )]
-        }
-
         let results = await TranslationCoordinator.shared.translate(text: trimmed)
         if results.isEmpty {
             return [ResultItem(
