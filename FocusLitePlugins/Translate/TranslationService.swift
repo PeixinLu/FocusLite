@@ -80,6 +80,12 @@ struct DetectedLanguage: Hashable, Sendable {
 }
 
 enum LanguageDetector {
+    private static let ambiguousDominantConfidence = 0.60
+    private static let minimumPreferredConfidence = 0.15
+    private static let minimumRelativePreferredConfidence = 0.40
+    private static let maximumShortTextScalarCount = 32
+    private static let maximumShortTextLetterCount = 24
+
     static func detect(_ text: String) -> DetectedLanguage? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -96,7 +102,14 @@ enum LanguageDetector {
         let language = recognizer.dominantLanguage
 
         if let language {
-            return DetectedLanguage(code: language.rawValue, isMixed: isMixed)
+            let hypotheses = recognizer.languageHypotheses(withMaximum: 8)
+            let resolved = resolveAmbiguousShortText(
+                trimmed,
+                dominantLanguage: language,
+                hypotheses: hypotheses,
+                preferredLanguage: TranslatePreferences.secondaryLanguage
+            )
+            return DetectedLanguage(code: resolved, isMixed: isMixed)
         }
 
         // Fallback to character-based detection for short texts or when NL detection is unreliable
@@ -107,6 +120,54 @@ enum LanguageDetector {
             return DetectedLanguage(code: "en", isMixed: isMixed)
         }
         return nil
+    }
+
+    static func resolveAmbiguousShortText(
+        _ text: String,
+        dominantLanguage: NLLanguage,
+        hypotheses: [NLLanguage: Double],
+        preferredLanguage: String
+    ) -> String {
+        let dominantCode = TranslatePreferences.normalizedLanguageCode(dominantLanguage.rawValue)
+        let preferredCode = TranslatePreferences.normalizedLanguageCode(preferredLanguage)
+        guard dominantCode != preferredCode,
+              isShortASCIILatinText(text),
+              let dominantConfidence = confidence(
+                  for: dominantCode,
+                  in: hypotheses
+              ),
+              let preferredConfidence = confidence(
+                  for: preferredCode,
+                  in: hypotheses
+              ),
+              dominantConfidence < ambiguousDominantConfidence,
+              preferredConfidence >= minimumPreferredConfidence,
+              preferredConfidence >= dominantConfidence * minimumRelativePreferredConfidence else {
+            return dominantLanguage.rawValue
+        }
+        return preferredLanguage
+    }
+
+    private static func confidence(
+        for normalizedLanguage: String,
+        in hypotheses: [NLLanguage: Double]
+    ) -> Double? {
+        hypotheses
+            .filter {
+                TranslatePreferences.normalizedLanguageCode($0.key.rawValue) == normalizedLanguage
+            }
+            .map(\.value)
+            .max()
+    }
+
+    private static func isShortASCIILatinText(_ text: String) -> Bool {
+        let scalars = text.unicodeScalars
+        guard scalars.count <= maximumShortTextScalarCount,
+              scalars.allSatisfy({ $0.value < 128 }) else { return false }
+        let letterCount = scalars.filter {
+            (65...90).contains($0.value) || (97...122).contains($0.value)
+        }.count
+        return letterCount > 0 && letterCount <= maximumShortTextLetterCount
     }
 
     private static func isCJK(_ scalar: UnicodeScalar) -> Bool {

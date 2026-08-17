@@ -8,10 +8,13 @@ struct TranslationBubbleView: View {
     let translationResult: TranslationResult?
     let isLoading: Bool
     let isPinned: Bool
+    let currentTargetLanguage: String
+    let languageOptions: [TranslateLanguageOption]
 
     var onCopy: ((String) -> Void)?
     var onTogglePinned: (() -> Void)?
     var onSwapDirection: (() -> Void)?
+    var onTargetLanguageChange: ((String) -> Void)?
     var onOpenInLauncher: (() -> Void)?
     var onPrepareSettings: (() -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -160,6 +163,7 @@ struct TranslationBubbleView: View {
 
     private func actionBar(for result: TranslationResult) -> some View {
         HStack(spacing: 6) {
+            targetLanguageMenu(sourceLanguage: result.sourceLanguage)
             Spacer()
             iconButton(systemName: "doc.on.doc", help: "复制") {
                 onCopy?(result.translatedText)
@@ -170,6 +174,30 @@ struct TranslationBubbleView: View {
             }
             settingsButton
         }
+    }
+
+    private func targetLanguageMenu(sourceLanguage: String) -> some View {
+        Menu {
+            ForEach(languageOptions, id: \.code) { option in
+                Button(option.name) {
+                    onTargetLanguageChange?(option.code)
+                }
+                .disabled(
+                    TranslatePreferences.normalizedLanguageCode(option.code) ==
+                        TranslatePreferences.normalizedLanguageCode(sourceLanguage)
+                )
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text("译为")
+                Text(TranslatePreferences.displayName(for: currentTargetLanguage))
+            }
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("更改目标语言")
     }
 
     private var pinButton: some View {

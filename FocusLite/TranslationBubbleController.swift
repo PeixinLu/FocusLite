@@ -36,6 +36,7 @@ final class TranslationBubbleController: NSObject {
     private var focusOrigin: NSRunningApplication?
     private var persistence = TranslationBubblePersistence(isPinned: TranslatePreferences.translationBubblePinned)
     private var directionOverride: TranslationDirectionOverride?
+    private var selectedTargetLanguage: String?
 
     var onDismiss: (() -> Void)?
     var onOpenInLauncher: ((String) -> Void)?
@@ -57,6 +58,7 @@ final class TranslationBubbleController: NSObject {
         isLoading = true
         focusOrigin = NSWorkspace.shared.frontmostApplication
         directionOverride = nil
+        selectedTargetLanguage = nil
 
         if shouldKeepPinnedPosition {
             updateContentView()
@@ -121,6 +123,8 @@ final class TranslationBubbleController: NSObject {
             translationResult: result,
             isLoading: isLoading,
             isPinned: persistence == .pinned,
+            currentTargetLanguage: currentTargetLanguage,
+            languageOptions: TranslatePreferences.languageOptions,
             onCopy: { text in
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
@@ -131,6 +135,9 @@ final class TranslationBubbleController: NSObject {
             },
             onSwapDirection: { [weak self] in
                 self?.swapDirection()
+            },
+            onTargetLanguageChange: { [weak self] language in
+                self?.changeTargetLanguage(to: language)
             },
             onOpenInLauncher: { [weak self] in
                 guard let self else { return }
@@ -235,6 +242,7 @@ final class TranslationBubbleController: NSObject {
             translationObserver = nil
         }
         let directionOverride = directionOverride
+        let selectedTargetLanguage = selectedTargetLanguage
         translationTask = Task {
             let results: [TranslationResult]
             if let directionOverride {
@@ -242,6 +250,11 @@ final class TranslationBubbleController: NSObject {
                     text: text,
                     sourceLanguage: directionOverride.sourceLanguage,
                     targetLanguage: directionOverride.targetLanguage
+                )
+            } else if let selectedTargetLanguage {
+                results = await TranslationCoordinator.shared.translate(
+                    text: text,
+                    targetLanguage: selectedTargetLanguage
                 )
             } else {
                 results = await TranslationCoordinator.shared.translate(text: text)
@@ -277,10 +290,16 @@ final class TranslationBubbleController: NSObject {
     }
 
     private func matchesCurrentDirection(_ result: TranslationResult?) -> Bool {
-        guard let directionOverride else { return true }
         guard let result else { return true }
-        return result.sourceLanguage == directionOverride.sourceLanguage &&
-            result.targetLanguage == directionOverride.targetLanguage
+        if let directionOverride {
+            return result.sourceLanguage == directionOverride.sourceLanguage &&
+                result.targetLanguage == directionOverride.targetLanguage
+        }
+        if let selectedTargetLanguage {
+            return TranslatePreferences.normalizedLanguageCode(result.targetLanguage) ==
+                TranslatePreferences.normalizedLanguageCode(selectedTargetLanguage)
+        }
+        return true
     }
 
     private func swapDirection() {
@@ -289,7 +308,32 @@ final class TranslationBubbleController: NSObject {
             sourceLanguage: result.targetLanguage,
             targetLanguage: result.sourceLanguage
         )
+        selectedTargetLanguage = result.sourceLanguage
         self.result = nil
+        isLoading = true
+        updateContentView()
+        startTranslation(text: sourceText)
+    }
+
+    private var currentTargetLanguage: String {
+        if let selectedTargetLanguage {
+            return selectedTargetLanguage
+        }
+        if let result {
+            return result.targetLanguage
+        }
+        if let detected = LanguageDetector.detect(sourceText) {
+            return TranslatePreferences.automaticTargetLanguage(for: detected.code)
+        }
+        return TranslatePreferences.secondaryLanguage
+    }
+
+    private func changeTargetLanguage(to language: String) {
+        guard TranslatePreferences.normalizedLanguageCode(language) !=
+                TranslatePreferences.normalizedLanguageCode(currentTargetLanguage) else { return }
+        selectedTargetLanguage = language
+        directionOverride = nil
+        result = nil
         isLoading = true
         updateContentView()
         startTranslation(text: sourceText)

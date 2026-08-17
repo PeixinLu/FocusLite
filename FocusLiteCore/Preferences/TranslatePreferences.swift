@@ -34,7 +34,9 @@ enum TranslatePreferences {
     private static let showTranslationBubbleKey = "translate.showTranslationBubble"
     private static let hotKeyTextKey = "translate.hotKeyText"
     static let translationBubblePinnedKey = "translate.bubblePinned"
-    private static let defaultTargetLanguageKey = "translate.defaultTargetLanguage"
+    private static let primaryLanguageKey = "translate.primaryLanguage"
+    private static let secondaryLanguageKey = "translate.secondaryLanguage"
+    private static let legacyDefaultTargetLanguageKey = "translate.defaultTargetLanguage"
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 
@@ -125,13 +127,49 @@ enum TranslatePreferences {
         set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: hotKeyTextKey) }
     }
 
-    /// 翻译结果的默认目标语言，默认英语
-    static var defaultTargetLanguage: String {
-        get { UserDefaults.standard.string(forKey: defaultTargetLanguageKey) ?? "en" }
+    /// 用户主要阅读与工作的语言。首次根据 macOS 首选语言初始化，之后保持用户设置。
+    static var primaryLanguage: String {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: primaryLanguageKey), !saved.isEmpty {
+                return saved
+            }
+            let initial = preferredPrimaryLanguage(from: Locale.preferredLanguages)
+            UserDefaults.standard.set(initial, forKey: primaryLanguageKey)
+            return initial
+        }
         set {
             let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
-            UserDefaults.standard.set(trimmed, forKey: defaultTargetLanguageKey)
+            UserDefaults.standard.set(trimmed, forKey: primaryLanguageKey)
+            if let savedSecondary = UserDefaults.standard.string(forKey: secondaryLanguageKey) {
+                let sanitized = distinctSecondaryLanguage(primary: trimmed, preferred: savedSecondary)
+                UserDefaults.standard.set(sanitized, forKey: secondaryLanguageKey)
+            }
+        }
+    }
+
+    /// 主语言内容默认翻译到的常用外语。旧版本的默认目标语言会在首次读取时迁移到这里。
+    static var secondaryLanguage: String {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: secondaryLanguageKey), !saved.isEmpty {
+                let sanitized = distinctSecondaryLanguage(primary: primaryLanguage, preferred: saved)
+                if sanitized != saved {
+                    UserDefaults.standard.set(sanitized, forKey: secondaryLanguageKey)
+                }
+                return sanitized
+            }
+            let legacy = UserDefaults.standard.string(forKey: legacyDefaultTargetLanguageKey)
+            let initial = distinctSecondaryLanguage(primary: primaryLanguage, preferred: legacy ?? "en")
+            UserDefaults.standard.set(initial, forKey: secondaryLanguageKey)
+            return initial
+        }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            UserDefaults.standard.set(
+                distinctSecondaryLanguage(primary: primaryLanguage, preferred: trimmed),
+                forKey: secondaryLanguageKey
+            )
         }
     }
 
@@ -196,6 +234,36 @@ enum TranslatePreferences {
         return lower
     }
 
+    static func preferredPrimaryLanguage(from identifiers: [String]) -> String {
+        for identifier in identifiers {
+            let normalized = identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+            let parts = normalized.split(separator: "-").map(String.init)
+            guard let base = parts.first else { continue }
+
+            if base == "zh" {
+                return "zh-Hans"
+            }
+
+            if languageOptions.contains(where: { $0.code == base }) {
+                return base
+            }
+        }
+        return "zh-Hans"
+    }
+
+    static func automaticTargetLanguage(for detectedLanguage: String) -> String {
+        normalizedLanguageCode(detectedLanguage) == normalizedLanguageCode(primaryLanguage)
+            ? secondaryLanguage
+            : primaryLanguage
+    }
+
+    private static func distinctSecondaryLanguage(primary: String, preferred: String) -> String {
+        guard normalizedLanguageCode(primary) == normalizedLanguageCode(preferred) else {
+            return preferred
+        }
+        return normalizedLanguageCode(primary) == "en" ? "zh-Hans" : "en"
+    }
+
     static func projects() -> [TranslateProject] {
         if let data = UserDefaults.standard.data(forKey: projectsKey) {
             if let decoded = try? decoder.decode([TranslateProject].self, from: data) {
@@ -217,25 +285,15 @@ enum TranslatePreferences {
         TranslateProject(
             id: UUID(),
             serviceID: serviceID.rawValue,
-            primaryLanguage: "zh-Hans",
-            secondaryLanguage: "en"
+            primaryLanguage: primaryLanguage,
+            secondaryLanguage: secondaryLanguage
         )
     }
 
     static func activeProjects() -> [TranslateProject] {
         let enabled = enabledServices.compactMap { TranslateServiceID(rawValue: $0) }
-        let targetLang = defaultTargetLanguage
-
-        // 反向推导源语言：目标语的对立语言
-        let sourceLang: String
-        switch targetLang {
-        case "en":
-            sourceLang = "zh-Hans"
-        case "zh-Hans", "zh":
-            sourceLang = "en"
-        default:
-            sourceLang = "zh-Hans"
-        }
+        let primary = primaryLanguage
+        let secondary = distinctSecondaryLanguage(primary: primary, preferred: secondaryLanguage)
 
         return enabled.compactMap { serviceID -> TranslateProject? in
             guard isConfigured(serviceID: serviceID) else { return nil }
@@ -244,8 +302,8 @@ enum TranslatePreferences {
             return TranslateProject(
                 id: stableID,
                 serviceID: serviceID.rawValue,
-                primaryLanguage: sourceLang,
-                secondaryLanguage: targetLang
+                primaryLanguage: primary,
+                secondaryLanguage: secondary
             )
         }
     }

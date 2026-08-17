@@ -553,7 +553,13 @@ final class LauncherViewModel: ObservableObject {
 
     /// 当前翻译目标语言（临时快速切换 或 默认设置）
     var currentTranslateTarget: String {
-        quickTargetLanguage ?? TranslatePreferences.defaultTargetLanguage
+        if let quickTargetLanguage {
+            return quickTargetLanguage
+        }
+        if let detected = LanguageDetector.detect(searchState.query) {
+            return TranslatePreferences.automaticTargetLanguage(for: detected.code)
+        }
+        return TranslatePreferences.secondaryLanguage
     }
 
     nonisolated static func shouldApplyTranslationResponse(
@@ -569,6 +575,12 @@ final class LauncherViewModel: ObservableObject {
 
     /// 预览窗格切换翻译目标语言
     func setTranslateTarget(_ lang: String) {
+        if let detected = LanguageDetector.detect(searchState.query),
+           TranslatePreferences.normalizedLanguageCode(detected.code) ==
+            TranslatePreferences.normalizedLanguageCode(lang) {
+            showToast("原文已是\(TranslatePreferences.displayName(for: lang))")
+            return
+        }
         quickTargetLanguage = lang
         showToast("目标语言: \(TranslatePreferences.displayName(for: lang))")
         performSearch()
@@ -608,9 +620,12 @@ final class LauncherViewModel: ObservableObject {
                 )
             }
             let serviceName = serviceDisplayName(for: TranslateServiceID(rawValue: project.serviceID))
+            let direction = LanguageDetector.detect(searchState.query).map {
+                TranslationDirection.resolve(for: project, detected: $0)
+            }
             return ResultItem(
                 title: "正在翻译…",
-                subtitle: "\(serviceName) · \(TranslatePreferences.displayName(for: project.primaryLanguage)) ↔ \(TranslatePreferences.displayName(for: project.secondaryLanguage))",
+                subtitle: "\(serviceName) · \(TranslatePreferences.displayName(for: direction?.source ?? project.primaryLanguage)) → \(TranslatePreferences.displayName(for: direction?.target ?? project.secondaryLanguage))",
                 icon: .system("arrow.triangle.2.circlepath"),
                 score: 0.2 - Double(index) * 0.01,
                 action: .none,
@@ -634,7 +649,7 @@ final class LauncherViewModel: ObservableObject {
         guard !query.isEmpty, query == currentQuery else { return }
 
         // 过滤掉过期通知：目标语言不匹配当前设置
-        let expectedTarget = quickTargetLanguage ?? TranslatePreferences.defaultTargetLanguage
+        let expectedTarget = currentTranslateTarget
         if let notifyTarget = info[TranslationCoordinator.targetLanguageKey] as? String,
            notifyTarget != expectedTarget {
             return

@@ -34,7 +34,8 @@ final class TranslateSettingsViewModel: ObservableObject {
     @Published var deepseekModel: String
 
     @Published var testStatus: [String: TranslateServiceTestStatus] = [:]
-    @Published var defaultTargetLanguage: String
+    @Published var primaryLanguage: String
+    @Published var secondaryLanguage: String
 
     init() {
         mixedPolicy = TranslatePreferences.mixedTextPolicy
@@ -56,7 +57,8 @@ final class TranslateSettingsViewModel: ObservableObject {
         deepseekAPIKey = TranslatePreferences.deepseekAPIKeyValue
         deepseekEndpoint = TranslatePreferences.deepseekEndpointValue
         deepseekModel = TranslatePreferences.deepseekModelValue
-        defaultTargetLanguage = TranslatePreferences.defaultTargetLanguage
+        primaryLanguage = TranslatePreferences.primaryLanguage
+        secondaryLanguage = TranslatePreferences.secondaryLanguage
     }
 
     func applyChanges() {
@@ -78,7 +80,8 @@ final class TranslateSettingsViewModel: ObservableObject {
         TranslatePreferences.deepseekAPIKeyValue = deepseekAPIKey
         TranslatePreferences.deepseekEndpointValue = deepseekEndpoint
         TranslatePreferences.deepseekModelValue = deepseekModel
-        TranslatePreferences.defaultTargetLanguage = defaultTargetLanguage
+        TranslatePreferences.primaryLanguage = primaryLanguage
+        TranslatePreferences.secondaryLanguage = secondaryLanguage
     }
 
     func toggleService(_ id: String, isOn: Bool) {
@@ -93,6 +96,14 @@ final class TranslateSettingsViewModel: ObservableObject {
 
     func languageDisplayName(_ code: String) -> String {
         TranslatePreferences.displayName(for: code)
+    }
+
+    func keepLanguagesDistinct() {
+        guard TranslatePreferences.normalizedLanguageCode(primaryLanguage) ==
+                TranslatePreferences.normalizedLanguageCode(secondaryLanguage) else { return }
+        secondaryLanguage = TranslatePreferences.normalizedLanguageCode(primaryLanguage) == "en"
+            ? "zh-Hans"
+            : "en"
     }
 
     func ensureAccessibilityForAutoPaste() -> Bool {
@@ -139,8 +150,8 @@ struct TranslateSettingsView: View {
     @State private var appleNativeInstalled = false
 
     private func checkAppleNativeStatus() async {
-        let target = viewModel.defaultTargetLanguage
-        let source = target == "zh-Hans" || target == "zh" ? "en" : "zh-Hans"
+        let source = viewModel.primaryLanguage
+        let target = viewModel.secondaryLanguage
         let installed = await AppleNativeTranslationService.isInstalled(
             sourceLanguage: source, targetLanguage: target
         )
@@ -248,19 +259,39 @@ struct TranslateSettingsView: View {
                 }
             }
 
-            SettingsSection("默认目标语言", note: "翻译结果默认转换到此语言。输入语言由系统自动识别，方向自动匹配。") {
-                SettingsFieldRow(title: "目标语言") {
-                    Picker("目标语言", selection: $viewModel.defaultTargetLanguage) {
+            SettingsSection(
+                "翻译语言",
+                note: "主语言内容默认翻译为常用外语；其他语言内容默认翻译为主语言。主语言首次根据 macOS 首选语言初始化。"
+            ) {
+                SettingsFieldRow(title: "主语言") {
+                    Picker("主语言", selection: $viewModel.primaryLanguage) {
                         ForEach(TranslatePreferences.languageOptions, id: \.code) { option in
                             Text(option.name).tag(option.code)
                         }
                     }
                     .labelsHidden()
                     .frame(width: 160)
-                    .onChange(of: viewModel.defaultTargetLanguage) { _ in
+                    .onChange(of: viewModel.primaryLanguage) { _ in
+                        viewModel.keepLanguagesDistinct()
                         applyAndNotify()
                     }
                 }
+                SettingsFieldRow(title: "常用外语") {
+                    Picker("常用外语", selection: $viewModel.secondaryLanguage) {
+                        ForEach(TranslatePreferences.languageOptions, id: \.code) { option in
+                            Text(option.name).tag(option.code)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 160)
+                    .onChange(of: viewModel.secondaryLanguage) { _ in
+                        viewModel.keepLanguagesDistinct()
+                        applyAndNotify()
+                    }
+                }
+                Text("自动规则：\(viewModel.languageDisplayName(viewModel.primaryLanguage))内容 → \(viewModel.languageDisplayName(viewModel.secondaryLanguage))；其他语言 → \(viewModel.languageDisplayName(viewModel.primaryLanguage))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
 
             SettingsSection("混合文本") {
@@ -405,7 +436,10 @@ struct TranslateSettingsView: View {
         .task {
             await checkAppleNativeStatus()
         }
-        .onChange(of: viewModel.defaultTargetLanguage) { _ in
+        .onChange(of: viewModel.primaryLanguage) { _ in
+            Task { await checkAppleNativeStatus() }
+        }
+        .onChange(of: viewModel.secondaryLanguage) { _ in
             Task { await checkAppleNativeStatus() }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

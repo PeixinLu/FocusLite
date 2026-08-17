@@ -12,8 +12,14 @@ actor TranslationCoordinator {
     func translate(text: String) async -> [TranslationResult] {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
+        let cacheKey = [
+            TranslatePreferences.primaryLanguage,
+            TranslatePreferences.secondaryLanguage,
+            TranslatePreferences.mixedTextPolicy.rawValue,
+            trimmed
+        ].joined(separator: "|")
 
-        if trimmed == lastQuery, Date().timeIntervalSince(lastQueryAt) < 1.0, let cached = cache[trimmed] {
+        if cacheKey == lastQuery, Date().timeIntervalSince(lastQueryAt) < 1.0, let cached = cache[cacheKey] {
             return cached
         }
 
@@ -24,8 +30,8 @@ actor TranslationCoordinator {
         }
         debounceTask = task
         let results = await task.value
-        cache[trimmed] = results
-        lastQuery = trimmed
+        cache[cacheKey] = results
+        lastQuery = cacheKey
         lastQueryAt = Date()
         return results
     }
@@ -62,13 +68,8 @@ actor TranslationCoordinator {
             }
         }
 
-        // 源语言与目标语言相同时，取反向语言
-        let source: String
-        if normalizedDetected == normalizedTarget {
-            source = appleLanguageCode(normalizedTarget == "en" ? "zh" : "en")
-        } else {
-            source = appleLanguageCode(normalizedDetected)
-        }
+        guard normalizedDetected != normalizedTarget else { return [] }
+        let source = appleLanguageCode(normalizedDetected)
         let target = appleLanguageCode(normalizedTarget)
 
         debounceTask?.cancel()
@@ -119,8 +120,8 @@ actor TranslationCoordinator {
 
         // 提取目标语言，用于通知过滤（防止旧翻译结果覆盖新目标语言的结果）
         let resolvedTarget = forcedDirection?.target
-            ?? projects.first?.secondaryLanguage
-            ?? TranslatePreferences.defaultTargetLanguage
+            ?? projects.first.map { TranslationDirection.resolve(for: $0, detected: detected).target }
+            ?? TranslatePreferences.automaticTargetLanguage(for: detected.code)
 
         /// 通知 UI 流式更新
         func notifyProgress() async {
@@ -251,7 +252,7 @@ extension Notification.Name {
     static let translationResultsUpdated = Notification.Name("translationResultsUpdated")
 }
 
-private struct TranslationDirection {
+struct TranslationDirection {
     let source: String
     let target: String
     let usedFallback: Bool
@@ -267,17 +268,10 @@ private struct TranslationDirection {
                 usedFallback: false
             )
         }
-        if detectedCode == secondaryCode {
-            return TranslationDirection(
-                source: project.secondaryLanguage,
-                target: project.primaryLanguage,
-                usedFallback: false
-            )
-        }
         return TranslationDirection(
-            source: project.primaryLanguage,
-            target: project.secondaryLanguage,
-            usedFallback: true
+            source: detectedCode == secondaryCode ? project.secondaryLanguage : detected.code,
+            target: project.primaryLanguage,
+            usedFallback: false
         )
     }
 }

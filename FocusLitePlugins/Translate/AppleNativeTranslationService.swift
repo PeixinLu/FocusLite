@@ -13,14 +13,12 @@ enum AppleNativeTranslationFallback {
     ) -> TranslateProject? {
         guard existingProjects.isEmpty else { return nil }
 
-        switch TranslatePreferences.normalizedLanguageCode(detected.code) {
-        case "zh":
-            return fallbackProject(source: "zh-Hans", target: "en")
-        case "en":
-            return fallbackProject(source: "en", target: "zh-Hans")
-        default:
-            return nil
-        }
+        let normalizedSource = TranslatePreferences.normalizedLanguageCode(detected.code)
+        let source = normalizedSource == "zh" ? "zh-Hans" : detected.code
+        let target = TranslatePreferences.automaticTargetLanguage(for: detected.code)
+        guard TranslatePreferences.normalizedLanguageCode(detected.code) !=
+                TranslatePreferences.normalizedLanguageCode(target) else { return nil }
+        return fallbackProject(source: source, target: target)
     }
 
     private static func fallbackProject(source: String, target: String) -> TranslateProject {

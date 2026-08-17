@@ -89,21 +89,118 @@ final class FocusLiteTests: XCTestCase {
         XCTAssertEqual(result.compactDirectionLabel, "中->英")
     }
 
-    func testAppleNativeFallbackProjectUsesChineseEnglishDirectionsOnlyWhenNoProjectsAreAvailable() {
+    func testPreferredPrimaryLanguageUsesFirstSupportedMacOSLanguage() {
+        XCTAssertEqual(
+            TranslatePreferences.preferredPrimaryLanguage(from: ["xx-YY", "ja-JP", "en-US"]),
+            "ja"
+        )
+        XCTAssertEqual(
+            TranslatePreferences.preferredPrimaryLanguage(from: ["zh-Hans-CN", "en-US"]),
+            "zh-Hans"
+        )
+        XCTAssertEqual(
+            TranslatePreferences.preferredPrimaryLanguage(from: ["zh-Hant-TW"]),
+            "zh-Hans"
+        )
+        XCTAssertEqual(
+            TranslatePreferences.preferredPrimaryLanguage(from: ["zh-Hant-TW", "en-US"]),
+            "zh-Hans"
+        )
+    }
+
+    func testTranslationDirectionUsesPrimaryLanguageAsTheReadingTarget() {
+        let project = TranslateProject(
+            id: UUID(),
+            serviceID: TranslateServiceID.deepseekAPI.rawValue,
+            primaryLanguage: "zh-Hans",
+            secondaryLanguage: "en"
+        )
+
+        let primaryText = TranslationDirection.resolve(
+            for: project,
+            detected: DetectedLanguage(code: "zh-Hans", isMixed: false)
+        )
+        XCTAssertEqual(primaryText.source, "zh-Hans")
+        XCTAssertEqual(primaryText.target, "en")
+
+        let secondaryText = TranslationDirection.resolve(
+            for: project,
+            detected: DetectedLanguage(code: "en", isMixed: false)
+        )
+        XCTAssertEqual(secondaryText.source, "en")
+        XCTAssertEqual(secondaryText.target, "zh-Hans")
+
+        let thirdLanguageText = TranslationDirection.resolve(
+            for: project,
+            detected: DetectedLanguage(code: "ja", isMixed: false)
+        )
+        XCTAssertEqual(thirdLanguageText.source, "ja")
+        XCTAssertEqual(thirdLanguageText.target, "zh-Hans")
+        XCTAssertFalse(thirdLanguageText.usedFallback)
+    }
+
+    func testLanguageDetectorPrefersCommonForeignLanguageForAmbiguousShortLatinText() {
+        let resolved = LanguageDetector.resolveAmbiguousShortText(
+            "transition",
+            dominantLanguage: .french,
+            hypotheses: [
+                .french: 0.4787,
+                .english: 0.2286,
+                .danish: 0.1095
+            ],
+            preferredLanguage: "en"
+        )
+
+        XCTAssertEqual(resolved, "en")
+    }
+
+    func testLanguageDetectorKeepsConfidentOrNonShortLanguageRecognition() {
+        let confidentFrench = LanguageDetector.resolveAmbiguousShortText(
+            "bonjour",
+            dominantLanguage: .french,
+            hypotheses: [.french: 0.92, .english: 0.03],
+            preferredLanguage: "en"
+        )
+        XCTAssertEqual(confidentFrench, "fr")
+
+        let longFrench = LanguageDetector.resolveAmbiguousShortText(
+            "Cette phrase contient suffisamment de contexte pour identifier sa langue.",
+            dominantLanguage: .french,
+            hypotheses: [.french: 0.52, .english: 0.30],
+            preferredLanguage: "en"
+        )
+        XCTAssertEqual(longFrench, "fr")
+
+        let weakEnglishCandidate = LanguageDetector.resolveAmbiguousShortText(
+            "transition",
+            dominantLanguage: .french,
+            hypotheses: [.french: 0.55, .english: 0.10],
+            preferredLanguage: "en"
+        )
+        XCTAssertEqual(weakEnglishCandidate, "fr")
+    }
+
+    func testAppleNativeFallbackProjectUsesPrimaryLanguageModelWhenNoProjectsAreAvailable() {
         let chineseFallback = AppleNativeTranslationFallback.project(
             detected: DetectedLanguage(code: "zh-Hans", isMixed: false),
             existingProjects: []
         )
         XCTAssertEqual(chineseFallback?.serviceID, TranslateServiceID.appleNative.rawValue)
         XCTAssertEqual(chineseFallback?.primaryLanguage, "zh-Hans")
-        XCTAssertEqual(chineseFallback?.secondaryLanguage, "en")
+        XCTAssertEqual(
+            chineseFallback?.secondaryLanguage,
+            TranslatePreferences.automaticTargetLanguage(for: "zh-Hans")
+        )
 
         let englishFallback = AppleNativeTranslationFallback.project(
             detected: DetectedLanguage(code: "en", isMixed: false),
             existingProjects: []
         )
         XCTAssertEqual(englishFallback?.primaryLanguage, "en")
-        XCTAssertEqual(englishFallback?.secondaryLanguage, "zh-Hans")
+        XCTAssertEqual(
+            englishFallback?.secondaryLanguage,
+            TranslatePreferences.automaticTargetLanguage(for: "en")
+        )
 
         let configuredProject = TranslatePreferences.defaultProject(for: .deepseekAPI)
         XCTAssertNil(AppleNativeTranslationFallback.project(
