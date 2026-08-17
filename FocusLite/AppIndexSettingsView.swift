@@ -3,28 +3,25 @@ import SwiftUI
 
 @MainActor
 final class AppIndexSettingsViewModel: ObservableObject {
-    @Published var apps: [AppIndex.AppEntry] = []
+    @Published private(set) var apps: [AppIndex.AppEntry] = []
     @Published var aliasText: [String: String] = [:]
-    @Published var searchText: String = ""
+    @Published var searchText: String = "" {
+        didSet {
+            updateFilteredApps()
+        }
+    }
+    @Published private(set) var filteredApps: [AppIndex.AppEntry] = []
     @Published var excludedBundleIDs: Set<String> = []
     @Published var excludedPaths: Set<String> = []
 
     private let appIndex = AppIndex.shared
     private let aliasStore: UserAliasStore
     private var pendingSave: DispatchWorkItem?
-    private var allApps: [AppIndex.AppEntry] = []
-    private let iconCache = NSCache<NSString, NSImage>()
 
     init(aliasStore: UserAliasStore = UserAliasStore(fileURL: AppIndex.aliasFileURL())) {
         self.aliasStore = aliasStore
     }
     
-    var filteredApps: [AppIndex.AppEntry] {
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return apps }
-        return apps.filter { matchesSearch(entry: $0, query: trimmed) }
-    }
-
     func load() {
         Task {
             await reload()
@@ -44,6 +41,7 @@ final class AppIndexSettingsViewModel: ObservableObject {
         let aliases = payload.byBundleID
         await MainActor.run {
             self.apps = snapshot
+            self.updateFilteredApps()
             self.aliasText = aliases.reduce(into: [:]) { result, pair in
                 result[pair.key] = pair.value.joined(separator: ", ")
             }
@@ -62,22 +60,29 @@ final class AppIndexSettingsViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: workItem)
     }
 
-    private func matchesSearch(entry: AppIndex.AppEntry, query: String) -> Bool {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return true }
+    private func updateFilteredApps() {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            filteredApps = apps
+            return
+        }
 
         let info = Matcher.queryInfo(for: trimmed)
-        if let match = Matcher.match(query: trimmed, index: entry.nameIndex),
+        let lowered = trimmed.lowercased()
+        filteredApps = apps.filter { matchesSearch(entry: $0, info: info, loweredQuery: lowered) }
+    }
+
+    private func matchesSearch(entry: AppIndex.AppEntry, info: QueryInfo, loweredQuery: String) -> Bool {
+        if let match = Matcher.match(info: info, index: entry.nameIndex),
            Matcher.shouldInclude(match, info: info) {
             return true
         }
 
         // 保留路径 / Bundle ID 简单包含匹配，避免与旧逻辑差距过大
-        let lowered = trimmed.lowercased()
-        if entry.path.lowercased().contains(lowered) {
+        if entry.path.lowercased().contains(loweredQuery) {
             return true
         }
-        if let bundleID = entry.bundleID?.lowercased(), bundleID.contains(lowered) {
+        if let bundleID = entry.bundleID?.lowercased(), bundleID.contains(loweredQuery) {
             return true
         }
         return false
@@ -90,15 +95,6 @@ final class AppIndexSettingsViewModel: ObservableObject {
             .filter { !$0.isEmpty }
         aliasStore.setAliases(bundleID: bundleID, aliases: aliases)
         Task { await appIndex.refreshAliases() }
-    }
-
-    func icon(for path: String) -> NSImage {
-        if let cached = iconCache.object(forKey: path as NSString) {
-            return cached
-        }
-        let icon = NSWorkspace.shared.icon(forFile: path)
-        iconCache.setObject(icon, forKey: path as NSString)
-        return icon
     }
 
     func isExcluded(_ entry: AppIndex.AppEntry) -> Bool {
@@ -170,9 +166,7 @@ struct AppIndexSettingsView: View {
             Table(viewModel.filteredApps) {
                 TableColumn("App 名称") { entry in
                     HStack(spacing: 8) {
-                        Image(nsImage: viewModel.icon(for: entry.path))
-                            .resizable()
-                            .frame(width: 18, height: 18)
+                        AppIndexIconView(path: entry.path)
                         Text(entry.name)
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -232,6 +226,102 @@ struct AppIndexSettingsView: View {
         } else {
             Text("无 bundleID")
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct AppIndexIconView: View {
+    let path: String
+
+    @State private var icon: CGImage?
+
+    var body: some View {
+        Group {
+            if let icon {
+                Image(decorative: icon, scale: 2)
+                    .resizable()
+            } else {
+                Image(systemName: "app.dashed")
+                    .resizable()
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(width: 18, height: 18)
+        .task(id: path) {
+            icon = await AppIndexIconStore.shared.icon(for: path)
+        }
+    }
+}
+
+@MainActor
+private final class AppIndexIconStore {
+    static let shared = AppIndexIconStore()
+
+    private let cache = NSCache<NSString, CGImage>()
+    private var inFlight: [String: Task<AppIndexIconResult, Never>] = [:]
+
+    private init() {
+        cache.countLimit = 256
+    }
+
+    func icon(for path: String) async -> CGImage? {
+        if let cached = cache.object(forKey: path as NSString) {
+            return cached
+        }
+
+        if let task = inFlight[path] {
+            return await task.value.image
+        }
+
+        let task = Task {
+            await AppIndexIconWorkQueue.shared.load(path: path)
+        }
+        inFlight[path] = task
+
+        let result = await task.value
+        inFlight[path] = nil
+        if let image = result.image {
+            cache.setObject(image, forKey: path as NSString)
+        }
+        return result.image
+    }
+}
+
+private final class AppIndexIconResult: @unchecked Sendable {
+    let image: CGImage?
+
+    init(image: CGImage?) {
+        self.image = image
+    }
+}
+
+private final class AppIndexIconWorkQueue: @unchecked Sendable {
+    static let shared = AppIndexIconWorkQueue()
+
+    private let queue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.focuslite.app-index-icons"
+        queue.qualityOfService = .utility
+        queue.maxConcurrentOperationCount = 3
+        return queue
+    }()
+
+    private init() {}
+
+    func load(path: String) async -> AppIndexIconResult {
+        await withCheckedContinuation { continuation in
+            queue.addOperation {
+                let image = autoreleasepool { () -> CGImage? in
+                    let icon = NSWorkspace.shared.icon(forFile: path)
+                    var proposedRect = NSRect(x: 0, y: 0, width: 36, height: 36)
+                    return icon.cgImage(
+                        forProposedRect: &proposedRect,
+                        context: nil,
+                        hints: nil
+                    )
+                }
+                continuation.resume(returning: AppIndexIconResult(image: image))
+            }
         }
     }
 }

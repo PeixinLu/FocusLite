@@ -2,6 +2,33 @@ import XCTest
 @testable import FocusLite
 
 final class FocusLiteTests: XCTestCase {
+    func testAppIndexAllowsSystemPasswordsPackageType() {
+        XCTAssertTrue(AppIndex.AppEntry.isSupportedPackageType("APPL", bundleID: "com.example.app"))
+        XCTAssertTrue(AppIndex.AppEntry.isSupportedPackageType("FNDR", bundleID: "com.apple.finder"))
+        XCTAssertTrue(AppIndex.AppEntry.isSupportedPackageType("XPC!", bundleID: "com.apple.Passwords"))
+        XCTAssertFalse(AppIndex.AppEntry.isSupportedPackageType("XPC!", bundleID: "com.example.service"))
+    }
+
+    func testAppIndexEntryIdentityUsesPath() {
+        let nameIndex = AppNameIndex(name: "Example", aliasEntry: nil, pinyinProvider: nil)
+        let first = AppIndex.AppEntry(
+            name: "Example",
+            path: "/Applications/Example.app",
+            bundleID: "com.example.app",
+            nameIndex: nameIndex
+        )
+        let second = AppIndex.AppEntry(
+            name: "Example Beta",
+            path: "/Applications/Example Beta.app",
+            bundleID: "com.example.app",
+            nameIndex: nameIndex
+        )
+
+        XCTAssertNotEqual(first.id, second.id)
+        XCTAssertEqual(first.id, first.path)
+        XCTAssertEqual(second.id, second.path)
+    }
+
     func testSearchEngineAggregatesAndSorts() async {
         let providerA = TestProvider(items: [
             ResultItem(title: "A", score: 0.2),

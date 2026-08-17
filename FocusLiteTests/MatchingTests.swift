@@ -66,6 +66,40 @@ final class MatchingTests: XCTestCase {
         }
     }
 
+    func testSimplifiedAndTraditionalChineseMatchEachOther() {
+        let cases = [
+            (query: "密码", name: "密碼"),
+            (query: "密碼", name: "密码"),
+            (query: "后台", name: "後臺"),
+            (query: "後臺", name: "后台")
+        ]
+
+        for item in cases {
+            let result = match(query: item.query, name: item.name)
+            XCTAssertEqual(result?.bucket, .exact, "Query: \(item.query), name: \(item.name)")
+        }
+    }
+
+    func testCachedTraditionalChineseIndexIsRenormalizedWhenDecoded() throws {
+        let data = Data("""
+        {
+          "original": "密碼",
+          "normalized": "密碼",
+          "tokens": ["密", "碼", "密碼"],
+          "acronym": "",
+          "aliasStrong": ["密碼"],
+          "aliasWeak": ["密碼"]
+        }
+        """.utf8)
+
+        let index = try JSONDecoder().decode(AppNameIndex.self, from: data)
+
+        XCTAssertEqual(index.normalized, "密码")
+        XCTAssertTrue(index.tokens.contains("密码"))
+        XCTAssertTrue(index.aliasStrong.contains("密码"))
+        XCTAssertTrue(index.aliasWeak.contains("密码"))
+    }
+
     func testMixedTokenCoverage() {
         let name = "Visual Studio Code"
         let full = match(query: "visual studio", name: name)

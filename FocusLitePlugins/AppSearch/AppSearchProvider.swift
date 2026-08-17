@@ -36,7 +36,7 @@ struct AppSearchProvider: ResultProvider {
             ) {
                 continue
             }
-            guard let match = Matcher.match(query: trimmed, index: app.nameIndex) else {
+            guard let match = Matcher.match(info: info, index: app.nameIndex) else {
                 continue
             }
 
