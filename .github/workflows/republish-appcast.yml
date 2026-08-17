@@ -1,0 +1,138 @@
+name: Republish Sparkle Appcast
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose appcast and release notes should be republished
+        required: true
+        default: v0.2.12
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  SPARKLE_VERSION: "2.8.1"
+
+jobs:
+  republish:
+    runs-on: macos-26
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+
+    steps:
+      - name: Checkout release note sources
+        uses: actions/checkout@v4
+
+      - name: Download existing release archive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern FocusLite.zip \
+            --dir artifacts \
+            --clobber
+
+      - name: Prepare release notes
+        run: scripts/prepare-release-notes.sh "${{ inputs.tag }}" artifacts
+
+      - name: Update GitHub Release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release edit "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --notes-file "release-notes/${{ inputs.tag }}.md"
+
+      - name: Download Sparkle tools
+        run: |
+          set -euo pipefail
+          curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
+          tar -xf sparkle.tar.xz
+          SPARKLE_DIR=$(tar -tf sparkle.tar.xz | head -1 | cut -d/ -f1 | tr -d '/')
+          SPARKLE_BIN="$PWD/$SPARKLE_DIR/bin"
+          if [ ! -x "$SPARKLE_BIN/generate_appcast" ]; then
+            FOUND=$(find "$SPARKLE_DIR" -type f -name generate_appcast | head -1 || true)
+            if [ -z "${FOUND:-}" ]; then
+              echo "generate_appcast not found in Sparkle package" >&2
+              exit 1
+            fi
+            SPARKLE_BIN="$PWD/$(dirname "$FOUND")"
+          fi
+          echo "SPARKLE_BIN=$SPARKLE_BIN" >> "$GITHUB_ENV"
+
+      - name: Prepare Sparkle private key
+        env:
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_ED25519_PRIVATE_KEY:-}" ]; then
+            echo "Secret SPARKLE_ED25519_PRIVATE_KEY is required" >&2
+            exit 1
+          fi
+          printf '%s' "$SPARKLE_ED25519_PRIVATE_KEY" > sparkle_private_key.pem
+          chmod 600 sparkle_private_key.pem
+
+      - name: Regenerate appcast
+        run: |
+          set -euo pipefail
+          TAG_NAME="${{ inputs.tag }}"
+          DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/"
+          RELEASE_SITE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          RELEASE_NOTES_PREFIX="${RELEASE_SITE_URL}/releases/${TAG_NAME}/"
+          cd artifacts
+          "$SPARKLE_BIN/generate_appcast" \
+            --ed-key-file ../sparkle_private_key.pem \
+            --download-url-prefix "$DOWNLOAD_PREFIX" \
+            --release-notes-url-prefix "$RELEASE_NOTES_PREFIX" \
+            .
+          rm -f ../sparkle_private_key.pem
+          grep -q "releases/download/${TAG_NAME}/FocusLite.zip" appcast.xml
+          grep -q "<sparkle:releaseNotesLink>${RELEASE_NOTES_PREFIX}FocusLite.html</sparkle:releaseNotesLink>" appcast.xml
+          ls -lh FocusLite.zip FocusLite.html "releases/${TAG_NAME}/FocusLite.html" appcast.xml
+
+      - name: Generate release history for the website
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/${{ github.repository }}/releases?per_page=100" > github-releases.json
+          ruby scripts/generate-release-history.rb \
+            github-releases.json \
+            artifacts \
+            "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          ruby -rjson -e 'data = JSON.parse(File.read("artifacts/releases.json")); abort "Selected release missing" unless data.fetch("releases").any? { |release| release.fetch("tag") == ARGV.fetch(0) }' "${{ inputs.tag }}"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload appcast to Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Deploy appcast to Pages
+        id: deploy-pages
+        uses: actions/deploy-pages@v4
+
+      - name: Trigger Cloudflare Pages website rebuild
+        env:
+          CF_PAGES_DEPLOY_HOOK_URL: ${{ secrets.CF_PAGES_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_PAGES_DEPLOY_HOOK_URL:-}" ]; then
+            echo "CF_PAGES_DEPLOY_HOOK_URL is not configured; skipping website rebuild."
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$CF_PAGES_DEPLOY_HOOK_URL"
